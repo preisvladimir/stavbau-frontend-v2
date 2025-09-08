@@ -1,0 +1,24 @@
+# CODEOWNERS for STAVBAU-V2
+# Vlož do kořene repozitáře jako .github/CODEOWNERS (funguje i /.github/CODEOWNERS)
+# Cokoliv kritického směřuj na @preisvladimir
+
+# --- Backend (Java / Spring Boot) ---
+/src/main/java/**/security/*        @preisvladimir
+/src/main/java/**/auth/*            @preisvladimir
+/src/main/resources/db/migration/*  @preisvladimir
+/pom.xml                            @preisvladimir
+
+# --- Frontend (React / Vite) ---
+/src/**/auth/*                      @preisvladimir
+/src/**/app/router.tsx              @preisvladimir
+/src/**/app/routes.tsx              @preisvladimir
+/package.json                       @preisvladimir
+/vite.config.ts                     @preisvladimir
+
+# --- Dokumentace & governance ---
+/docs/*                             @preisvladimir
+/.github/workflows/*                @preisvladimir
+/.github/ISSUE_TEMPLATE/*           @preisvladimir
+/.github/PULL_REQUEST_TEMPLATE.md   @preisvladimir
+/README.md                          @preisvladimir
+/CHANGELOG.md                       @preisvladimir
