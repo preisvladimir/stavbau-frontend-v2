@@ -1,69 +1,39 @@
-# React + TypeScript + Vite
+# 🏗️ STAVBAU-V2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+STAVBAU-V2 je backend + frontend projekt vyvíjený jako **modular monolith**.  
+Cílem je vytvořit udržitelnou, profesionální a rozšiřitelnou SaaS platformu pro řízení stavebních projektů.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📂 Struktura projektu
+- **Backend (Spring Boot 3, Java 17+)** – modular monolith by feature, DDD přístup.  
+- **Frontend (React + Vite + TypeScript)** – modulární, s vlastním UI kitem (`stavbau-ui`).  
+- **Databáze (PostgreSQL, Flyway)** – řízené migrace, JSONB podpora.  
+- **Docker Compose** – lokální prostředí (DB + pgAdmin).  
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📑 Dokumentace
+Všechny referenční dokumenty a pokyny jsou uloženy ve složce [`/docs`](./docs):  
+- `STAVBAU_GUIDELINES.md` – pravidla vývoje a používání dokumentů.  
+- `STAVBAU_TEMPLATES.md` – šablony pro commit messages a Step Plan.  
+- `hotovo-todo-future.md` – přehled HOTOVO / TODO / FUTURE (časová osa vývoje).  
+- `bussines plan.md` – business plán projektu.  
+- `Sprintový plán – MVP verze STAVBAU.md` – sprintový plán pro MVP.  
+- `struktury projektu (balíčky & vrstvy) - včetně i18n.md` – návrh balíčků a vrstev.  
+- `modular monolith (by feature).md` – architektura backendu.  
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## 🚀 Vývoj
+Vývoj se **řídí pravidly v [`STAVBAU_GUIDELINES.md`](./docs/STAVBAU_GUIDELINES.md)**.  
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Každý commit musí následovat **Conventional Commits**.  
+- Každý větší krok musí začínat analýzou pomocí **Step Plan**.  
+- Po dokončení bloku práce se provádí checkpoint → aktualizace `hotovo-todo-future.md`.  
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
+## 📜 Licence
+Projekt zatím není veřejně licencován – licence bude doplněna podle zvoleného modelu distribuce (MVP vs PRO verze).  
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+![FE CI](https://github.com/preisvladimir/stavbau-frontend-v2/actions/workflows/frontend-ci.yml/badge.svg)
