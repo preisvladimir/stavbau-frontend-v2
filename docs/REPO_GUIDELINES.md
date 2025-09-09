@@ -62,7 +62,7 @@ Používat jednotný set štítků pro Issues a PR:
 - `security`
 - `documentation`
 - `performance`
-- `test`
+- `test`, `ci`
 - `priority-high`, `priority-medium`, `priority-low`
 - `sprint-1`, `sprint-2`, ...
 - `good first issue`
@@ -135,3 +135,35 @@ gh release create v0.1.0 --notes "První release"
 Používat CLI je rychlejší, konzistentní a umožňuje automatizaci.
 
 ---
+### Bootstrap štítků (GitHub CLI)
+
+> Jednorázově vytvoří/aktualizuje výchozí sadu štítků v repozitáři.
+
+#### PowerShell
+```powershell
+$labels = @(
+  @{n="bug";               c="d73a4a"; d="Bug or defect"},
+  @{n="enhancement";       c="a2eeef"; d="Improvement or enhancement"},
+  @{n="feature";           c="0e8a16"; d="New feature"},
+  @{n="security";          c="ee0701"; d="Security-related work"},
+  @{n="documentation";     c="0075ca"; d="Docs & README updates"},
+  @{n="performance";       c="c2e0c6"; d="Performance improvements"},
+  @{n="test";              c="5319e7"; d="Tests & coverage"},
+  @{n="ci";                c="bfd4f2"; d="CI/CD & tooling"},
+  @{n="priority-high";     c="b60205"; d="High priority"},
+  @{n="priority-medium";   c="fbca04"; d="Medium priority"},
+  @{n="priority-low";      c="0e8a16"; d="Low priority"},
+  @{n="good first issue";  c="7057ff"; d="Good for newcomers"},
+  @{n="question";          c="d876e3"; d="Needs more info"},
+  @{n="wontfix";           c="ffffff"; d="Won’t be addressed"},
+  @{n="sprint-1";          c="1d76db"; d="Sprint 1"},
+  @{n="sprint-2";          c="1d76db"; d="Sprint 2"}
+)
+
+foreach ($l in $labels) {
+  if (gh label list | Select-String -SimpleMatch (" " + $l.n + " ")) {
+    gh label edit $l.n --color $l.c --description $l.d | Out-Null
+  } else {
+    gh label create $l.n --color $l.c --description $l.d | Out-Null
+  }
+}
