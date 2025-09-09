@@ -13,15 +13,19 @@ Cílem je vytvořit udržitelnou, profesionální a rozšiřitelnou SaaS platfor
 
 ---
 
-## 📑 Dokumentace
-Všechny referenční dokumenty a pokyny jsou uloženy ve složce [`/docs`](./docs):  
-- `STAVBAU_GUIDELINES.md` – pravidla vývoje a používání dokumentů.  
-- `STAVBAU_TEMPLATES.md` – šablony pro commit messages a Step Plan.  
-- `hotovo-todo-future.md` – přehled HOTOVO / TODO / FUTURE (časová osa vývoje).  
-- `bussines plan.md` – business plán projektu.  
-- `Sprintový plán – MVP verze STAVBAU.md` – sprintový plán pro MVP.  
-- `struktury projektu (balíčky & vrstvy) - včetně i18n.md` – návrh balíčků a vrstev.  
-- `modular monolith (by feature).md` – architektura backendu.  
+## 📖 Dokumentace
+
+Veškerá projektová dokumentace se nachází ve složce [`/docs`](./docs):
+
+- [STAVBAU_GUIDELINES.md](./docs/STAVBAU_GUIDELINES.md) – hlavní pravidla, workflow, governance, mindset, checklist  
+- [REPO_GUIDELINES.md](./docs/REPO_GUIDELINES.md) – pravidla pro GitHub (PR/CI/labels/CODEOWNERS, governance)  
+- [STAVBAU_TEMPLATES.md](./docs/STAVBAU_TEMPLATES.md) – šablony Commit + Step Plan  
+- [bussines plan.md](./docs/bussines%20plan.md) – směr, monetizace, cílovky, strategie  
+- [Sprintový plán – MVP verze STAVBAU.md](./docs/Sprintový%20plán%20–%20MVP%20verze%20STAVBAU.md) – aktuální sprinty  
+- [struktury projektu (balíčky & vrstvy) - včetně i18n.md](./docs/struktury%20projektu%20(balíčky%20&%20vrstvy)%20-%20včetně%20i18n.md)  
+- [modular monolith (by feature).md](./docs/modular%20monolith%20(by%20feature).md)  
+- [hotovo-todo-future.md](./docs/hotovo-todo-future.md) – časová osa (hotovo / todo / future)  
+- [PROJECT_SETUP.md](./docs/PROJECT_SETUP.md) – postup nastavení projektu + první prompt
 
 ---
 
