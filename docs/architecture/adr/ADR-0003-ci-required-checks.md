@@ -1,0 +1,2 @@
+- **Rozhodnutí:** CI build/test povinný pro PR.  
+- **Důvod:** Kvalita a stabilita od začátku.

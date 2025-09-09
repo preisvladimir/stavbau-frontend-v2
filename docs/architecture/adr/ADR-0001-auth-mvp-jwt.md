@@ -1,0 +1,3 @@
+- **Rozhodnutí:** MVP používá Bearer JWT v hlavičce, cookie varianta je Next.  
+- **Důvod:** Rychlost, menší komplexita, lepší DX.  
+- **Dopady:** FE/BE jednodušší; přechod na cookie možný bez přepisu FE.

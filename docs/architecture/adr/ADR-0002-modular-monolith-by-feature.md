@@ -1,0 +1,2 @@
+- **Rozhodnutí:** Struktura by-feature pro BE/FE.  
+- **Důvod:** Lepší škálování; pozdější extrakce služeb.

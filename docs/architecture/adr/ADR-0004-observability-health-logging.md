@@ -1,0 +1,2 @@
+- **Rozhodnutí:** Health endpoint v CI, sjednocený log pattern (MDC).  
+- **Důvod:** Rychlá diagnostika, menší MTTR.
