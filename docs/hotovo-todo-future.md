@@ -69,6 +69,21 @@
 - **Repo metainfra – návrh**: připraveny `.gitattributes` (LF default) a `.editorconfig` (konzistentní formát); doporučeno commitnout.
 - **Pokyny a šablony**: `STAVBAU_GUIDELINES.md`, `STAVBAU_TEMPLATES.md`, `POKYNY_GITHUB.md` a workflow šablony připraveny.
 
+### 9. 9. 2025 --- Plánování RBAC BE (MVP)
+
+- **🕒 Milník (plánování):** RBAC BE (MVP) – Step Plan schválen.
+- **TODO (Sprint 2):**
+  - Implementovat `security/rbac` (Scopes, CompanyRoleName, ProjectRoleName, BuiltInRoles).
+  - `RbacService` + `RbacServiceImpl`, `RbacMethodSecurityConfig`.
+  - Úpravy `AppUserPrincipal` a `JwtService` – claims: `companyRole`, `projectRoles[]`, `scopes[]`.
+  - `/auth/me` rozšířit o `companyRole`, `scopes[]`.
+  - Anotace pilotních endpointů (`projects:read`, `projects:create`).
+  - Doplnit i18n klíče pro 401/403 (auth.forbidden_missing_scope).
+  - Testy: unit (`BuiltInRolesTest`, `RbacServiceTest`), slice (`WebMvcTest` 401/403/200), integrační happy path.
+- **FUTURE:**
+  - Projektové role + `hasProjectScope` enforcement (Sprint 3).
+  - DB perzistence rolí/scopes (PRO fáze).
+  - Admin UI pro správu rolí.
 
 ------------------------------------------------------------------------
 

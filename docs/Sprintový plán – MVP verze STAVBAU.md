@@ -23,6 +23,7 @@ Každý sprint má jasně vymezené cíle, prioritní úkoly a výstupy.
 * `PasswordEncoder` + hashování hesla
 * JWT login (`AuthController`, `JwtService`)
 * JWT validace (`JwtAuthenticationFilter`, `SecurityConfig`)
+* RBAC základ (company role → scopes, JWT claims, /auth/me)
 
 **Výstup:** Možnost přihlásit uživatele a získat JWT token
 
