@@ -1,0 +1,11 @@
+{
+  "401": "Nesprávné přihlašovací údaje nebo relace vypršela.",
+  "403": "Pro tuto akci nemáš oprávnění.",
+  "429": "Byl překročen limit požadavků. Zkus to prosím později.",
+  "5xx": "Došlo k neočekávané chybě. Zkus to znovu.",
+  "validation": {
+    "email": "Zadej platný e-mail.",
+    "required": "Toto pole je povinné.",
+    "password_min": "Heslo musí mít alespoň {{min}} znaků."
+  }
+}

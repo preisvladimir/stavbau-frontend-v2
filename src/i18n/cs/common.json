@@ -1,0 +1,5 @@
+{
+  "app": { "title": "Stavbau" },
+  "actions": { "save": "Uložit", "cancel": "Zrušit", "login": "Přihlásit", "logout": "Odhlásit" },
+  "nav": { "dashboard": "Přehled", "projects": "Projekty", "newProject": "Nový projekt" }
+}

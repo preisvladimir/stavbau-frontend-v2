@@ -9,6 +9,7 @@
     "paths": { "@/*": ["src/*"] },
     "strict": true,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "types": ["vitest", "node"]
   }
 }
