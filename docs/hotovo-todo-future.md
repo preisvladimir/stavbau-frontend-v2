@@ -188,45 +188,33 @@
 - Šablony PDF (branding per company), vícejazyčné PDF.
 - S3/MinIO storage, AV scanning, signed URLs.
 
+### 12. 9. 2025 — Fix WebClient kolize
+- MapyCzClient nyní používá @Qualifier("geoWebClient"), aby nedocházelo ke kolizi s meteostatWebClient.
 
-------------------------------------------------------------------------
+### 13. 9. 2025 — Sprint 4: Finance a dokumentace (Invoices & Files)
 
-## 📋 TODO (krátkodobé)
+**HOTOVO**
+- Přidán modul **Invoices**:
+    - `NumberSeriesService` + unit testy (rezervace čísel, atomická transakce).
+    - `InvoiceService` (CRUD, vystavení, změna stavu).
+    - `InvoiceController` + DTOs + Swagger anotace.
+    - Integrační test (`MockMvc`) pro základní akce.
+- Přidán modul **Files**:
+    - Entita `StoredFile`, `FileTag`.
+    - Služba `StoredFileServiceImpl` + jednotkové testy.
+    - `FileStorage` interface + implementace `LocalFsStorage` (bean).
+    - REST API: upload, download, tag management (RBAC scopes `files:*`).
+- RBAC:
+    - Anotace endpointů `@PreAuthorize` s využitím `invoices:*`, `files:*` (dle RBAC_2.1).
+- CI prošlo (backend build + testy zelené).
 
--   Definice **uživatelských rolí (RBAC)** a mapování na scopes.\
--   **Company → User vztah** rozšířit o role v rámci firmy.\
--   Přidat testy pro rate-limiting (ověření blokace při překročení
-    limitů).\
--   Doplnit CI/CD pipeline (GitHub Actions nebo GitLab CI).\
--   Připravit **Sprint 2**: první business funkce (projekty).
--   Cache (per lat,lon,date), rate-limit profil, RBAC scope `diary:write`.
--   Fallback provider + robustnější klasifikace COCO → label.
--   Unit/IT testy + metriky (latence, hit/miss cache).
-- 
+**TODO (další krok ve Sprintu 4):**
+- Implementace `InvoicePdfService` (export faktur do PDF s i18n formátováním).
+- Propojení faktur s ARES (automatické doplnění odběratele).
+- FE demo: modul fakturace + file upload (propojení s BE API).
+- Integrační testy `StoredFileController` (MockMvc: upload, download, 403 bez scope).
 
-- **Backend**
-  - Zapnout **Branch protection** na `main` a vyžadovat passing checks.
-  - Po prvním zeleném běhu CI otagovat `v0.1.0` (navazuje na `CHANGELOG.md`).
-
-- **Frontend**
-  - Inicializovat projekt: Vite React TS skeleton (`create-vite@7.1.1`), `npm install`, první commit.
-  - Přidat alias `@ -> src` a přísnější TS pravidla (`tsconfig.json`, `vite.config.ts`).
-  - Přidat router (`react-router-dom`), `AuthContext`, `AuthGuard`, `axios` instance (kostra).
-  - Zkopírovat `/docs` (GUIDELINES, TEMPLATES, hotovo‑todo‑future) – FE může mít vlastní časovou osu.
-  - Přidat `frontend-ci.yml` a CI badge do `README.md`.
-  - Zapnout **Branch protection** na `main`.
-------------------------------------------------------------------------
-
-## 🔮 FUTURE (střednědobé)
-- **Dependabot** pro Maven a npm (bezpečnostní updaty).
-- `CODEOWNERS` pro klíčové oblasti (security, migrace, FE auth/router).
-- Automatizace releasů (GitHub Releases s artefakty JAR/dist).
-- Přidat `Issues` štítky a šablony (bug report, feature request).
-
-## 🔮 FUTURE
-
--   Přechod na **distributed cache (Redis)** pro rate-limit a refresh
-    tokeny.\
--   Podpora **multi-tenantingu** (více firem v rámci jedné DB).\
--   Integrace **externích API** (ARES, ČÚZK).\
--   Připravit základní **frontend skeleton** (React + stavbau-ui).
+**FUTURE**
+- Integrace se službou e-mailu: `InvoiceEmailService` (odeslání faktur zákazníkům).
+- Rozšíření `FileStorage` o S3 implementaci (cloud).
+- Verzionování souborů a archivace (PRO verze).
