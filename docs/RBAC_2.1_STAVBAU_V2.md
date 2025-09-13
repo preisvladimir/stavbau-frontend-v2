@@ -131,17 +131,17 @@
 ### 5.1 MVP (in‑code)
 - `BuiltInScopes` (konstanty) — jediné místo s texty scopes.
 - `BuiltInRoles` — dvě mapy:
-  - `Map<CompanyRoleName, Set<String>> companyRoleScopes`
-  - `Map<ProjectRoleName, Set<String>> projectRoleScopes`
+    - `Map<CompanyRoleName, Set<String>> companyRoleScopes`
+    - `Map<ProjectRoleName, Set<String>> projectRoleScopes`
 
 ### 5.2 PRO (DB + cache)
 - **Tabulky:**
-  - `scope_definitions(id, area, action, description)`
-  - `roles(id, level ENUM('COMPANY','PROJECT'), name, display_name, description)`
-  - `role_scopes(role_id, scope_id)`
-  - `user_company_roles(user_id, company_id, role_id)`
-  - `project_members(project_id, user_id, role_id)` (již máme; `role_id` → ProjectRoleName/ref)
-  - *(volitelně)* `user_project_scopes_override(user_id, project_id, scope_id, grant_bool)`
+    - `scope_definitions(id, area, action, description)`
+    - `roles(id, level ENUM('COMPANY','PROJECT'), name, display_name, description)`
+    - `role_scopes(role_id, scope_id)`
+    - `user_company_roles(user_id, company_id, role_id)`
+    - `project_members(project_id, user_id, role_id)` (již máme; `role_id` → ProjectRoleName/ref)
+    - *(volitelně)* `user_project_scopes_override(user_id, project_id, scope_id, grant_bool)`
 - **Cache:** role→scopes, invalidace při změně.
 - **Migrace:** mapování legacy `User.role` → `companyRole` + `project_members.role`.
 
@@ -209,13 +209,13 @@ public interface RbacService {
 ```
 
 ### 7.3 Umístění v projektu (by feature)
-- `src/main/java/cz/stavbau/backend/security/rbac/`  
-  - `Scopes.java` (konstanty)  
-  - `CompanyRole.java`, `ProjectRole.java` (enumy)  
-  - `BuiltInRoles.java` (mapy role→scopes)  
-  - `RbacService.java`, `RbacServiceImpl.java`  
-  - `RbacMethodSecurityConfig.java` (povolení @PreAuthorize s bean `rbac`)  
-  - `SecurityUtils.java` (helpery k JWT a principalu)  
+- `src/main/java/cz/stavbau/backend/security/rbac/`
+    - `Scopes.java` (konstanty)
+    - `CompanyRole.java`, `ProjectRole.java` (enumy)
+    - `BuiltInRoles.java` (mapy role→scopes)
+    - `RbacService.java`, `RbacServiceImpl.java`
+    - `RbacMethodSecurityConfig.java` (povolení @PreAuthorize s bean `rbac`)
+    - `SecurityUtils.java` (helpery k JWT a principalu)
 
 ---
 
@@ -238,12 +238,12 @@ public interface RbacService {
 ---
 
 ## 10) Migrace RBAC 2.0 → 2.1 (STAVBAU‑V2)
-1. **Založit modul** `security/rbac` a vložit konstanty `Scopes`, enumy rolí, `BuiltInRoles`.  
-2. **Implementovat `RbacService`** a povolit method security.  
-3. **Upravit JWT vydávání**: dopočítat `scopes[]` z company + project rolí.  
-4. **Anotovat kontrolery** v MVP modulech (projects, logbook, budget, tasks, files, team, admin).  
-5. **FE toggly**: doplnit hooky/guards podle `scopes[]`, načítat `/auth/me`.  
-6. **Testy**: unit + mvc slice + e2e (viz výše).  
+1. **Založit modul** `security/rbac` a vložit konstanty `Scopes`, enumy rolí, `BuiltInRoles`.
+2. **Implementovat `RbacService`** a povolit method security.
+3. **Upravit JWT vydávání**: dopočítat `scopes[]` z company + project rolí.
+4. **Anotovat kontrolery** v MVP modulech (projects, logbook, budget, tasks, files, team, admin).
+5. **FE toggly**: doplnit hooky/guards podle `scopes[]`, načítat `/auth/me`.
+6. **Testy**: unit + mvc slice + e2e (viz výše).
 7. **(PRO fáze)**: Flyway tabulky (viz kap. 5.2), CRUD pro role/scopes admin UI, cache invalidace.
 
 ---
@@ -251,24 +251,24 @@ public interface RbacService {
 ## 11) Přílohy
 ### 11.1 Minimální role‑to‑scope matrix (FE orientačně)
 - **Company:**
-  - OWNER → vše + admin + integrations
-  - COMPANY_ADMIN → `dashboard:view`, `projects:*` (bez delete), `team:*`, `admin:users_read`
-  - VIEWER → `dashboard:view`, `projects:read`
-  - AUDITOR_READONLY → `*:read`
+    - OWNER → vše + admin + integrations
+    - COMPANY_ADMIN → `dashboard:view`, `projects:*` (bez delete), `team:*`, `admin:users_read`
+    - VIEWER → `dashboard:view`, `projects:read`
+    - AUDITOR_READONLY → `*:read`
 - **Project:**
-  - PROJECT_MANAGER → `*:all` v projektu + `budget:approve`
-  - SITE_MANAGER → operativa bez `budget:approve`
-  - QS → `budget:*` (+ často `budget:approve`)
-  - PROJECT_VIEWER → `*:read`
+    - PROJECT_MANAGER → `*:all` v projektu + `budget:approve`
+    - SITE_MANAGER → operativa bez `budget:approve`
+    - QS → `budget:*` (+ často `budget:approve`)
+    - PROJECT_VIEWER → `*:read`
 
 > Přesné vyhodnocení vždy na BE, FE matrix slouží pro UX toggly.
 
 ---
 
 ## 12) Soulad s STAVBAU‑V2 guidelines
-- **Modular monolith by feature**: RBAC je samostatný modul, ne prosakující utilita.  
-- **Nepsat dopředu**: začínáme MVP katalogem scopes/rolí a postupně rozšiřujeme.  
-- **Checkpointy**: po nasazení RBAC základů zapiš do `hotovo-todo-future.md`.  
+- **Modular monolith by feature**: RBAC je samostatný modul, ne prosakující utilita.
+- **Nepsat dopředu**: začínáme MVP katalogem scopes/rolí a postupně rozšiřujeme.
+- **Checkpointy**: po nasazení RBAC základů zapiš do `hotovo-todo-future.md`.
 - **CI/PR**: změny v RBAC vyžadují CODEOWNERS review (security).
 
 ---

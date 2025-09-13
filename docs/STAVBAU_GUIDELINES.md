@@ -45,7 +45,6 @@ Slouží jako **jediný zdroj pravdy** pro postup v projektu.
   🔹 Doménový návrh řízení přístupu (Company roles, Project roles, Scopes).  
   ➝ Používat při implementaci bezpečnostních kontrol, JWT payloadu, FE togglů a BE autorizace.  
   ➝ Každá změna RBAC musí být provedena skrz tento dokument (PR + update), aby zůstal jediným zdrojem pravdy.
-  
 ---
 
 ## 3. Průběh práce (workflow)
