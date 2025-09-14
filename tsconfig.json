@@ -10,6 +10,8 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
-    "types": ["vitest", "node"]
+    "types": ["vitest", "node"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true
   }
 }

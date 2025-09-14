@@ -28,8 +28,14 @@ export function withInterceptors(instance: AxiosInstance) {
   instance.interceptors.response.use(
     (res) => res,
     async (error: AxiosError) => {
-      const original = error.config as AxiosRequestConfig & { _retried?: boolean };
+      const original = error.config as AxiosRequestConfig & { _retried?: boolean; _skipRefresh?: boolean };
       const status = error.response?.status;
+
+      // ⛳️ Pojistka: speciálně označené requesty (např. první /auth/me po loginu) NErefreshujeme
+      if (status === 401 && original?._skipRefresh) {
+        tokenManager.onUnauthorized?.();
+        return Promise.reject(error);
+      }     
 
       if (status === 401 && !original?._retried) {
         if (!tokenManager.getRefreshToken()) {

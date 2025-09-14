@@ -1,0 +1,312 @@
+/* =========================================
+   STAVBAU – Design tokens & primitives
+   ========================================= */
+:root {
+  /* Base palette */
+  --sb-bg: 255 255 255;
+  --sb-fg: 15 23 42;          /* slate-900 */
+  --sb-muted: 100 116 139;    /* slate-500 */
+  --sb-border: 226 232 240;   /* slate-200 */
+
+  /* Brand */
+  --sb-primary: 16 185 129;       /* emerald-500 */
+  --sb-primary-600: 5 150 105;    /* emerald-600 */
+  --sb-accent: 245 158 11;        /* amber-500 */
+
+  /* Status */
+  --sb-success: 34 197 94;   /* green-500 */
+  --sb-info: 59 130 246;     /* blue-500 */
+  --sb-warning: 245 158 11;  /* amber-500 */
+  --sb-danger: 239 68 68;    /* red-500 */
+
+  /* Surfaces / elevation */
+  --sb-surface: 255 255 255;
+  --sb-elev-1: 0 0 0 / 0.04;
+  --sb-elev-2: 0 0 0 / 0.08;
+
+  /* Typography */
+  --sb-font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --sb-font-size: 16px;
+  --sb-leading: 1.5;
+
+  /* Radius & spacing */
+  --sb-radius-sm: .5rem;  /* 8 */
+  --sb-radius: .75rem;    /* 12 */
+  --sb-radius-lg: 1rem;   /* 16 */
+  --sb-gap: .75rem;
+
+  /* Focus ring */
+  --sb-ring: 110 231 183;        /* emerald-300 */
+  --sb-ring-offset: 255 255 255; /* surface bg */
+
+  /* Z-index */
+  --sb-z-nav: 50;
+  --sb-z-modal: 100;
+  --sb-z-toast: 200;
+}
+
+:root[data-theme="dark"] {
+  --sb-bg: 15 23 42;        /* slate-900 */
+  --sb-fg: 241 245 249;     /* slate-100 */
+  --sb-muted: 148 163 184;  /* slate-400 */
+  --sb-border: 51 65 85;    /* slate-700 */
+  --sb-surface: 30 41 59;   /* slate-800 */
+  --sb-elev-1: 0 0 0 / 0.5;
+  --sb-elev-2: 0 0 0 / 0.6;
+  --sb-ring-offset: 30 41 59;
+}
+
+/* =========================================
+   Base reset
+   ========================================= */
+html, body { height: 100%; }
+html, body {
+  font-family: var(--sb-font-sans);
+  font-size: var(--sb-font-size);
+  line-height: var(--sb-leading);
+  color: rgb(var(--sb-fg));
+  background: rgb(var(--sb-bg));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+img, svg, video, canvas { display:block; max-width:100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* Headings scale (lehké sjednocení) */
+h1 { font-size: clamp(1.4rem, 1.2rem + 1.2vw, 2rem); font-weight: 800; letter-spacing: .2px; }
+h2 { font-size: clamp(1.2rem, 1.1rem + .6vw, 1.5rem); font-weight: 700; }
+h3 { font-size: 1.125rem; font-weight: 700; }
+
+/* Links */
+a { color: rgb(var(--sb-info)); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Focus ring (globální) */
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(var(--sb-ring-offset)),
+    0 0 0 4px rgb(var(--sb-ring));
+  border-radius: .25rem;
+}
+
+/* =========================================
+   Layout utilities
+   ========================================= */
+.sb-container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+.sb-content { 
+  padding: 16px 0 88px; 
+  margin: 15px;
+} /* rezerva pro bottom bar na mobilech */
+@media (min-width: 768px) {
+  .sb-content { padding: 24px 0 24px; }
+}
+
+/* ===== GRID SHELL – 1 col mobile, 2 cols desktop ===== */
+.sb-shell{
+  min-height: 100vh;
+  background: rgb(var(--sb-bg));
+  color: rgb(var(--sb-fg));
+  display: grid;
+  grid-template-columns: 1fr;            /* mobile: bez sidebaru */
+  grid-template-rows: 1fr;
+}
+@media (min-width: 768px){
+  .sb-shell{
+    grid-template-columns: 14rem 1fr;    /* desktop: sidebar 224px + obsah */
+  }
+}
+
+/* Sidebar */
+.sb-aside{
+  display: none;
+  padding: 1rem;
+  border-right: 1px solid rgb(var(--sb-border));
+  background: rgb(var(--sb-surface));
+}
+@media (min-width: 768px){
+  .sb-aside{ display: block; }
+}
+
+/* Hlavní panel – vlastní scroll kontejnér */
+.sb-main{
+  min-height: 100vh;
+  overflow: auto;                        /* sticky header lepí uvnitř mainu */
+  background: rgb(var(--sb-bg));
+}
+
+/* Sticky header uvnitř mainu */
+.sb-header{
+  position: sticky;
+  top: 0;
+  z-index: var(--sb-z-nav);
+  background: rgb(var(--sb-surface));
+  border-bottom: 1px solid rgb(var(--sb-border));
+}
+
+/* Sidebar / nav odkazy (konzistence) */
+.sb-nav__link {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: rgb(var(--sb-muted));
+  text-decoration: none;
+}
+.sb-nav__link:hover,
+.sb-nav__link.active {
+  background: rgba(var(--sb-border), .6);
+  color: rgb(var(--sb-fg));
+}
+
+/* =========================================
+   Cards
+   ========================================= */
+.sb-card {
+  background: rgb(var(--sb-surface));
+  border: 1px solid rgb(var(--sb-border));
+  border-radius: var(--sb-radius);
+  box-shadow: 0 1px 2px rgba(var(--sb-elev-1));
+}
+.sb-shadow-2 { box-shadow: 0 2px 10px rgba(var(--sb-elev-2)); }
+
+/* =========================================
+   Buttons (mapováno v UI kitu)
+   ========================================= */
+.sb-btn {
+  display: inline-flex;
+  gap: .5rem;
+  align-items: center;
+  justify-content: center;
+  height: 44px; /* mobilní target */
+  padding: 0 .9rem;
+  font-weight: 600;
+  border-radius: var(--sb-radius);
+  border: 1px solid transparent;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
+}
+.sb-btn:active { transform: translateY(1px); }
+.sb-btn--primary   { background: rgb(var(--sb-primary)); color: #fff; }
+.sb-btn--primary:hover { background: rgb(var(--sb-primary-600)); }
+.sb-btn--outline   { background: rgb(var(--sb-surface)); color: rgb(var(--sb-fg)); border-color: rgb(var(--sb-border)); }
+.sb-btn--danger    { background: rgb(var(--sb-danger)); color: #fff; }
+
+/* =========================================
+   Badges
+   ========================================= */
+.sb-badge {
+  display: inline-flex; gap:.4rem; align-items:center;
+  height: 22px; padding: 0 .5rem;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: rgba(var(--sb-border));
+  color: rgb(var(--sb-muted));
+}
+.sb-badge--dot::before {
+  content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block;
+}
+
+/* Intent helpers (pro Badge / tagy – např. mapováno ve stavbau-ui) */
+.sb-intent--success { color: rgb(var(--sb-success)); background: color-mix(in oklab, rgb(var(--sb-success)) 15%, rgb(var(--sb-surface))); }
+.sb-intent--info    { color: rgb(var(--sb-info));    background: color-mix(in oklab, rgb(var(--sb-info)) 12%, rgb(var(--sb-surface))); }
+.sb-intent--warning { color: rgb(var(--sb-warning)); background: color-mix(in oklab, rgb(var(--sb-warning)) 18%, rgb(var(--sb-surface))); }
+.sb-intent--danger  { color: rgb(var(--sb-danger));  background: color-mix(in oklab, rgb(var(--sb-danger)) 12%, rgb(var(--sb-surface))); }
+.sb-intent--neutral { color: rgb(var(--sb-muted));   background: rgba(var(--sb-border), .7); }
+
+/* =========================================
+   Tables
+   ========================================= */
+.sb-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.sb-table th, .sb-table td { padding: .65rem .75rem; border-bottom: 1px solid rgb(var(--sb-border)); }
+.sb-table th { text-align: left; color: rgb(var(--sb-muted)); font-weight: 600; }
+.sb-table tr:hover td {
+  background: color-mix(in oklab, rgb(var(--sb-surface)), rgb(var(--sb-border)) 15%);
+}
+
+/* =========================================
+   Modal
+   ========================================= */
+.sb-modal-backdrop {
+  position: fixed; inset: 0; z-index: var(--sb-z-modal);
+  background: color-mix(in oklab, black, transparent 50%);
+  display: grid; place-items: center; padding: 1rem;
+  padding: 15px;
+}
+.sb-modal {
+  background: rgb(var(--sb-surface));
+  border: 1px solid rgb(var(--sb-border));
+  border-radius: var(--sb-radius-lg);
+  box-shadow: 0 12px 32px rgba(0,0,0,.28);
+  width: min(720px, calc(100vw - 2rem));
+  padding: 15px;
+}
+
+/* =========================================
+   Inputs
+   ========================================= */
+.sb-input, .sb-select, .sb-textarea {
+  width: 100%;
+  border: 1px solid rgb(var(--sb-border));
+  background: rgb(var(--sb-surface));
+  color: rgb(var(--sb-fg));
+  border-radius: var(--sb-radius);
+  padding: .55rem .7rem;
+  font-size: .95rem;
+}
+.sb-input:focus, .sb-select:focus, .sb-textarea:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(var(--sb-ring-offset)),
+    0 0 0 4px rgb(var(--sb-ring));
+}
+
+/* =========================================
+   Bottom app bar (mobile) + FAB
+   (podporuje .sb-bottombar i .sb-bottom-bar)
+   ========================================= */
+.sb-bottombar, .sb-bottom-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: var(--sb-z-nav);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: .25rem; padding: .5rem .75rem;
+  background: rgb(var(--sb-surface));
+  border-top: 1px solid rgb(var(--sb-border));
+}
+.sb-bottombar__link,
+.sb-bottom-bar .sb-bottombar__link,
+.sb-bottom-bar a,
+.sb-bottom-bar button {
+  text-align: center;
+  font-size: 12px;
+  padding: .4rem .5rem;
+  color: rgb(var(--sb-muted));
+  text-decoration: none;
+  border-radius: .6rem;
+  background: transparent;
+  border: 0;
+}
+.sb-bottombar__link.active,
+.sb-bottom-bar a.active {
+  color: rgb(var(--sb-primary-600));
+  background: color-mix(in oklab, rgb(var(--sb-primary)) 10%, rgb(var(--sb-surface)));
+}
+
+/* FAB – mimo media query, ať má styl i při inspectu */
+.sb-fab {
+  position: fixed; right: 1rem; bottom: 4.5rem;
+  z-index: var(--sb-z-nav);
+  width: 56px; height: 56px; border-radius: 999px;
+  background: rgb(var(--sb-primary)); color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,.2);
+  border: 0;
+}
+.sb-fab:active { transform: translateY(1px); }
+.sb-fab__plus { font-size: 22px; font-weight: 700; line-height: 1; }
+
+/* Rezerva pod obsah na mobilech (pokud by někde chyběla .sb-content) */
+@media (max-width: 767px) {
+  main { padding-bottom: 88px; }
+}

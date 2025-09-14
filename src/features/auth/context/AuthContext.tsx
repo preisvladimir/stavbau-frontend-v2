@@ -36,13 +36,20 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, [refreshToken]);
 
   const login = useCallback(async (r: LoginResponse) => {
+    // ⛳️ Okamžitě registruj tokeny pro interceptory (nečekej na re-render)
+    tokenManager.register({
+      getAccessToken: () => r.accessToken,
+      getRefreshToken: () => r.refreshToken,
+      refreshTokens,
+      onUnauthorized: logout,
+    });
     setAccess(r.accessToken);
     setRefresh(r.refreshToken);
-   setExpires(r.expiresAt);
-    // ihned načti /auth/me
-    const me = await AuthService.me();
+    setExpires(r.expiresAt);
+    // ihned načti /auth/me s čerstvým tokenem (a flagem _skipRefresh)
+    const me = await AuthService.me(r.accessToken);
     setUser(me);
- }, []);
+  }, []);
 
   // registrace tokenManageru pro interceptory (DI)
   useMemo(() => {

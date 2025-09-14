@@ -1,0 +1,12 @@
+{
+    "401": "Invalid credentials or session expired.",
+    "403": "You are not allowed to perform this action.",
+    "429": "Rate limit exceeded. Please try again later.",
+    "5xx": "Unexpected error. Please try again.",
+    "tryAgainLater": "Please try again later.",
+    "validation": {
+        "email": "Enter a valid email.",
+        "required": "This field is required.",
+        "password_min": "Password must be at least {{min}} characters."
+    }
+}

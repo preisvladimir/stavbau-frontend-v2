@@ -1,7 +1,7 @@
 // --- TabButton.tsx ---
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import clsx from "clsx";
+import { cn } from "@/lib/utils/cn";
 
 // Varianty: aktivní = primary, jinak outline
 const tabButtonVariants = cva(
@@ -25,7 +25,11 @@ export interface TabButtonProps
 
 export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
   ({ className, active, ...props }, ref) => (
-    <button ref={ref} className={clsx(tabButtonVariants({ active }), className)} {...props} />
+    <button
+      ref={ref}
+      className={cn(tabButtonVariants({ active }), className)}
+      {...props}
+    />
   )
 );
 
