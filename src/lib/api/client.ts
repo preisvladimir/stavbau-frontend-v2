@@ -6,5 +6,7 @@ import { getEnv } from "../utils/env";
 export const api = withInterceptors(
   axios.create({
     baseURL: getEnv("VITE_API_BASE_URL"),
+    timeout: 15000,
+    headers: { "Content-Type": "application/json" },
   })
 );

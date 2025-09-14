@@ -1,0 +1,534 @@
+*** a/src/features/auth/pages/LoginPage.tsx
+--- b/src/features/auth/pages/LoginPage.tsx
+@@
+-import React from "react";
+-
+-/** TODO: RHF + Zod form, i18n hlášky, 401/429 inline+toast, loading state */
+-export default function LoginPage() {
+-  return (
+-    <div className="min-h-screen grid place-items-center p-6">
+-      {/* TODO: Card + form (email, password, submit) */}
+-      <div>TODO: Login form</div>
+-    </div>
+-  );
+-}
++import React, { useState } from "react";
++import { useForm } from "react-hook-form";
++import { z } from "zod";
++import { zodResolver } from "@hookform/resolvers/zod";
++import { useTranslation } from "react-i18next";
++import { AuthService } from "@/features/auth/services/AuthService";
++import { useAuth } from "@/features/auth/hooks/useAuth";
++import { useSearchParams, useNavigate } from "react-router-dom";
++
++const schema = z.object({
++  email: z.string().email({ message: "validation.email" }),
++  password: z.string().min(6, { message: "validation.password_min" }),
++});
++type FormValues = z.infer<typeof schema>;
++
++export default function LoginPage() {
++  const { t } = useTranslation(["auth", "errors"]);
++  const { login } = useAuth();
++  const [search] = useSearchParams();
++  const navigate = useNavigate();
++  const [serverErrorKey, setServerErrorKey] = useState<string | null>(null);
++
++  const {
++    register,
++    handleSubmit,
++    formState: { errors, isSubmitting },
++  } = useForm<FormValues>({ resolver: zodResolver(schema) });
++
++  const onSubmit = async (data: FormValues) => {
++    setServerErrorKey(null);
++    try {
++      const res = await AuthService.login({ email: data.email, password: data.password });
++      await login(res); // provede i /auth/me
++      const redirectTo = search.get("redirectTo") || "/app/dashboard";
++      navigate(redirectTo, { replace: true });
++    } catch (e: any) {
++      const status = e?.response?.status;
++      if (status === 401) setServerErrorKey("401");
++      else if (status === 429) setServerErrorKey("429");
++      else setServerErrorKey("5xx");
++    }
++  };
++
++  return (
++    <div className="min-h-dvh grid place-items-center p-6">
++      <div className="w-full max-w-sm border rounded-2xl p-6 shadow-sm bg-white">
++        <h1 className="text-xl font-semibold mb-4">{t("login.title", { ns: "auth" })}</h1>
++        {serverErrorKey && (
++          <div role="alert" className="mb-3 text-sm text-red-600">
++            {t(serverErrorKey, { ns: "errors", min: 6 })}
++          </div>
++        )}
++        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
++          <div>
++            <label className="block text-sm mb-1" htmlFor="email">{t("login.email", { ns: "auth" })}</label>
++            <input
++              id="email"
++              type="email"
++              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
++              autoComplete="email"
++              {...register("email")}
++              aria-invalid={!!errors.email}
++              aria-describedby={errors.email ? "email-error" : undefined}
++            />
++            {errors.email && (
++              <p id="email-error" className="mt-1 text-xs text-red-600">
++                {t(errors.email.message || "validation.email", { ns: "errors", min: 6 })}
++              </p>
++            )}
++          </div>
++          <div>
++            <label className="block text-sm mb-1" htmlFor="password">{t("login.password", { ns: "auth" })}</label>
++            <input
++              id="password"
++              type="password"
++              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
++              autoComplete="current-password"
++              {...register("password")}
++              aria-invalid={!!errors.password}
++              aria-describedby={errors.password ? "password-error" : undefined}
++            />
++            {errors.password && (
++              <p id="password-error" className="mt-1 text-xs text-red-600">
++                {t(errors.password.message || "validation.password_min", { ns: "errors", min: 6 })}
++              </p>
++            )}
++          </div>
++          <button
++            type="submit"
++            disabled={isSubmitting}
++            className="w-full rounded-lg px-3 py-2 border bg-black text-white disabled:opacity-60"
++            aria-busy={isSubmitting}
++          >
++            {isSubmitting ? t("common:actions.login") + "…" : t("common:actions.login")}
++          </button>
++        </form>
++      </div>
++    </div>
++  );
++}
+*** a/src/lib/api/interceptors.ts
+--- b/src/lib/api/interceptors.ts
+@@
+-import type { AxiosInstance } from "axios";
+-
+-/** TODO: request: Authorization Bearer; response: 401→refresh→retry, 403/429 UX */
+-export function withInterceptors(instance: AxiosInstance) {
+-  // TODO: add request/response interceptors + singleflight refresh
+-  return instance;
+-}
++import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } from "axios";
++import { tokenManager } from "./tokenManager";
++
++let isRefreshing = false;
++let waitQueue: Array<() => void> = [];
++
++function onRefreshed() {
++  waitQueue.forEach((cb) => cb());
++  waitQueue = [];
++}
++
++function enqueue(cb: () => void) {
++  waitQueue.push(cb);
++}
++
++export function withInterceptors(instance: AxiosInstance) {
++  // Request: Authorization header
++  instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
++    const access = tokenManager.getAccessToken();
++    if (access) {
++      config.headers = config.headers ?? {};
++      (config.headers as any).Authorization = `Bearer ${access}`;
++    }
++    return config;
++  });
++
++  // Response: 401→refresh→retry, 403/429 UX
++  instance.interceptors.response.use(
++    (res) => res,
++    async (error: AxiosError) => {
++      const original = error.config as AxiosRequestConfig & { _retried?: boolean };
++      const status = error.response?.status;
++
++      if (status === 401 && !original?._retried) {
++        if (!tokenManager.getRefreshToken()) {
++          tokenManager.onUnauthorized?.();
++          return Promise.reject(error);
++        }
++        if (isRefreshing) {
++          // čekej na dokončení refresh
++          await new Promise<void>((resolve) => enqueue(resolve));
++          original._retried = true;
++          return instance(original);
++        }
++        try {
++          isRefreshing = true;
++          await tokenManager.refreshTokens(); // delegováno do AuthContext
++          onRefreshed();
++          original._retried = true;
++          return instance(original);
++        } catch (e) {
++          tokenManager.onUnauthorized?.();
++          return Promise.reject(e);
++        } finally {
++          isRefreshing = false;
++        }
++      }
++
++      if (status === 403) {
++        tokenManager.onForbidden?.(error);
++      } else if (status === 429) {
++        tokenManager.onRateLimit?.(error);
++      }
++      return Promise.reject(error);
++    }
++  );
++  return instance;
++}
+*** /dev/null
+--- b/src/lib/api/tokenManager.ts
+@@
++type Handlers = {
++  refreshTokens: () => Promise<void>;
++  getAccessToken: () => string | null | undefined;
++  getRefreshToken: () => string | null | undefined;
++  onUnauthorized?: () => void;
++  onForbidden?: (e: unknown) => void;
++  onRateLimit?: (e: unknown) => void;
++};
++
++// Lehký DI bridge mezi interceptory a AuthContext, aby nevznikla kruhová závislost.
++class TokenManager {
++  private handlers: Partial<Handlers> = {};
++  register(h: Partial<Handlers>) { this.handlers = { ...this.handlers, ...h }; }
++  async refreshTokens() { return this.handlers.refreshTokens?.() ?? Promise.reject("refreshTokens not set"); }
++  getAccessToken() { return this.handlers.getAccessToken?.(); }
++  getRefreshToken() { return this.handlers.getRefreshToken?.(); }
++  onUnauthorized?() { return this.handlers.onUnauthorized?.(); }
++  onForbidden?(e: unknown) { return this.handlers.onForbidden?.(e); }
++  onRateLimit?(e: unknown) { return this.handlers.onRateLimit?.(e); }
++}
++
++export const tokenManager = new TokenManager();
+*** a/src/features/auth/services/AuthService.ts
+--- b/src/features/auth/services/AuthService.ts
+@@
+-import { api } from "@/lib/api/client";
+-import type { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "@/lib/api/types";
+-
+-/** TODO: volání /auth/login, /auth/me, /auth/refresh (jen signatury) */
+-export const AuthService = {
+-  login: async (_payload: LoginRequest): Promise<LoginResponse> => {
+-    // TODO: implement
+-    return Promise.reject(new Error("Not implemented"));
+-  },
+-  me: async (): Promise<MeResponse> => Promise.reject(new Error("Not implemented")),
+-  refresh: async (_payload: RefreshRequest): Promise<RefreshResponse> => Promise.reject(new Error("Not implemented")),
+-};
++import { api } from "@/lib/api/client";
++import type { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "@/lib/api/types";
++
++export const AuthService = {
++  async login(payload: LoginRequest): Promise<LoginResponse> {
++    const { data } = await api.post<LoginResponse>("/auth/login", payload);
++    return data;
++  },
++  async me(): Promise<MeResponse> {
++    const { data } = await api.get<MeResponse>("/auth/me");
++    return data;
++  },
++  async refresh(payload: RefreshRequest): Promise<RefreshResponse> {
++    const { data } = await api.post<RefreshResponse>("/auth/refresh", payload);
++    return data;
++  },
++};
+*** a/src/features/auth/context/AuthContext.tsx
+--- b/src/features/auth/context/AuthContext.tsx
+@@
+-import React, { createContext, useContext } from "react";
+-import type { MeResponse, LoginResponse } from "@/lib/api/types";
+-
+-/** TODO: držet v paměti access/refresh/expiresAt, user, role, scopes */
+-export type AuthState = {
+-  isAuthenticated: boolean;
+-  user?: MeResponse | null;
+-  accessToken?: string | null;
+-  refreshToken?: string | null;
+-  expiresAt?: string | null;
+-  login: (_r: LoginResponse) => void;   // TODO: doplnit signaturu podle implementace
+-  logout: () => void;
+-  refreshTokens: () => Promise<void>;
+-};
+-
+-const AuthContext = createContext<AuthState | undefined>(undefined);
+-
+-export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+-  // TODO: state + provider
+-  const value: AuthState = {
+-    isAuthenticated: false,
+-    user: null,
+-    accessToken: null,
+-    refreshToken: null,
+-    expiresAt: null,
+-    login: () => {},
+-    logout: () => {},
+-    refreshTokens: async () => {},
+-  };
+-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+-};
+-
+-export const useAuthContext = () => {
+-  const ctx = useContext(AuthContext);
+-  if (!ctx) throw new Error("useAuthContext must be used within AuthProvider");
+-  return ctx;
+-};
++import React, { createContext, useContext, useMemo, useState, useCallback } from "react";
++import type { MeResponse, LoginResponse } from "@/lib/api/types";
++import { AuthService } from "../services/AuthService";
++import { tokenManager } from "@/lib/api/tokenManager";
++
++export type AuthState = {
++  isAuthenticated: boolean;
++  user: MeResponse | null;
++  accessToken: string | null;
++  refreshToken: string | null;
++  expiresAt: string | null;
++  login: (r: LoginResponse) => Promise<void>;
++  logout: () => void;
++  refreshTokens: () => Promise<void>;
++};
++
++const AuthContext = createContext<AuthState | undefined>(undefined);
++
++export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
++  const [user, setUser] = useState<MeResponse | null>(null);
++  const [accessToken, setAccess] = useState<string | null>(null);
++  const [refreshToken, setRefresh] = useState<string | null>(null);
++  const [expiresAt, setExpires] = useState<string | null>(null);
++
++  const isAuthenticated = !!accessToken;
++
++  const logout = useCallback(() => {
++    setUser(null); setAccess(null); setRefresh(null); setExpires(null);
++  }, []);
++
++  const refreshTokens = useCallback(async () => {
++    if (!refreshToken) throw new Error("No refresh token");
++    const res = await AuthService.refresh({ refreshToken });
++    setAccess(res.accessToken);
++    setRefresh(res.refreshToken);
++    setExpires(res.expiresAt);
++  }, [refreshToken]);
++
++  const login = useCallback(async (r: LoginResponse) => {
++    setAccess(r.accessToken);
++    setRefresh(r.refreshToken);
++    setExpires(r.expiresAt);
++    // ihned načti /auth/me
++    const me = await AuthService.me();
++    setUser(me);
++  }, []);
++
++  // registrace tokenManageru pro interceptory (DI)
++  useMemo(() => {
++    tokenManager.register({
++      getAccessToken: () => accessToken,
++      getRefreshToken: () => refreshToken,
++      refreshTokens,
++      onUnauthorized: logout,
++    });
++  }, [accessToken, refreshToken, refreshTokens, logout]);
++
++  const value: AuthState = {
++    isAuthenticated,
++    user,
++    accessToken,
++    refreshToken,
++    expiresAt,
++    login,
++    logout,
++    refreshTokens,
++  };
++  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
++};
++
++export const useAuthContext = () => {
++  const ctx = useContext(AuthContext);
++  if (!ctx) throw new Error("useAuthContext must be used within AuthProvider");
++  return ctx;
++};
+*** a/src/lib/api/client.ts
+--- b/src/lib/api/client.ts
+@@
+ import axios from "axios";
+ import { withInterceptors } from "./interceptors";
+ import { getEnv } from "../utils/env";
+ 
+ /** Axios klient s baseURL; TODO: doplnit timeout, headers */
+ export const api = withInterceptors(
+   axios.create({
+     baseURL: getEnv("VITE_API_BASE_URL"),
++    timeout: 15000,
++    headers: { "Content-Type": "application/json" },
+   })
+ );
+*** a/src/lib/api/types.ts
+--- b/src/lib/api/types.ts
+@@
+ export type LoginRequest = { email: string; password: string; };
+ export type LoginResponse = { accessToken: string; refreshToken: string; expiresAt: string; };
+ export type RefreshRequest = { refreshToken: string; };
+ export type RefreshResponse = { accessToken: string; refreshToken: string; expiresAt: string; };
+ export type MeResponse = {
+   id: string;
+   email: string;
+   fullName: string;
+   avatarUrl?: string | null;
+   activeCompany?: { id: string; name: string } | null;
+   role: string;
+   scopes: string[];
+ };
++export type PageResponse<T> = { items: T[]; page: number; size: number; total: number; };
+*** a/src/features/auth/utils/hasScope.ts
+--- b/src/features/auth/utils/hasScope.ts
+@@
+-/** Čistá utilita pro kontrolu scopes (anyOf/allOf – zatím anyOf). TODO: rozšířit */
+-export function hasScope(userScopes: string[], required: string | string[]) {
+-  const need = Array.isArray(required) ? required : [required];
+-  return need.some((s) => userScopes.includes(s));
+-}
++/** Čistá utilita pro kontrolu scopes. Podporuje anyOf (default) a allOf. */
++export function hasScope(userScopes: string[], required: string | string[], mode: "anyOf" | "allOf" = "anyOf") {
++  const need = Array.isArray(required) ? required : [required];
++  if (mode === "allOf") return need.every((s) => userScopes.includes(s));
++  return need.some((s) => userScopes.includes(s));
++}
+*** a/src/routes/components/Sidebar.tsx
+--- b/src/routes/components/Sidebar.tsx
+@@
+-import React from "react";
+-/** TODO: navigace podle scopes (Dashboard, Projects), collapsible */
+-export default function Sidebar() { return <aside className="w-64 border-r p-4 hidden md:block">TODO: Sidebar</aside>; }
++import React from "react";
++import { NavLink } from "react-router-dom";
++import { useAuth } from "@/features/auth/hooks/useAuth";
++import { hasScope } from "@/features/auth/utils/hasScope";
++
++export default function Sidebar() {
++  const { user } = useAuth();
++  const scopes = user?.scopes ?? [];
++
++  const canReadProjects = hasScope(scopes, "projects:read", "anyOf");
++
++  return (
++    <aside className="w-64 border-r p-4 hidden md:block">
++      <nav className="space-y-2">
++        <NavLink to="/app/dashboard" className="block px-2 py-1 rounded hover:bg-muted">Přehled</NavLink>
++        {canReadProjects && (
++          <NavLink to="/app/projects" className="block px-2 py-1 rounded hover:bg-muted">Projekty</NavLink>
++        )}
++      </nav>
++    </aside>
++  );
++}
+*** a/src/pages/projects/ProjectsListPage.tsx
+--- b/src/pages/projects/ProjectsListPage.tsx
+@@
+-import React from "react";
+-/** TODO: ScopeGuard pro "Nový projekt" tlačítko (projects:create) */
+-export default function ProjectsListPage(){ return <div>TODO: Projects list</div>; }
++import React from "react";
++import ScopeGuard from "@/features/auth/guards/ScopeGuard";
++import { Link } from "react-router-dom";
++
++export default function ProjectsListPage(){
++  return (
++    <div className="space-y-4">
++      <div className="flex items-center justify-between">
++        <h2 className="text-lg font-semibold">Projekty</h2>
++        <ScopeGuard required="projects:create" fallback={null}>
++          <Link to="/app/projects/new" className="rounded px-3 py-2 border">Nový projekt</Link>
++        </ScopeGuard>
++      </div>
++      <div className="text-sm text-muted-foreground">TODO: seznam projektů</div>
++    </div>
++  );
++}
+*** a/src/pages/projects/ProjectNewPage.tsx
+--- b/src/pages/projects/ProjectNewPage.tsx
+@@
+-import React from "react";
+-/** TODO: celá stránka chráněná ScopeGuardem (projects:create) */
+-export default function ProjectNewPage(){ return <div>TODO: New Project</div>; }
++import React from "react";
++import ScopeGuard from "@/features/auth/guards/ScopeGuard";
++
++export default function ProjectNewPage(){
++  return (
++    <ScopeGuard required="projects:create" fallback={<div className="text-sm text-muted-foreground">Nemáš oprávnění vytvořit projekt.</div>}>
++      <div>TODO: New Project</div>
++    </ScopeGuard>
++  );
++}
+*** a/src/features/auth/guards/ProtectedRoute.tsx
+--- b/src/features/auth/guards/ProtectedRoute.tsx
+@@
+ export default function ProtectedRoute() {
+   const { isAuthenticated } = useAuthContext();
+   const loc = useLocation();
+   if (!isAuthenticated) return <Navigate to={`/login?redirectTo=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
+   return <Outlet />;
+ }
+*** a/src/features/auth/guards/__tests__/ProtectedRoute.test.tsx
+--- b/src/features/auth/guards/__tests__/ProtectedRoute.test.tsx
+@@
+-describe("ProtectedRoute", () => { test("TODO", () => { expect(true).toBe(true); }); });
++import { describe, it, expect } from "vitest";
++describe("ProtectedRoute", () => {
++  it("placeholder", () => { expect(true).toBe(true); });
++});
+*** a/src/features/auth/guards/__tests__/ScopeGuard.test.tsx
+--- b/src/features/auth/guards/__tests__/ScopeGuard.test.tsx
+@@
+-describe("ScopeGuard", () => { test("TODO", () => { expect(true).toBe(true); }); });
++import { describe, it, expect } from "vitest";
++describe("ScopeGuard", () => {
++  it("placeholder", () => { expect(true).toBe(true); });
++});
+*** a/src/features/auth/utils/__tests__/hasScope.test.ts
+--- b/src/features/auth/utils/__tests__/hasScope.test.ts
+@@
+-describe("hasScope", () => { test("TODO", () => { expect(true).toBe(true); }); });
++import { describe, it, expect } from "vitest";
++import { hasScope } from "../../utils/hasScope";
++describe("hasScope", () => {
++  it("anyOf works", () => {
++    expect(hasScope(["a","b"], ["x","b"], "anyOf")).toBe(true);
++  });
++  it("allOf works", () => {
++    expect(hasScope(["a","b","c"], ["a","b"], "allOf")).toBe(true);
++    expect(hasScope(["a","b"], ["a","b","c"], "allOf")).toBe(false);
++  });
++  it("single string", () => {
++    expect(hasScope(["p:r"], "p:r")).toBe(true);
++  });
++});
+*** a/src/lib/api/__tests__/interceptors.test.ts
+--- b/src/lib/api/__tests__/interceptors.test.ts
+@@
+-describe("interceptors", () => { test("TODO", () => { expect(true).toBe(true); }); });
++import { describe, it, expect } from "vitest";
++describe("interceptors", () => {
++  it("placeholder", () => { expect(true).toBe(true); });
++});
+*** a/e2e/smoke.login.spec.ts
+--- b/e2e/smoke.login.spec.ts
+@@
+-describe("smoke login", () => { it("TODO", () => {}); });
++// Pseudo-kostra; doplní se podle nástroje (Playwright/Cypress).
++describe("smoke login", () => { it("placeholder", () => {}); });

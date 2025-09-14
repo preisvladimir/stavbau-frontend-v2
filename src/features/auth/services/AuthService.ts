@@ -1,12 +1,17 @@
-//import { api } from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 import type { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "@/lib/api/types";
 
-/** TODO: volání /auth/login, /auth/me, /auth/refresh (jen signatury) */
 export const AuthService = {
-  login: async (_payload: LoginRequest): Promise<LoginResponse> => {
-    // TODO: implement
-    return Promise.reject(new Error("Not implemented"));
+  async login(payload: LoginRequest): Promise<LoginResponse> {
+    const { data } = await api.post<LoginResponse>("/auth/login", payload);
+    return data;
   },
-  me: async (): Promise<MeResponse> => Promise.reject(new Error("Not implemented")),
-  refresh: async (_payload: RefreshRequest): Promise<RefreshResponse> => Promise.reject(new Error("Not implemented")),
+  async me(): Promise<MeResponse> {
+    const { data } = await api.get<MeResponse>("/auth/me");
+    return data;
+  },
+  async refresh(payload: RefreshRequest): Promise<RefreshResponse> {
+    const { data } = await api.post<RefreshResponse>("/auth/refresh", payload);
+    return data;
+  },
 };
