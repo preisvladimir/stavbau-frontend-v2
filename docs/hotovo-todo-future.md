@@ -256,3 +256,37 @@
 - Persist bez localStorage (volitelná rehydratace přes /auth/me).
 - HttpOnly cookie refresh varianta (pokud BE povolí) + CSRF.
 - Anti-bruteforce UX při 429 (cooldown/captcha).
+
+### 14. 9. 2025 — FE Auth MVP + UI knihovna
+
+**HOTOVO**
+- FE autentizace:
+  - `LoginPage` přepracován s **React Hook Form + Zod** validací, i18n hláškami, stavem loading, podporou 401/429.
+  - Axios **interceptory** s refresh singleflight a retry pro 401, UX hooky pro 403/429.
+  - **AuthContext** napojen na `/auth/me` – po loginu plní `user/role/scopes`.
+  - RBAC toggly v **Sidebaru** a v Projects (scope `projects:create`).
+- UI knihovna:
+  - Základní komponenty sjednoceny: `Button`, `LinkButton`, `Badge`, `Card*` (Card, Header, Title, Description, Content, Footer).
+  - Přidány helpery: `cn` utilita, `icons` index pro lucide-react.
+  - Instalace a zapojení **class-variance-authority**, **clsx**, **lucide-react**.
+  - Zavedeny design tokens (`sb-*` classes) pro konzistenci.
+- i18n:
+  - Struktura `i18n/` s namespacy `common`, `auth`, `errors`, `projects`.
+  - Připojeno do providerů v `main.tsx`.
+
+**TODO (další kroky Sprintu 2)**
+- Integrační testy interceptorů (`axios-mock-adapter`).
+- E2E testy login flow (happy path, RBAC scénáře) – Cypress/Playwright.
+- UI rozšíření:
+  - Toastery (shadcn/ui) místo fallback `console.log`.
+  - Show/hide password toggle.
+  - Lepší chybové/empty stavy.
+- Napojení reálného **Projects API** (GET/POST).
+- Dokončit CI pro frontend (lint, build, test).
+
+**FUTURE**
+- Persist stavů bez localStorage (rehydratace přes `/auth/me` po refreshi).
+- Volitelná varianta s refresh tokenem v HttpOnly cookie + CSRF tokeny.
+- UX při bruteforce/429 (cooldown, captcha).
+- Rozšíření UI knihovny (`DataTable`, `Modal`, `EmptyState`) jako plnohodnotný „stavbau-ui“ balík pro všechny feature moduly.
+- Konsolidace design tokens (`tokens.css`) a theming (dark mode).
