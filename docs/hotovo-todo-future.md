@@ -218,3 +218,41 @@
 - Integrace se službou e-mailu: `InvoiceEmailService` (odeslání faktur zákazníkům).
 - Rozšíření `FileStorage` o S3 implementaci (cloud).
 - Verzionování souborů a archivace (PRO verze).
+
+### 13. 9. 2025 — FE Auth MVP skeleton
+
+**HOTOVO**
+- Přidán skeleton autentizace na FE: `/login`, `AuthContext`, Axios klient + interceptory (TODO), guardy (`ProtectedRoute`, `ScopeGuard`), router a layout, i18n (common/auth/errors).
+- Vytvořeny DTO typy: `LoginRequest/Response`, `RefreshRequest/Response`, `MeResponse`.
+
+**TODO (další PR)**
+- Implementace RHF + Zod validace ve `LoginPage`.
+- Implementace interceptorů včetně refresh singleflight a 401→retry.
+- Napojení `/auth/me` a naplnění `AuthContext` (user, role, scopes).
+- UI toggle podle scopes v Sidebar/Projects.
+- Unit & e2e testy dle plánu.
+
+**FUTURE**
+- Persist bez localStorage (rehydratace přes `/auth/me` po refreshi).
+- HttpOnly cookie pro refresh (pokud BE umožní) + CSRF varianta.
+- Captcha/slowdown při opakovaném 401/429.
+
+### 14. 9. 2025 — FE Auth implementace (MVP)
+
+**HOTOVO**
+- LoginPage (RHF+Zod, i18n, loading, 401/429).
+- Axios interceptory s refresh singleflight a 401→retry; 403/429 UX hooky.
+- AuthContext napojen na /auth/me (po loginu) – naplnění user/role/scopes.
+- RBAC toggly: Sidebar a Projects (button „Nový projekt“ jen se scope).
+- Unit test: hasScope (anyOf/allOf), kostry pro guards/interceptors/e2e.
+
+**TODO**
+- Doplnit integrační test interceptorů (axios-mock-adapter).
+- E2E: happy path login → dashboard, RBAC scénáře (Playwright/Cypress).
+- UI rozšíření (toasty, show/hide password, vizuální stavy).
+- Napojení reálných Projects API.
+
+**FUTURE**
+- Persist bez localStorage (volitelná rehydratace přes /auth/me).
+- HttpOnly cookie refresh varianta (pokud BE povolí) + CSRF.
+- Anti-bruteforce UX při 429 (cooldown/captcha).
