@@ -1,3 +1,4 @@
+BACKEND
 cz.stavbau.backend/
 ├─ StavbauBackendApplication.java
 ├─ config/
@@ -128,3 +129,137 @@ cz.stavbau.backend/
    ├─ storage/ LocalFsStorage.java, S3Storage.java
    ├─ mail/ MailConfig.java
    └─ scheduling/ ScheduledJobs.java
+
+FRONTEND
+src/
+├─ app/
+│  ├─ main.tsx                         // bootstrap Reactu (providers: i18n, AuthProvider, ToastProvider, Router)
+│  ├─ App.tsx                          // mount routeru + globální ErrorBoundary
+│  └─ providers/                       // (vol.) separované providery, když porostou
+│
+├─ routes/
+│  ├─ router.tsx                       // createBrowserRouter: public (/login), private (/app/*)
+│  ├─ AppLayout.tsx                    // topbar + sidebar + <Outlet/> (private shell)
+│  └─ components/
+│     ├─ Topbar.tsx                    // avatar, jazyk, logout, env badge
+│     ├─ Sidebar.tsx                   // navigace podle scopes (Dashboard, Projects…)
+│     └─ LanguageToggle.tsx            // přepínání cs/en (i18next)
+│
+├─ lib/
+│  ├─ api/
+│  │  ├─ client.ts                     // Axios instance (baseURL, JSON) + registrace interceptorů
+│  │  ├─ interceptors.ts               // Authorization: Bearer, 401→refresh→retry, 403/429 UX
+│  │  └─ types.ts                      // sdílené DTO typy (Login/Me/Refresh, PageResponse apod.)
+│  ├─ rbac/
+│  │  ├─ hasScope.ts                   // čistá utilita (anyOf/allOf)
+│  │  └─ ScopeGuard.tsx                // komponenta pro kontrolu scopes (UI toggly)
+│  ├─ utils/
+│  │  ├─ env.ts                        // čtení VITE_* proměnných
+│  │  ├─ time.ts                       // práce s expiresAt (ISO), isExpired(), secondsLeft()
+│  │  └─ formatting.ts                 // měna, data, čísla podle i18n (zrcadlí BE FormattingUtils)
+│  └─ ui/
+│     ├─ ToastProvider.tsx             // shadcn/ui toast system (aria-live)
+│     └─ EmptyState.tsx, ErrorState.tsx, Loading.tsx
+│
+├─ i18n/
+│  ├─ index.ts                         // inicializace i18next (resources, fallbackLng, ns: common, auth, errors, ...)
+│  ├─ cs/
+│  │  ├─ common.json                   // akce, navigace, stavy (save/cancel/login/logout, menu)
+│  │  ├─ errors.json                   // 401/403/429/5xx + validační hlášky (RHF+Zod)
+│  │  ├─ auth.json                     // texty pro login/me/refresh
+│  │  ├─ projects.json                 // texty modulu Projects
+│  │  ├─ invoices.json                 // texty modulu Invoices
+│  │  ├─ files.json                    // texty modulu Files
+│  │  ├─ budget.json                   // texty modulu Budget
+│  │  └─ logs.json                     // texty modulu Logbook/Weather
+│  └─ en/ (stejná struktura jako cs/)
+│
+├─ features/
+│  ├─ auth/
+│  │  ├─ pages/
+│  │  │  └─ LoginPage.tsx              // form (email+heslo), Zod validace, i18n, 401/429, loading
+│  │  ├─ context/
+│  │  │  └─ AuthContext.tsx            // user, activeCompany, role, scopes, tokens, expiresAt; login/logout/refresh
+│  │  ├─ hooks/
+│  │  │  └─ useAuth.ts                 // zkratka na AuthContext
+│  │  ├─ services/
+│  │  │  └─ AuthService.ts             // /auth/login, /auth/me, /auth/refresh (Axios)
+│  │  ├─ utils/
+│  │  │  └─ mapAuthErrors.ts           // mapování HTTP → i18n klíče (auth/errors)
+│  │  └─ guards/
+│  │     └─ ProtectedRoute.tsx         // redirect na /login?redirectTo=... pokud není auth
+│  │
+│  ├─ dashboard/
+│  │  └─ pages/
+│  │     └─ DashboardPage.tsx          // uvítání + rychlé info (uživatel, firma), placeholder pro widgety
+│  │
+│  ├─ projects/
+│  │  ├─ pages/
+│  │  │  ├─ ProjectsListPage.tsx       // list + ScopeGuard pro tlačítko „Nový projekt“ (projects:create)
+│  │  │  └─ ProjectNewPage.tsx         // celá stránka za ScopeGuardem (projects:create)
+│  │  ├─ components/
+│  │  │  ├─ ProjectsTable.tsx          // tabulka (paging, empty state)
+│  │  │  └─ ProjectForm.tsx            // RHF+Zod formulář (název, popis; připrav. na i18n)
+│  │  ├─ services/
+│  │  │  └─ ProjectsService.ts         // /api/v1/projects (GET/POST) + DTO mapování
+│  │  ├─ hooks/
+│  │  │  ├─ useProjects.ts             // načítání seznamu (filters, pagination)
+│  │  │  └─ useCreateProject.ts        // vytvoření projektu + toasty
+│  │  └─ utils/
+│  │     └─ mappers.ts                 // mapování DTO↔UI, enum labely (sync s BE EnumLabeler)
+│  │
+│  ├─ invoices/
+│  │  ├─ pages/
+│  │  │  ├─ InvoicesListPage.tsx       // MVP placeholder (naváže v dalším sprintu)
+│  │  │  └─ InvoiceDetailPage.tsx
+│  │  ├─ components/
+│  │  │  ├─ InvoiceTable.tsx
+│  │  │  └─ InvoiceEditor.tsx
+│  │  ├─ services/
+│  │  │  └─ InvoicesService.ts         // /api/v1/invoices, /series, /lines
+│  │  └─ utils/
+│  │     └─ formatters.ts              // měna, datumy dle locale (navazuje na lib/utils/formatting)
+│  │
+│  ├─ files/
+│  │  ├─ pages/
+│  │  │  └─ FilesPage.tsx              // upload/list/tagging placeholder
+│  │  ├─ components/
+│  │  │  ├─ FileUpload.tsx
+│  │  │  └─ FileList.tsx
+│  │  └─ services/
+│  │     └─ FilesService.ts            // /api/v1/files (upload/download), link/tag API
+│  │
+│  ├─ budget/
+│  │  ├─ pages/
+│  │  │  └─ BudgetPage.tsx             // MVP placeholder
+│  │  └─ services/
+│  │     └─ BudgetService.ts
+│  │
+│  └─ logs/
+│     ├─ pages/
+│     │  └─ LogsPage.tsx               // deník prací, počasí (Meteostat integrace později)
+│     └─ services/
+│        └─ LogsService.ts
+│
+├─ components/
+│  ├─ form/                             // reusable RHF + shadcn wrappers (InputField, SelectField…)
+│  ├─ layout/                           // pokud některé layout prvky mají být sdílené mimo /routes
+│  └─ icons/                            // lucide-react aliasy, případně custom
+│
+├─ pages/
+│  └─ (volitelně) drobné cross-feature stránky (jinak vše ve features/*)
+│
+├─ assets/
+│  ├─ images/, svg/, illustrations/     // statická aktiva
+│  └─ locales/                          // (pokud načítáš JSON i18n dynamicky ze souborů)
+│
+├─ styles/
+│  ├─ index.css                         // Tailwind @base/@components/@utilities
+│  └─ tokens.css                        // CSS variables (barvy, spacing), pokud používáš
+│
+├─ tests/
+│  └─ lib/
+│     └─ api/__tests__/interceptors.test.ts // 401→refresh→retry integrační test
+│
+└─ e2e/
+└─ smoke.login.spec.ts               // happy path: login → dashboard; RBAC scénáře
