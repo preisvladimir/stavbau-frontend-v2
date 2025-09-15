@@ -291,3 +291,52 @@
 - UX při bruteforce/429 (cooldown, captcha).
 - Rozšíření UI knihovny (`DataTable`, `Modal`, `EmptyState`) jako plnohodnotný „stavbau-ui“ balík pro všechny feature moduly.
 - Konsolidace design tokens (`tokens.css`) a theming (dark mode).
+
+## 🧭 Rozhodnutí architektury — 15. 9. 2025
+**Téma:** Registrace firmy & členství (Sprint 2)  
+**Rozhodnutí:** Zavedeme `CompanyMember` pro RBAC/membership (OWNER atd.). `User` zůstává štíhlý (auth). Kontaktní/fakturační údaje budou řešeny samostatným modulem **contacts/** a přes **invoices/Customer**. Připravíme migrační cestu `company_members.contact_id` (po zavedení contacts).  
+**Důvod:** Čisté oddělení Auth vs. Business, soulad s modular-monolith by feature a RBAC 2.1, snížení reworku.  
+**Dopady:** DB constraint „1 OWNER per company“, i18n klíče, rate-limit na public endpointu, bez autologinu (verifikace později).
+
+## ✅ HOTOVO – 15. 9. 2025
+- Schválen ADR: CompanyMember (MVP) + future Contacts/Customer.
+- Upřesněna akceptační kritéria a test plan pro registraci firmy + OWNER.
+
+## 🛠 TODO (Sprint 2/1 – BE)
+- [ ] Flyway: `company_members` + unique owner per company, uniq `companies(ico)`, uniq `lower(users.email)`.
+- [ ] Registrační služba: vytvořit Company, User (email+passwordHash+companyId), CompanyMember(OWNER).
+- [ ] i18n: `company.exists`, `user.email.exists`, validační klíče (cs/en).
+- [ ] MockMvc + @DataJpaTest: happy path, duplicity, unique OWNER, i18n.
+
+## 🔭 FUTURE
+- Contacts modul (Contact/Person + Address) a napojení `company_members.contact_id`.
+- E-mail verifikace + autologin po potvrzení.
+- Admin správa členů a rolí (team:* scopes).
+
+## ✅ HOTOVO – 15. 9. 2025
+- DB: unikátní index `lower(users.email)` a `companies(ico)`.
+- DB: zavedena tabulka `company_members` + constraint „1 OWNER na firmu“.
+- BE: `UserRepository` doplněn o `existsByEmailIgnoreCase` a `findByEmailIgnoreCase`.
+- BE: `CompanyRepository` s `findByIco` a `existsByIco`.
+- BE: přidána entita a repo `CompanyMember`.
+
+## 🛠 TODO (Sprint 2/1 – registrace)
+- [ ] Doplňit registrační službu: vytvoření `Company`, `User` (email+passwordHash+companyId), `CompanyMember(OWNER)`.
+- [ ] Public endpoint `/api/v1/tenants/register` (permitAll + rate-limit).
+- [ ] Integrační testy: happy path, duplicita IČO / e-mail, unikátní OWNER, i18n.
+
+## ✅ HOTOVO – 16. 9. 2025
+- BE registrace firmy: fungující endpoint `POST /api/v1/tenants/register` (public).
+- Vytvoření Company, User (email+passwordHash+companyId), CompanyMember(OWNER).
+- Opraven NPE: inicializace `Company.sidlo` před mapováním adresy.
+- Ověřeno přes Swagger/cURL (201 Created).
+
+## 🛠 TODO (Sprint 2/1 – BE)
+- [ ] Dopsat integrační testy: 409 duplicitní IČO/e-mail, i18n, unique OWNER (DB).
+- [ ] Omezit/odstranit DEV exception handler (detail DB chyb) mimo `local` profil.
+- [ ] Nastavit rate-limit pro `/api/v1/tenants/register`.
+- [ ] Swagger: doplnit `@Operation`, `@ApiResponse(409)` + example payloady.
+
+## 🔭 FUTURE
+- E-mail verifikace + autologin po potvrzení.
+- Contacts modul (napojení na členy přes `contact_id`).
