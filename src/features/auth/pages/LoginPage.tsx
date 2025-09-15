@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShow((s) => !s)}
-                  className="absolute right-2 top-[38px] p-1 text-gray-500 hover:text-black"
+                  className="absolute right-2 top-[32px] p-1 text-gray-500 hover:text-black"
                   aria-label={show ? t("hidePassword", { ns: "auth", defaultValue: "Skrýt heslo" }) : t("showPassword", { ns: "auth", defaultValue: "Zobrazit heslo" })}
                   disabled={isSubmitting}
                 >
