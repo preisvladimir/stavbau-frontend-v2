@@ -1,7 +1,36 @@
 {
-  "title": "Register a new company",
-  "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
-  "placeholder": {
-    "nextStep": "The wizard will be added in the next step (PR 2/7)."
+   "title": "Register a new company",
+   "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
+  "steps": {
+    "0": { "title": "Step 1 — Company ID (IČO)", "desc": "Enter the company ID. You can review and adjust details in the next step." },
+    "1": { "title": "Step 2 — Company", "desc": "Review and adjust name, VAT ID, legal form and address." },
+    "2": { "title": "Step 3 — Owner & Consents", "desc": "Fill in owner details and confirm consents.", "submitPlaceholder": "Submitting to server will be added in next PRs." }
+  },
+  "fields": {
+    "ico": { "label": "Company ID (IČO)", "placeholder": "e.g. 12345678" },
+    "name": { "label": "Company name" },
+    "dic": { "label": "VAT ID (optional)" },
+    "legalFormCode": { "label": "Legal form (code, optional)" },
+    "address": {
+      "street": { "label": "Street & No." },
+      "city": { "label": "City" },
+      "zip": { "label": "ZIP/Postal code" },
+      "country": { "label": "Country (ISO-2)" }
+    },
+    "owner": {
+      "firstName": { "label": "First name (optional)" },
+      "lastName": { "label": "Last name (optional)" },
+      "email": { "label": "Email" },
+      "password": { "label": "Password" }
+    },
+    "consents": {
+      "termsAccepted": { "label": "I agree to the Terms & Conditions" },
+      "marketing": { "label": "I want to receive news & tips (optional)" }
+    }
+  },
+  "actions": {
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
   }
-}
+ }

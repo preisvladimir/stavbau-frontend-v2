@@ -1,7 +1,36 @@
-{
-  "title": "Registrace nové firmy",
-  "lead": "Vyplňte IČO, zkontrolujte údaje a založte účet vlastníka (OWNER).",
-  "placeholder": {
-    "nextStep": "Průvodce bude doplněn v dalším kroku (PR 2/7)."
+ {
+   "title": "Registrace nové firmy",
+   "lead": "Vyplňte IČO, zkontrolujte údaje a založte účet vlastníka (OWNER).",
+  "steps": {
+    "0": { "title": "Krok 1 — IČO", "desc": "Zadejte IČO firmy. V dalším kroku údaje zkontrolujete a upravíte." },
+    "1": { "title": "Krok 2 — Firma", "desc": "Zkontrolujte a případně upravte název, DIČ, právní formu a adresu." },
+    "2": { "title": "Krok 3 — Vlastník a souhlasy", "desc": "Vyplňte údaje vlastníka a potvrďte souhlasy.", "submitPlaceholder": "Odeslání na server bude přidáno v následujících PR." }
+  },
+  "fields": {
+    "ico": { "label": "IČO", "placeholder": "např. 12345678" },
+    "name": { "label": "Název firmy" },
+    "dic": { "label": "DIČ (volitelné)" },
+    "legalFormCode": { "label": "Právní forma (kód, volitelné)" },
+    "address": {
+      "street": { "label": "Ulice a č.p." },
+      "city": { "label": "Město" },
+      "zip": { "label": "PSČ" },
+      "country": { "label": "Stát (ISO-2)" }
+    },
+    "owner": {
+      "firstName": { "label": "Jméno (volitelné)" },
+      "lastName": { "label": "Příjmení (volitelné)" },
+      "email": { "label": "E-mail" },
+      "password": { "label": "Heslo" }
+    },
+    "consents": {
+      "termsAccepted": { "label": "Souhlasím s obchodními podmínkami" },
+      "marketing": { "label": "Chci dostávat novinky a tipy (volitelné)" }
+    }
+  },
+  "actions": {
+    "back": "Zpět",
+    "next": "Další",
+    "finish": "Dokončit"
   }
-}
+ }
