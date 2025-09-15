@@ -1,0 +1,7 @@
+{
+  "title": "Register a new company",
+  "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
+  "placeholder": {
+    "nextStep": "The wizard will be added in the next step (PR 2/7)."
+  }
+}
