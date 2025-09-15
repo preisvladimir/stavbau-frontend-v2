@@ -111,6 +111,7 @@
 - Sjednocení názvů: tabulka `companies`, FK users.company_id → companies(id)
 - MapStruct: vypnutý builder, ignorace auditních polí, AresCompanyMapper + CompanyMapper OK
 - ARES integrace: DTO (AresSubjectDto), mapper, service skeleton, WebFlux v pom.xml
+- AresCompanyMapper – sjednoceny ignore mapping pro single i legacy tvary payloadu.
 - RegistrationStatuses: dočasně @Transient
 
 ## TODO (další sprint)
@@ -121,7 +122,7 @@
 
 ## FUTURE
 - Validace IČO mod 11 (BE), FE hinty dle ARES
-- Indexy pro vyhledávání: ico, okres_nuts_lau, dor_obec/psc (pokud bude potřeba)  
+- Indexy pro vyhledávání: ico, okres_nuts_lau, dor_obec/psc (pokud bude potřeba)
 
 ### 11. 9. 2025 — Analýza & plán integrace GEO (Mapy.cz API)
 
@@ -261,26 +262,26 @@
 
 **HOTOVO**
 - FE autentizace:
-  - `LoginPage` přepracován s **React Hook Form + Zod** validací, i18n hláškami, stavem loading, podporou 401/429.
-  - Axios **interceptory** s refresh singleflight a retry pro 401, UX hooky pro 403/429.
-  - **AuthContext** napojen na `/auth/me` – po loginu plní `user/role/scopes`.
-  - RBAC toggly v **Sidebaru** a v Projects (scope `projects:create`).
+    - `LoginPage` přepracován s **React Hook Form + Zod** validací, i18n hláškami, stavem loading, podporou 401/429.
+    - Axios **interceptory** s refresh singleflight a retry pro 401, UX hooky pro 403/429.
+    - **AuthContext** napojen na `/auth/me` – po loginu plní `user/role/scopes`.
+    - RBAC toggly v **Sidebaru** a v Projects (scope `projects:create`).
 - UI knihovna:
-  - Základní komponenty sjednoceny: `Button`, `LinkButton`, `Badge`, `Card*` (Card, Header, Title, Description, Content, Footer).
-  - Přidány helpery: `cn` utilita, `icons` index pro lucide-react.
-  - Instalace a zapojení **class-variance-authority**, **clsx**, **lucide-react**.
-  - Zavedeny design tokens (`sb-*` classes) pro konzistenci.
+    - Základní komponenty sjednoceny: `Button`, `LinkButton`, `Badge`, `Card*` (Card, Header, Title, Description, Content, Footer).
+    - Přidány helpery: `cn` utilita, `icons` index pro lucide-react.
+    - Instalace a zapojení **class-variance-authority**, **clsx**, **lucide-react**.
+    - Zavedeny design tokens (`sb-*` classes) pro konzistenci.
 - i18n:
-  - Struktura `i18n/` s namespacy `common`, `auth`, `errors`, `projects`.
-  - Připojeno do providerů v `main.tsx`.
+    - Struktura `i18n/` s namespacy `common`, `auth`, `errors`, `projects`.
+    - Připojeno do providerů v `main.tsx`.
 
 **TODO (další kroky Sprintu 2)**
 - Integrační testy interceptorů (`axios-mock-adapter`).
 - E2E testy login flow (happy path, RBAC scénáře) – Cypress/Playwright.
 - UI rozšíření:
-  - Toastery (shadcn/ui) místo fallback `console.log`.
-  - Show/hide password toggle.
-  - Lepší chybové/empty stavy.
+    - Toastery (shadcn/ui) místo fallback `console.log`.
+    - Show/hide password toggle.
+    - Lepší chybové/empty stavy.
 - Napojení reálného **Projects API** (GET/POST).
 - Dokončit CI pro frontend (lint, build, test).
 
