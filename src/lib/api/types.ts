@@ -13,3 +13,48 @@ export type MeResponse = {
   scopes: string[];
 };
 export type PageResponse<T> = { items: T[]; page: number; size: number; total: number; };
+
+// ARES response (zjednodušené podle BE)
+export type AresCompanyDto = {
+  ico: string;
+  dic?: string | null;
+  name: string;
+  legalFormCode?: string | null;
+  address: { street: string; city: string; zip: string; country: string };
+};
+
+// Request pro registraci
+export type CompanyRegistrationRequest = {
+  company: {
+    ico: string;
+    dic?: string | null;
+    name: string;
+    address: { street: string; city: string; zip: string; country: string };
+    legalFormCode?: string | null;
+  };
+  owner: {
+    email: string;
+    password: string;
+    firstName?: string | null; // MVP neperzistujeme, ale necháme v DTO
+    lastName?: string | null;
+    phone?: string | null;
+  };
+  consents: { termsAccepted: boolean; marketing?: boolean | null };
+};
+
+export type CompanyRegistrationResponse = {
+  companyId: string;
+  ownerUserId: string;
+  ownerRole: 'OWNER';
+  status: 'CREATED' | 'EXISTS' | 'PENDING_VERIFICATION';
+};
+
+// ProblemDetail (BE sjednoceno)
+export type ProblemDetail = {
+  type?: string;
+  title: string;
+  status: number;
+  detail?: string;
+  code?: string; // např. 'company.exists', 'user.email.exists', 'validation.error'
+  [k: string]: unknown;
+};

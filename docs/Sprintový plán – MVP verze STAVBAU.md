@@ -27,6 +27,24 @@ Každý sprint má jasně vymezené cíle, prioritní úkoly a výstupy.
 
 **Výstup:** Možnost přihlásit uživatele a získat JWT token  
 
+Step Plan – Sprint 2/1: Registrace firmy + vytvoření OWNER
+1) Cíle a výsledky
+
+Umožnit veřejnou registraci nové firmy (anonymous povoleno) v 3-krokovém procesu:
+
+FE ověří IČO přes existující ARES endpoint (GET /api/v1/companies/lookup/ares?ico=…).
+
+FE předvyplní formulář daty z ARES, uživatel je zkontroluje/doplní.
+
+FE odešle registraci: vytvoří se Company + uživatel s rolí OWNER přiřazený k firmě.
+
+Vytvořit bezpečnou, transakční a idempotentní BE operaci (ochrana proti duplicitám).
+
+Respektovat RBAC (role OWNER na company-level) a připravit podmínky pro další moduly (invoices/files PRO v budoucnu).
+
+Zajistit i18n chybových zpráv a readiness pro e-mail potvrzení (volitelné v MVP).
+
+
 ---
 
 ### 🌍 Sprint 3: Integrace základních služeb (Geo, Weather, ARES)
