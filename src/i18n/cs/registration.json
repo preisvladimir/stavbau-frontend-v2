@@ -28,9 +28,22 @@
       "marketing": { "label": "Chci dostávat novinky a tipy (volitelné)" }
     }
   },
-  "actions": {
-    "back": "Zpět",
-    "next": "Další",
-    "finish": "Dokončit"
-  }
+   "actions": {
+     "back": "Zpět",
+     "next": "Další",
+     "finish": "Dokončit"
+  },
+  "validation": {
+    "ico": { "invalid": "IČO musí mít přesně 8 číslic." },
+    "name": { "min2": "Název musí mít alespoň 2 znaky." },
+    "street": { "required": "Ulice a č.p. je povinné." },
+    "city": { "required": "Město je povinné." },
+    "zip": { "invalid": "PSČ musí být ve formátu 12345 nebo 123 45." },
+    "country": { "invalid": "Stát musí být dvoupísmenný kód (ISO-2), např. CZ." },
+    "dic": { "min2": "DIČ musí mít alespoň 2 znaky, nebo ponechte prázdné." },
+    "legalFormCode": { "min1": "Kód právní formy musí být vyplněn, nebo ponechte prázdné." },
+    "email": { "invalid": "E-mail není ve správném formátu." },
+    "password": { "min8": "Heslo musí mít alespoň 8 znaků." },
+    "terms": { "accept": "Pro pokračování musíte souhlasit s obchodními podmínkami." }
+   }
  }

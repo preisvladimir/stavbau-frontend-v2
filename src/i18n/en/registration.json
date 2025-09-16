@@ -28,9 +28,22 @@
       "marketing": { "label": "I want to receive news & tips (optional)" }
     }
   },
-  "actions": {
-    "back": "Back",
-    "next": "Next",
-    "finish": "Finish"
-  }
+   "actions": {
+     "back": "Back",
+     "next": "Next",
+     "finish": "Finish"
+  },
+  "validation": {
+    "ico": { "invalid": "Company ID (IČO) must be exactly 8 digits." },
+    "name": { "min2": "Company name must be at least 2 characters." },
+    "street": { "required": "Street & No. is required." },
+    "city": { "required": "City is required." },
+    "zip": { "invalid": "ZIP/Postal code must be 12345 or 123 45." },
+    "country": { "invalid": "Country must be a 2-letter ISO code, e.g., CZ." },
+    "dic": { "min2": "VAT ID must be at least 2 characters or left empty." },
+    "legalFormCode": { "min1": "Legal form code must be provided or left empty." },
+    "email": { "invalid": "Email is not valid." },
+    "password": { "min8": "Password must be at least 8 characters." },
+    "terms": { "accept": "You must accept the Terms & Conditions to continue." }
+   }
  }
