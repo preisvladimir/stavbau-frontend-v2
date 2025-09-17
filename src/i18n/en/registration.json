@@ -1,49 +1,117 @@
 {
-   "title": "Register a new company",
-   "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
+  "title": "Register a new company",
+  "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
   "steps": {
-    "0": { "title": "Step 1 — Company ID (IČO)", "desc": "Enter the company ID. You can review and adjust details in the next step." },
-    "1": { "title": "Step 2 — Company", "desc": "Review and adjust name, VAT ID, legal form and address." },
-    "2": { "title": "Step 3 — Owner & Consents", "desc": "Fill in owner details and confirm consents.", "submitPlaceholder": "Submitting to server will be added in next PRs." }
-  },
-  "fields": {
-    "ico": { "label": "Company ID (IČO)", "placeholder": "e.g. 12345678" },
-    "name": { "label": "Company name" },
-    "dic": { "label": "VAT ID (optional)" },
-    "legalFormCode": { "label": "Legal form (code, optional)" },
-    "address": {
-      "street": { "label": "Street & No." },
-      "city": { "label": "City" },
-      "zip": { "label": "ZIP/Postal code" },
-      "country": { "label": "Country (ISO-2)" }
+    "0": {
+      "title": "Step 1 — Company ID (IČO)",
+      "desc": "Enter the company ID. You can review and adjust details in the next step."
     },
-    "owner": {
-      "firstName": { "label": "First name (optional)" },
-      "lastName": { "label": "Last name (optional)" },
-      "email": { "label": "Email" },
-      "password": { "label": "Password" }
+    "1": {
+      "title": "Step 2 — Company",
+      "desc": "Review and adjust name, VAT ID, legal form and address."
     },
-    "consents": {
-      "termsAccepted": { "label": "I agree to the Terms & Conditions" },
-      "marketing": { "label": "I want to receive news & tips (optional)" }
+    "2": {
+      "title": "Step 3 — Owner & Consents",
+      "desc": "Fill in owner details and confirm consents.",
+      "submitPlaceholder": "Submitting to server will be added in next PRs."
     }
   },
-   "actions": {
-     "back": "Back",
-     "next": "Next",
-     "finish": "Finish"
+  "fields": {
+    "ico": {
+      "label": "Company ID (IČO)",
+      "placeholder": "e.g. 12345678"
+    },
+    "name": {
+      "label": "Company name"
+    },
+    "dic": {
+      "label": "VAT ID (optional)"
+    },
+    "legalFormCode": {
+      "label": "Legal form (code, optional)"
+    },
+    "address": {
+      "street": {
+        "label": "Street & No."
+      },
+      "city": {
+        "label": "City"
+      },
+      "zip": {
+        "label": "ZIP/Postal code"
+      },
+      "country": {
+        "label": "Country (ISO-2)"
+      }
+    },
+    "owner": {
+      "firstName": {
+        "label": "First name (optional)"
+      },
+      "lastName": {
+        "label": "Last name (optional)"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "password": {
+        "label": "Password"
+      }
+    },
+    "consents": {
+      "termsAccepted": {
+        "label": "I agree to the Terms & Conditions"
+      },
+      "marketing": {
+        "label": "I want to receive news & tips (optional)"
+      }
+    }
+  },
+  "actions": {
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "loading": "Loading…"
+  },
+  "errors": {
+    "ares_not_found": "No company with this ID was found in ARES.",
+    "ares_unavailable": "ARES service is temporarily unavailable. Please try again later.",
+    "rate_limited": "Too many requests. Please try again shortly.",
+    "unexpected": "Something went wrong. Please try again."
   },
   "validation": {
-    "ico": { "invalid": "Company ID (IČO) must be exactly 8 digits." },
-    "name": { "min2": "Company name must be at least 2 characters." },
-    "street": { "required": "Street & No. is required." },
-    "city": { "required": "City is required." },
-    "zip": { "invalid": "ZIP/Postal code must be 12345 or 123 45." },
-    "country": { "invalid": "Country must be a 2-letter ISO code, e.g., CZ." },
-    "dic": { "min2": "VAT ID must be at least 2 characters or left empty." },
-    "legalFormCode": { "min1": "Legal form code must be provided or left empty." },
-    "email": { "invalid": "Email is not valid." },
-    "password": { "min8": "Password must be at least 8 characters." },
-    "terms": { "accept": "You must accept the Terms & Conditions to continue." }
-   }
- }
+    "ico": {
+      "invalid": "Company ID (IČO) must be exactly 8 digits."
+    },
+    "name": {
+      "min2": "Company name must be at least 2 characters."
+    },
+    "street": {
+      "required": "Street & No. is required."
+    },
+    "city": {
+      "required": "City is required."
+    },
+    "zip": {
+      "invalid": "ZIP/Postal code must be 12345 or 123 45."
+    },
+    "country": {
+      "invalid": "Country must be a 2-letter ISO code, e.g., CZ."
+    },
+    "dic": {
+      "min2": "VAT ID must be at least 2 characters or left empty."
+    },
+    "legalFormCode": {
+      "min1": "Legal form code must be provided or left empty."
+    },
+    "email": {
+      "invalid": "Email is not valid."
+    },
+    "password": {
+      "min8": "Password must be at least 8 characters."
+    },
+    "terms": {
+      "accept": "You must accept the Terms & Conditions to continue."
+    }
+  }
+}

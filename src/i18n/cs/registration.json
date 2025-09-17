@@ -1,49 +1,117 @@
- {
-   "title": "Registrace nové firmy",
-   "lead": "Vyplňte IČO, zkontrolujte údaje a založte účet vlastníka (OWNER).",
+{
+  "title": "Registrace nové firmy",
+  "lead": "Vyplňte IČO, zkontrolujte údaje a založte účet vlastníka (OWNER).",
   "steps": {
-    "0": { "title": "Krok 1 — IČO", "desc": "Zadejte IČO firmy. V dalším kroku údaje zkontrolujete a upravíte." },
-    "1": { "title": "Krok 2 — Firma", "desc": "Zkontrolujte a případně upravte název, DIČ, právní formu a adresu." },
-    "2": { "title": "Krok 3 — Vlastník a souhlasy", "desc": "Vyplňte údaje vlastníka a potvrďte souhlasy.", "submitPlaceholder": "Odeslání na server bude přidáno v následujících PR." }
-  },
-  "fields": {
-    "ico": { "label": "IČO", "placeholder": "např. 12345678" },
-    "name": { "label": "Název firmy" },
-    "dic": { "label": "DIČ (volitelné)" },
-    "legalFormCode": { "label": "Právní forma (kód, volitelné)" },
-    "address": {
-      "street": { "label": "Ulice a č.p." },
-      "city": { "label": "Město" },
-      "zip": { "label": "PSČ" },
-      "country": { "label": "Stát (ISO-2)" }
+    "0": {
+      "title": "Krok 1 — IČO",
+      "desc": "Zadejte IČO firmy. V dalším kroku údaje zkontrolujete a upravíte."
     },
-    "owner": {
-      "firstName": { "label": "Jméno (volitelné)" },
-      "lastName": { "label": "Příjmení (volitelné)" },
-      "email": { "label": "E-mail" },
-      "password": { "label": "Heslo" }
+    "1": {
+      "title": "Krok 2 — Firma",
+      "desc": "Zkontrolujte a případně upravte název, DIČ, právní formu a adresu."
     },
-    "consents": {
-      "termsAccepted": { "label": "Souhlasím s obchodními podmínkami" },
-      "marketing": { "label": "Chci dostávat novinky a tipy (volitelné)" }
+    "2": {
+      "title": "Krok 3 — Vlastník a souhlasy",
+      "desc": "Vyplňte údaje vlastníka a potvrďte souhlasy.",
+      "submitPlaceholder": "Odeslání na server bude přidáno v následujících PR."
     }
   },
-   "actions": {
-     "back": "Zpět",
-     "next": "Další",
-     "finish": "Dokončit"
+  "fields": {
+    "ico": {
+      "label": "IČO",
+      "placeholder": "např. 12345678"
+    },
+    "name": {
+      "label": "Název firmy"
+    },
+    "dic": {
+      "label": "DIČ (volitelné)"
+    },
+    "legalFormCode": {
+      "label": "Právní forma (kód, volitelné)"
+    },
+    "address": {
+      "street": {
+        "label": "Ulice a č.p."
+      },
+      "city": {
+        "label": "Město"
+      },
+      "zip": {
+        "label": "PSČ"
+      },
+      "country": {
+        "label": "Stát (ISO-2)"
+      }
+    },
+    "owner": {
+      "firstName": {
+        "label": "Jméno (volitelné)"
+      },
+      "lastName": {
+        "label": "Příjmení (volitelné)"
+      },
+      "email": {
+        "label": "E-mail"
+      },
+      "password": {
+        "label": "Heslo"
+      }
+    },
+    "consents": {
+      "termsAccepted": {
+        "label": "Souhlasím s obchodními podmínkami"
+      },
+      "marketing": {
+        "label": "Chci dostávat novinky a tipy (volitelné)"
+      }
+    }
+  },
+  "actions": {
+    "back": "Zpět",
+    "next": "Další",
+    "finish": "Dokončit",
+    "loading": "Načítám…"
+  },
+  "errors": {
+    "ares_not_found": "Firma s tímto IČO nebyla v ARES nalezena.",
+    "ares_unavailable": "Služba ARES je dočasně nedostupná. Zkuste to prosím později.",
+    "rate_limited": "Příliš mnoho požadavků. Zkuste to prosím za chvíli znovu.",
+    "unexpected": "Něco se pokazilo. Zkuste to prosím znovu."
   },
   "validation": {
-    "ico": { "invalid": "IČO musí mít přesně 8 číslic." },
-    "name": { "min2": "Název musí mít alespoň 2 znaky." },
-    "street": { "required": "Ulice a č.p. je povinné." },
-    "city": { "required": "Město je povinné." },
-    "zip": { "invalid": "PSČ musí být ve formátu 12345 nebo 123 45." },
-    "country": { "invalid": "Stát musí být dvoupísmenný kód (ISO-2), např. CZ." },
-    "dic": { "min2": "DIČ musí mít alespoň 2 znaky, nebo ponechte prázdné." },
-    "legalFormCode": { "min1": "Kód právní formy musí být vyplněn, nebo ponechte prázdné." },
-    "email": { "invalid": "E-mail není ve správném formátu." },
-    "password": { "min8": "Heslo musí mít alespoň 8 znaků." },
-    "terms": { "accept": "Pro pokračování musíte souhlasit s obchodními podmínkami." }
-   }
- }
+    "ico": {
+      "invalid": "IČO musí mít přesně 8 číslic."
+    },
+    "name": {
+      "min2": "Název musí mít alespoň 2 znaky."
+    },
+    "street": {
+      "required": "Ulice a č.p. je povinné."
+    },
+    "city": {
+      "required": "Město je povinné."
+    },
+    "zip": {
+      "invalid": "PSČ musí být ve formátu 12345 nebo 123 45."
+    },
+    "country": {
+      "invalid": "Stát musí být dvoupísmenný kód (ISO-2), např. CZ."
+    },
+    "dic": {
+      "min2": "DIČ musí mít alespoň 2 znaky, nebo ponechte prázdné."
+    },
+    "legalFormCode": {
+      "min1": "Kód právní formy musí být vyplněn, nebo ponechte prázdné."
+    },
+    "email": {
+      "invalid": "E-mail není ve správném formátu."
+    },
+    "password": {
+      "min8": "Heslo musí mít alespoň 8 znaků."
+    },
+    "terms": {
+      "accept": "Pro pokračování musíte souhlasit s obchodními podmínkami."
+    }
+  }
+}

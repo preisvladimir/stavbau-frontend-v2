@@ -4,6 +4,8 @@ import { useRegistration } from "../RegistrationWizard";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { step3OwnerSchema, type Step3Owner } from "../../validation/schemas";
+import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
+import { isAxiosError } from "axios";
 
 export const StepOwner: React.FC = () => {
   const { t } = useTranslation("registration");

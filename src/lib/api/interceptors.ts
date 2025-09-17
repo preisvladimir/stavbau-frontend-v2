@@ -1,5 +1,6 @@
 import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } from "axios";
 import { tokenManager } from "./tokenManager";
+import i18n from "@/i18n";
 
 let isRefreshing = false;
 let waitQueue: Array<() => void> = [];
@@ -17,10 +18,15 @@ export function withInterceptors(instance: AxiosInstance) {
   // Request: Authorization header
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const access = tokenManager.getAccessToken();
+    const lang =
+      i18n.resolvedLanguage || (i18n as any).language || "cs"; // fallback    
     if (access) {
       config.headers = config.headers ?? {};
       (config.headers as any).Authorization = `Bearer ${access}`;
     }
+    if (!config.headers["Accept-Language"]) {
+      config.headers["Accept-Language"] = lang;
+    }    
     return config;
   });
 

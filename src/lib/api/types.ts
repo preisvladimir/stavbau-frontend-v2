@@ -14,13 +14,15 @@ export type MeResponse = {
 };
 export type PageResponse<T> = { items: T[]; page: number; size: number; total: number; };
 
+export type AddressDto = { street: string; city: string; zip: string; country: string };
+
 // ARES response (zjednodušené podle BE)
 export type AresCompanyDto = {
   ico: string;
   dic?: string | null;
   name: string;
   legalFormCode?: string | null;
-  address: { street: string; city: string; zip: string; country: string };
+  address: AddressDto;
 };
 
 // Request pro registraci
@@ -56,5 +58,6 @@ export type ProblemDetail = {
   status: number;
   detail?: string;
   code?: string; // např. 'company.exists', 'user.email.exists', 'validation.error'
-  [k: string]: unknown;
+  path?: string;
+  [k: string]: unknown;  
 };
