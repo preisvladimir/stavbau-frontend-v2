@@ -12,8 +12,11 @@
     },
     "2": {
       "title": "Krok 3 — Vlastník a souhlasy",
-      "desc": "Vyplňte údaje vlastníka a potvrďte souhlasy.",
-      "submitPlaceholder": "Odeslání na server bude přidáno v následujících PR."
+      "desc": "Vyplňte údaje vlastníka a potvrďte souhlasy."
+    },
+    "3": {
+      "title": "Hotovo!",
+      "desc": "Registrace byla úspěšná. Můžete se přihlásit nebo založit další firmu."
     }
   },
   "fields": {
@@ -51,6 +54,9 @@
       "lastName": {
         "label": "Příjmení (volitelné)"
       },
+      "phone": {
+        "label": "Telefon (volitelné)"
+      },
       "email": {
         "label": "E-mail"
       },
@@ -77,7 +83,8 @@
     "ares_not_found": "Firma s tímto IČO nebyla v ARES nalezena.",
     "ares_unavailable": "Služba ARES je dočasně nedostupná. Zkuste to prosím později.",
     "rate_limited": "Příliš mnoho požadavků. Zkuste to prosím za chvíli znovu.",
-    "unexpected": "Něco se pokazilo. Zkuste to prosím znovu."
+    "unexpected": "Něco se pokazilo. Zkuste to prosím znovu.",
+    "company.exists_with_cta": "Firma s tímto IČO už u nás existuje. Změňte prosím IČO v Kroku 1."
   },
   "validation": {
     "ico": {
@@ -112,6 +119,15 @@
     },
     "terms": {
       "accept": "Pro pokračování musíte souhlasit s obchodními podmínkami."
+    }
+  },
+  "success": {
+    "companyId": "ID firmy: {{id}}",
+    "ownerUserId": "ID vlastníka: {{id}}",
+    "status": "Stav: {{status}}",
+    "cta": {
+      "login": "Přejít na přihlášení",
+      "registerAnother": "Založit další firmu"
     }
   }
 }

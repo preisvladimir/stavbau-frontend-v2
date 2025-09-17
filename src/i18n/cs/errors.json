@@ -1,9 +1,29 @@
 {
+  "generic": "Něco se nepovedlo. Zkuste to prosím znovu.",
+
   "401": "Nesprávné přihlašovací údaje nebo relace vypršela.",
   "403": "Pro tuto akci nemáš oprávnění.",
   "429": "Byl překročen limit požadavků. Zkus to prosím později.",
   "5xx": "Došlo k neočekávané chybě. Zkus to znovu.",
+
+  "ares": {
+    "not_found": "Firma s tímto IČO nebyla v ARES nalezena.",
+    "unavailable": "Služba ARES je dočasně nedostupná. Zkuste to prosím později.",
+    "rate_limit": "Příliš mnoho požadavků na ARES. Zkuste to prosím později."
+  },
+
+  "company": {
+    "exists": "Firma s tímto IČO už u nás existuje."
+  },
+
+  "user": {
+    "email": {
+      "exists": "Tento e-mail už je zaregistrován."
+    }
+  },
+
   "validation": {
+    "generic": "Formulář obsahuje chyby.",
     "email": "Zadej platný e-mail.",
     "required": "Toto pole je povinné.",
     "password_min": "Heslo musí mít alespoň {{min}} znaků."

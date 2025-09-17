@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { CompanyLookupPreviewDto } from "@/lib/api/types";
+import type { CompanyLookupPreviewDto, CompanyRegistrationRequest, CompanyRegistrationResponse } from "@/lib/api/types";
 
 export class RegistrationService {
   /** Normalized FE-ready preview from BE */
@@ -10,4 +10,10 @@ export class RegistrationService {
     });
     return res.data;
   }
+
+  static async register(body: CompanyRegistrationRequest, signal?: AbortSignal): Promise<CompanyRegistrationResponse> {
+    const res = await api.post<CompanyRegistrationResponse>("/tenants/register", body, { signal });
+    return res.data;
+  }  
+  
 }

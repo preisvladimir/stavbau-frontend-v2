@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { StepIco } from "./steps/StepIco";
 import { StepCompany } from "./steps/StepCompany";
 import { StepOwner } from "./steps/StepOwner";
+import { StepSuccess } from "./steps/StepSuccess";
 
 type Address = { street: string; city: string; zip: string; country: string };
 export type CompanyState = {
@@ -22,10 +23,11 @@ export type OwnerState = {
 };
 export type ConsentsState = { termsAccepted: boolean; marketing?: boolean | null };
 export type RegistrationState = {
-  step: 0 | 1 | 2;
+  step: 0 | 1 | 2 | 3;
   company: CompanyState;
   owner: OwnerState;
   consents: ConsentsState;
+  result?: { companyId: string; ownerUserId: string; ownerRole: "OWNER"; status: "CREATED" | "EXISTS" | "PENDING_VERIFICATION" };
 };
 
 const EMPTY_STATE: RegistrationState = {
@@ -74,12 +76,12 @@ export const RegistrationWizard: React.FC = () => {
   }, [state]);
 
   const next = React.useCallback(() => {
-    setState((s) => ({ ...s, step: (Math.min(2, s.step + 1) as 0 | 1 | 2) }));
+    setState((s) => ({ ...s, step: (Math.min(2, s.step + 1) as 0 | 1 | 2 | 3) }));
   }, []);
   const back = React.useCallback(() => {
-    setState((s) => ({ ...s, step: (Math.max(0, s.step - 1) as 0 | 1 | 2) }));
+    setState((s) => ({ ...s, step: (Math.max(0, s.step - 1) as 0 | 1 | 2 | 3) }));
   }, []);
-  const goTo = React.useCallback((s: 0 | 1 | 2) => setState((st) => ({ ...st, step: s })), []);
+  const goTo = React.useCallback((s: 0 | 1 | 2 | 3) => setState((st) => ({ ...st, step: s })), []);
 
   React.useEffect(() => {
     const el = document.getElementById("registration-step-title");
@@ -90,6 +92,7 @@ export const RegistrationWizard: React.FC = () => {
     { id: 0 as const, label: t("steps.0.title") },
     { id: 1 as const, label: t("steps.1.title") },
     { id: 2 as const, label: t("steps.2.title") },
+    { id: 3 as const, label: t("steps.3.title") },
   ];
 
   return (
@@ -122,6 +125,7 @@ export const RegistrationWizard: React.FC = () => {
         {state.step === 0 && <StepIco />}
         {state.step === 1 && <StepCompany />}
         {state.step === 2 && <StepOwner />}
+        {state.step === 3 && <StepSuccess />}
       </section>
     </RegistrationCtx.Provider>
   );

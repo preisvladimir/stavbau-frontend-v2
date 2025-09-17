@@ -1,25 +1,28 @@
 {
   "title": "Register a new company",
-  "lead": "Enter the company ID (IČO), review details, and create the owner (OWNER) account.",
+  "lead": "Enter the Company ID (IČO), review the details, and create the owner (OWNER) account.",
   "steps": {
     "0": {
       "title": "Step 1 — Company ID (IČO)",
-      "desc": "Enter the company ID. You can review and adjust details in the next step."
+      "desc": "Enter the company ID. In the next step you can review and adjust the details."
     },
     "1": {
       "title": "Step 2 — Company",
-      "desc": "Review and adjust name, VAT ID, legal form and address."
+      "desc": "Review and adjust the company name, VAT ID, legal form, and address."
     },
     "2": {
       "title": "Step 3 — Owner & Consents",
-      "desc": "Fill in owner details and confirm consents.",
-      "submitPlaceholder": "Submitting to server will be added in next PRs."
+      "desc": "Fill in the owner details and confirm the consents."
+    },
+    "3": {
+      "title": "Done!",
+      "desc": "Registration succeeded. You can log in or register another company."
     }
   },
   "fields": {
     "ico": {
       "label": "Company ID (IČO)",
-      "placeholder": "e.g. 12345678"
+      "placeholder": "e.g., 12345678"
     },
     "name": {
       "label": "Company name"
@@ -38,7 +41,7 @@
         "label": "City"
       },
       "zip": {
-        "label": "ZIP/Postal code"
+        "label": "ZIP / Postal code"
       },
       "country": {
         "label": "Country (ISO-2)"
@@ -51,8 +54,11 @@
       "lastName": {
         "label": "Last name (optional)"
       },
+      "phone": {
+        "label": "Phone (optional)"
+      },
       "email": {
-        "label": "Email"
+        "label": "E-mail"
       },
       "password": {
         "label": "Password"
@@ -63,7 +69,7 @@
         "label": "I agree to the Terms & Conditions"
       },
       "marketing": {
-        "label": "I want to receive news & tips (optional)"
+        "label": "I want to receive news and tips (optional)"
       }
     }
   },
@@ -75,9 +81,10 @@
   },
   "errors": {
     "ares_not_found": "No company with this ID was found in ARES.",
-    "ares_unavailable": "ARES service is temporarily unavailable. Please try again later.",
+    "ares_unavailable": "The ARES service is temporarily unavailable. Please try again later.",
     "rate_limited": "Too many requests. Please try again shortly.",
-    "unexpected": "Something went wrong. Please try again."
+    "unexpected": "Something went wrong. Please try again.",
+    "company.exists_with_cta": "A company with this ID already exists. Please change the ID in Step 1."
   },
   "validation": {
     "ico": {
@@ -112,6 +119,15 @@
     },
     "terms": {
       "accept": "You must accept the Terms & Conditions to continue."
+    }
+  },
+  "success": {
+    "companyId": "Company ID: {{id}}",
+    "ownerUserId": "Owner user ID: {{id}}",
+    "status": "Status: {{status}}",
+    "cta": {
+      "login": "Go to Login",
+      "registerAnother": "Register another company"
     }
   }
 }
