@@ -17,7 +17,7 @@ export type PageResponse<T> = { items: T[]; page: number; size: number; total: n
 export type AddressDto = { street: string; city: string; zip: string; country: string };
 
 // ARES response (zjednodušené podle BE)
-export type AresCompanyDto = {
+export type CompanyLookupPreviewDto = {
   ico: string;
   dic?: string | null;
   name: string;

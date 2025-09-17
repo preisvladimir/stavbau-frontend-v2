@@ -1,12 +1,10 @@
 import { api } from "@/lib/api/client";
-import type { AresCompanyDto } from "@/lib/api/types";
-
-//export type AddressDto = { street: string; city: string; zip: string; country: string };
-
+import type { CompanyLookupPreviewDto } from "@/lib/api/types";
 
 export class RegistrationService {
-  static async getFromAres(ico: string, signal?: AbortSignal): Promise<AresCompanyDto> {
-    const res = await api.get<AresCompanyDto>("/companies/lookup/ares", {
+  /** Normalized FE-ready preview from BE */
+  static async getFromAres(ico: string, signal?: AbortSignal): Promise<CompanyLookupPreviewDto> {
+    const res = await api.get<CompanyLookupPreviewDto>("/companies/lookup/ares/preview", {
       params: { ico },
       signal,
     });
