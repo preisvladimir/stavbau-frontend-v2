@@ -6,8 +6,9 @@ import { useRegistration } from "../RegistrationWizard";
 import { step1IcoSchema, type Step1Ico } from "../../validation/schemas";
 import { RegistrationService } from "../../services/RegistrationService";
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import { type ProblemDetail } from "../../../../lib/api/types";
+import { type ProblemDetail } from "@/lib/api/types";
 import { isAxiosError } from "axios";
+import { Button } from "@/components/ui/stavbau-ui";
 
 export const StepIco: React.FC = () => {
   const { t } = useTranslation("registration");
@@ -29,11 +30,11 @@ export const StepIco: React.FC = () => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     try {
-      // 1) Uložit IČO do state (pro případ návratu)
+      // 1) uložit IČO do state
       setState((s) => ({ ...s, company: { ...s.company, ico: values.ico } }));
-      // 2) Volání ARES
+      // 2) ARES preview
       const dto = await RegistrationService.getFromAres(values.ico, abortRef.current.signal);
-      // 3) Prefill do kroku 2 (ponecháme možnost editace)
+      // 3) prefill do kroku 2
       setState((s) => ({
         ...s,
         company: {
@@ -42,6 +43,7 @@ export const StepIco: React.FC = () => {
           dic: dto.dic ?? null,
           name: dto.name ?? "",
           legalFormCode: dto.legalFormCode ?? null,
+          legalFormName: dto.legalFormName ?? null,
           address: {
             street: dto.address?.street ?? "",
             city: dto.address?.city ?? "",
@@ -52,10 +54,9 @@ export const StepIco: React.FC = () => {
       }));
       next();
     } catch (e) {
-      //setErrorKey(mapRegistrationError(e));
       const pd = isAxiosError(e) ? (e.response?.data as ProblemDetail | undefined) : undefined;
       const mapped = mapRegistrationError(pd);
-      setErrorKey(mapped.i18nKey); // ← uložíme jen i18n klíč (string)      
+      setErrorKey(mapped.i18nKey);
     } finally {
       setLoading(false);
     }
@@ -67,18 +68,33 @@ export const StepIco: React.FC = () => {
         {t("steps.0.title")}
       </h2>
       <p className="text-muted-foreground mb-4">{t("steps.0.desc")}</p>
+
       {errorKey && (
-        <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div
+          role="alert"
+          className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {t(errorKey)}
         </div>
       )}
-      <form onSubmit={onSubmit} noValidate className="max-w-sm">
-        <div className="grid gap-2">
-          <label className="text-sm" htmlFor="ico">{t("fields.ico.label")}</label>
+
+      {/* plná šířka + button vedle inputu na desktopu */}
+      <form
+        onSubmit={onSubmit}
+        noValidate
+        className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
+      >
+        {/* label přes celou šířku */}
+        <label className="text-sm md:col-span-2" htmlFor="ico">
+          {t("fields.ico.label")}
+        </label>
+
+        {/* input (1fr) */}
+        <div>
           <input
             id="ico"
             {...form.register("ico")}
-            className="border rounded-md px-3 py-2"
+            className="border rounded-md px-3 py-2 w-full"
             placeholder={t("fields.ico.placeholder") ?? ""}
             inputMode="numeric"
             autoComplete="off"
@@ -86,21 +102,26 @@ export const StepIco: React.FC = () => {
             aria-describedby={form.formState.errors.ico ? "ico-error" : undefined}
             disabled={loading}
           />
-          {form.formState.errors.ico && (
-            <p id="ico-error" role="alert" className="text-red-600 text-sm">
-              {t(form.formState.errors.ico.message as string)}
-            </p>
-          )}
         </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <button
+
+        {/* button (auto) */}
+        <div className="md:ml-2">
+          <Button
             type="submit"
-            className="border rounded-md px-4 py-2"
+            className="w-full md:w-auto"
+            isLoading={loading || form.formState.isSubmitting}
             disabled={loading || form.formState.isSubmitting}
           >
-            {loading ? t("actions.loading") : t("actions.next")}
-          </button>
+            {t("actions.next")}
+          </Button>
         </div>
+
+        {/* error message pod inputem, přes celou šířku */}
+        {form.formState.errors.ico && (
+          <p id="ico-error" role="alert" className="text-red-600 text-sm md:col-span-2">
+            {t(form.formState.errors.ico.message as string)}
+          </p>
+        )}
       </form>
     </div>
   );

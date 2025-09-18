@@ -12,6 +12,7 @@ export type Step1Ico = z.infer<typeof step1IcoSchema>;
 
 export const addressSchema = z.object({
   street: z.string().min(1, { message: "validation.city.required" }),
+  city: z.string().min(1, { message: "validation.city.required" }),
   zip: z.string().regex(ZIP_CZ_REGEX, { message: "validation.zip.invalid" }),
   country: z.string().regex(ISO2_REGEX, { message: "validation.country.invalid" }),
 });
@@ -20,6 +21,7 @@ export const step2CompanySchema = z.object({
   name: z.string().min(2, { message: "validation.name.min2" }),
   dic: z.string().trim().min(2, { message: "validation.dic.min2" }).optional().or(z.literal("").transform(() => undefined)),
   legalFormCode: z.string().trim().min(1, { message: "validation.legalFormCode.min1" }).optional().or(z.literal("").transform(() => undefined)),
+  legalFormName: z.string().trim().optional().or(z.literal("").transform(() => undefined)),
   address: addressSchema,
 });
 export type Step2Company = z.infer<typeof step2CompanySchema>;

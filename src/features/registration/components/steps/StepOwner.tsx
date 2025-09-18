@@ -9,23 +9,19 @@ import { useRegistration } from "../RegistrationWizard";
 import { step3OwnerSchema, type Step3Owner } from "../../validation/schemas";
 import { RegistrationService } from "../../services/RegistrationService";
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import type { CompanyRegistrationRequest, ProblemDetail } from "@/lib/api/types";
+import type { ProblemDetail, CompanyRegistrationRequest } from "@/lib/api/types";
+import { Button } from "@/components/ui/stavbau-ui";
 
 export const StepOwner: React.FC = () => {
   // t = registration, te = errors
   const { t } = useTranslation("registration");
   const { t: te } = useTranslation("errors");
 
-  // Překladový helper:
-  // - klíče začínající "errors." -> errors ns (bez prefixu)
-  // - jinak -> registration ns
+  // Překladový helper – zvládá "errors.*" i případný "registration.*"
   const tr = (key?: string) => {
     if (!key) return "";
-    // mapper a BE kódy ve "errors" namespacu
     if (key.startsWith("errors.")) return te(key.replace(/^errors\./, ""));
-    // defensivně: pokud přijde klíč s prefixem "registration.", odtrhni ho
     if (key.startsWith("registration.")) return t(key.replace(/^registration\./, ""));
-    // jinak ber klíče relativně k "registration" ns
     return t(key);
   };
 
@@ -49,7 +45,7 @@ export const StepOwner: React.FC = () => {
   const onSubmit = form.handleSubmit(async (values) => {
     setBanner(null);
 
-    // 1) Uložit aktuální hodnoty do wizard state
+    // Ulož aktuální hodnoty do wizard state
     setState((s) => ({
       ...s,
       owner: {
@@ -63,7 +59,7 @@ export const StepOwner: React.FC = () => {
       consents: { ...s.consents, termsAccepted: values.termsAccepted, marketing: !!values.marketing },
     }));
 
-    // 2) Payload pro BE
+    // Payload pro BE
     const body: CompanyRegistrationRequest = {
       company: {
         ico: state.company.ico,
@@ -92,29 +88,28 @@ export const StepOwner: React.FC = () => {
 
     try {
       const res = await RegistrationService.register(body);
-      setState((s) => ({ ...s, result: res, step: 3 }));
-      // focus přejde na StepSuccess
+      setState((s) => ({
+        ...s,
+        result: res,
+        step: 3,
+        maxReachedStep: (Math.max(s.maxReachedStep ?? 0, 3) as 0 | 1 | 2 | 3),
+      }));
     } catch (err) {
       if (isAxiosError(err)) {
         const pd = err.response?.data as ProblemDetail | undefined;
         const mapped = mapRegistrationError(pd);
 
-        // 409/user.email.exists → inline u emailu (ulož klíč, překládej v renderu)
         if (mapped.kind === "field" && mapped.field === "owner.email") {
           form.setError("email", { type: "conflict", message: mapped.i18nKey });
           return;
         }
-
-        // 409/company.exists → návrat na krok 1  banner
         if (mapped.kind === "flow" && mapped.i18nKey === "errors.company.exists") {
           setBanner(tr("errors.company.exists_with_cta"));
           goTo(0);
           return;
         }
-
-        // 400 validation → mapování podle path (owner.*), jinak generic (ulož klíč)
         if (pd?.status === 400 && pd?.path) {
-          const path = String(pd.path); // např. "owner.email" nebo "company.address.zip"
+          const path = String(pd.path);
           if (path.startsWith("owner.")) {
             const field = path.split(".")[1] as keyof Step3Owner;
             form.setError(field, { type: "server", message: pd.code || "errors.validation.generic" });
@@ -123,13 +118,9 @@ export const StepOwner: React.FC = () => {
           setBanner(tr(pd.code || "errors.validation.generic"));
           return;
         }
-
-        // Fallback (403/429/5xx…)
         setBanner(tr(mapped.i18nKey));
         return;
       }
-
-      // Non-Axios error
       setBanner(tr("errors.generic"));
     }
   });
@@ -151,35 +142,31 @@ export const StepOwner: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={onSubmit} noValidate className="grid gap-4 max-w-lg">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm" htmlFor="firstName">
-              {t("fields.owner.firstName.label")}
-            </label>
-            <input id="firstName" {...form.register("firstName")} className="border rounded-md px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label className="text-sm" htmlFor="lastName">
-              {t("fields.owner.lastName.label")}
-            </label>
-            <input id="lastName" {...form.register("lastName")} className="border rounded-md px-3 py-2 w-full" />
-          </div>
+      {/* plná šířka karty; na md+ dvousloupcově, email+password vedle sebe */}
+      <form onSubmit={onSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Jméno / Příjmení */}
+        <div>
+          <label className="text-sm" htmlFor="firstName">{t("fields.owner.firstName.label")}</label>
+          <input id="firstName" {...form.register("firstName")} className="border rounded-md px-3 py-2 w-full" />
+        </div>
+        <div>
+          <label className="text-sm" htmlFor="lastName">{t("fields.owner.lastName.label")}</label>
+          <input id="lastName" {...form.register("lastName")} className="border rounded-md px-3 py-2 w-full" />
         </div>
 
-        <div>
-          <label className="text-sm" htmlFor="phone">
-            {t("fields.owner.phone.label")}
-          </label>
+        {/* Telefon (celá šířka) */}
+        <div className="md:col-span-2">
+          <label className="text-sm" htmlFor="phone">{t("fields.owner.phone.label")}</label>
           <input id="phone" {...form.register("phone")} className="border rounded-md px-3 py-2 w-full" />
         </div>
 
+        {/* Email + Heslo vedle sebe na md+ */}
         <div>
-          <label className="text-sm" htmlFor="email">
-            {t("fields.owner.email.label")}
-          </label>
+          <label className="text-sm" htmlFor="email">{t("fields.owner.email.label")}</label>
           <input
             id="email"
+            type="email"
+            autoComplete="email"
             {...form.register("email")}
             className="border rounded-md px-3 py-2 w-full"
             aria-invalid={!!form.formState.errors.email || undefined}
@@ -192,12 +179,11 @@ export const StepOwner: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-sm" htmlFor="password">
-            {t("fields.owner.password.label")}
-          </label>
+          <label className="text-sm" htmlFor="password">{t("fields.owner.password.label")}</label>
           <input
             id="password"
             type="password"
+            autoComplete="new-password"
             {...form.register("password")}
             className="border rounded-md px-3 py-2 w-full"
             aria-invalid={!!form.formState.errors.password || undefined}
@@ -209,7 +195,8 @@ export const StepOwner: React.FC = () => {
           )}
         </div>
 
-        <div className="mt-2">
+        {/* Souhlasy (oba přes celou šířku) */}
+        <div className="md:col-span-2 mt-2">
           <label className="inline-flex items-center gap-2" htmlFor="termsAccepted">
             <input id="termsAccepted" type="checkbox" {...form.register("termsAccepted")} />
             <span className="text-sm">{t("fields.consents.termsAccepted.label")}</span>
@@ -221,20 +208,21 @@ export const StepOwner: React.FC = () => {
           )}
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label className="inline-flex items-center gap-2" htmlFor="marketing">
             <input id="marketing" type="checkbox" {...form.register("marketing")} />
             <span className="text-sm">{t("fields.consents.marketing.label")}</span>
           </label>
         </div>
 
-        <div className="mt-6 flex justify-between">
-          <button type="button" className="border rounded-md px-4 py-2" onClick={back}>
+        {/* Akce */}
+        <div className="mt-6 md:col-span-2 flex justify-between">
+          <Button type="button" className="w-auto" onClick={back} disabled={form.formState.isSubmitting}>
             {t("actions.back")}
-          </button>
-          <button type="submit" className="border rounded-md px-4 py-2" disabled={form.formState.isSubmitting}>
+          </Button>
+          <Button type="submit" className="w-auto" isLoading={form.formState.isSubmitting} disabled={form.formState.isSubmitting}>
             {t("actions.finish")}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

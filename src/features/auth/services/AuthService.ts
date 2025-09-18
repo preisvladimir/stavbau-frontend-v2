@@ -19,4 +19,12 @@ export const AuthService = {
     const { data } = await api.post<RefreshResponse>("/auth/refresh", payload);
     return data;
   },
+  // ⬇️ NOVÉ
+  async logout(refreshToken?: string): Promise<void> {
+    try {
+      await api.post("/auth/logout", { refreshToken });
+    } catch {
+      // best-effort: FE logout proběhne i když BE logout selže
+    }
+  },  
 };

@@ -7,13 +7,16 @@ import { StepOwner } from "./steps/StepOwner";
 import { StepSuccess } from "./steps/StepSuccess";
 
 type Address = { street: string; city: string; zip: string; country: string };
+
 export type CompanyState = {
   ico: string;
   dic?: string | null;
   name: string;
   address: Address;
   legalFormCode?: string | null;
+  legalFormName?: string | null;
 };
+
 export type OwnerState = {
   email: string;
   password: string;
@@ -21,22 +24,32 @@ export type OwnerState = {
   lastName?: string | null;
   phone?: string | null;
 };
+
 export type ConsentsState = { termsAccepted: boolean; marketing?: boolean | null };
+
 export type RegistrationState = {
   step: 0 | 1 | 2 | 3;
+  maxReachedStep: 0 | 1 | 2 | 3;
   company: CompanyState;
   owner: OwnerState;
   consents: ConsentsState;
-  result?: { companyId: string; ownerUserId: string; ownerRole: "OWNER"; status: "CREATED" | "EXISTS" | "PENDING_VERIFICATION" };
+  result?: {
+    companyId: string;
+    ownerUserId: string;
+    ownerRole: "OWNER";
+    status: "CREATED" | "EXISTS" | "PENDING_VERIFICATION";
+  };
 };
 
 const EMPTY_STATE: RegistrationState = {
   step: 0,
+  maxReachedStep: 0,
   company: {
     ico: "",
     name: "",
     dic: null,
     legalFormCode: null,
+    legalFormName: null,
     address: { street: "", city: "", zip: "", country: "CZ" },
   },
   owner: { email: "", password: "", firstName: null, lastName: null, phone: null },
@@ -45,12 +58,16 @@ const EMPTY_STATE: RegistrationState = {
 
 const SS_KEY = "registration-state-v1";
 
+// helper: zajistí úzkou unii 0|1|2|3
+const clampStep = (n: number): 0 | 1 | 2 | 3 =>
+  (n < 0 ? 0 : n > 3 ? 3 : (n as 0 | 1 | 2 | 3));
+
 type Ctx = {
   state: RegistrationState;
   setState: React.Dispatch<React.SetStateAction<RegistrationState>>;
   next: () => void;
   back: () => void;
-  goTo: (s: 0 | 1 | 2) => void;
+  goTo: (s: 0 | 1 | 2 | 3) => void;
 };
 
 const RegistrationCtx = React.createContext<Ctx | null>(null);
@@ -62,6 +79,7 @@ export const useRegistration = () => {
 
 export const RegistrationWizard: React.FC = () => {
   const { t } = useTranslation("registration");
+
   const [state, setState] = React.useState<RegistrationState>(() => {
     try {
       const raw = sessionStorage.getItem(SS_KEY);
@@ -76,16 +94,26 @@ export const RegistrationWizard: React.FC = () => {
   }, [state]);
 
   const next = React.useCallback(() => {
-    setState((s) => ({ ...s, step: (Math.min(2, s.step + 1) as 0 | 1 | 2 | 3) }));
+    setState((s) => {
+      const nextStep = clampStep(s.step + 1);
+      return {
+        ...s,
+        step: nextStep,
+        maxReachedStep: clampStep(Math.max(s.maxReachedStep, nextStep)),
+      };
+    });
   }, []);
+
   const back = React.useCallback(() => {
-    setState((s) => ({ ...s, step: (Math.max(0, s.step - 1) as 0 | 1 | 2 | 3) }));
+    setState((s) => ({ ...s, step: clampStep(s.step - 1) }));
   }, []);
-  const goTo = React.useCallback((s: 0 | 1 | 2 | 3) => setState((st) => ({ ...st, step: s })), []);
+
+  const goTo = React.useCallback((target: 0 | 1 | 2 | 3) => {
+    setState((s) => ({ ...s, step: clampStep(target) }));
+  }, []);
 
   React.useEffect(() => {
-    const el = document.getElementById("registration-step-title");
-    el?.focus();
+    document.getElementById("registration-step-title")?.focus();
   }, [state.step]);
 
   const steps = [
@@ -95,22 +123,31 @@ export const RegistrationWizard: React.FC = () => {
     { id: 3 as const, label: t("steps.3.title") },
   ];
 
+  const canNavigateTo = (idx: 0 | 1 | 2 | 3) => idx <= state.maxReachedStep;
+
   return (
     <RegistrationCtx.Provider value={{ state, setState, next, back, goTo }}>
       <ol className="mb-6 flex items-center gap-2 text-sm">
         {steps.map((s, idx) => {
           const isActive = state.step === s.id;
           const isDone = state.step > s.id;
+          const disabled = !canNavigateTo(s.id);
           return (
             <li key={s.id} className="flex items-center">
               <button
                 type="button"
-                className={
-                  "rounded-full w-7 h-7 mr-2 border flex items-center justify-center " +
-                  (isActive ? "border-primary font-semibold" : isDone ? "border-primary/60" : "border-muted-foreground/30")
+                onClick={() => !disabled && goTo(s.id)}
+                disabled={disabled}
+                aria-disabled={disabled}
+                title={
+                  disabled ? (t("steps.guard", { defaultValue: "Dokončete předchozí krok." }) as string) : undefined
                 }
+                className={[
+                  "rounded-full w-7 h-7 mr-2 border flex items-center justify-center transition-colors",
+                  isActive ? "border-gray-900" : isDone ? "border-gray-500" : "border-gray-300",
+                  disabled ? "text-gray-400 cursor-not-allowed" : "hover:underline",
+                ].join(" ")}
                 aria-current={isActive ? "step" : undefined}
-                onClick={() => goTo(s.id)}
               >
                 {idx + 1}
               </button>
@@ -121,7 +158,7 @@ export const RegistrationWizard: React.FC = () => {
         })}
       </ol>
 
-      <section className="rounded-lg border p-6">
+      <section className="rounded-xl border border-gray-200 p-6">
         {state.step === 0 && <StepIco />}
         {state.step === 1 && <StepCompany />}
         {state.step === 2 && <StepOwner />}

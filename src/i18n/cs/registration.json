@@ -17,7 +17,8 @@
     "3": {
       "title": "Hotovo!",
       "desc": "Registrace byla úspěšná. Můžete se přihlásit nebo založit další firmu."
-    }
+    },
+    "guard": "Dokončete předchozí krok."
   },
   "fields": {
     "ico": {

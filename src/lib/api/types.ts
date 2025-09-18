@@ -22,6 +22,7 @@ export type CompanyLookupPreviewDto = {
   dic?: string | null;
   name: string;
   legalFormCode?: string | null;
+  legalFormName?: string | null;
   address: AddressDto;
 };
 

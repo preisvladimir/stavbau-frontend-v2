@@ -17,7 +17,8 @@
     "3": {
       "title": "Done!",
       "desc": "Registration succeeded. You can log in or register another company."
-    }
+    },
+    "guard": "Please complete the previous step."
   },
   "fields": {
     "ico": {

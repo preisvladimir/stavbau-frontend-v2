@@ -20,11 +20,13 @@ export const StepSuccess: React.FC = () => {
     } catch {}
     setState(() => ({
       step: 0,
+      maxReachedStep: 0,
       company: {
         ico: "",
         dic: null,
         name: "",
         legalFormCode: null,
+        legalFormName: null,
         address: { street: "", city: "", zip: "", country: "CZ" },
       },
       owner: { email: "", password: "", firstName: null, lastName: null, phone: null },
@@ -48,7 +50,7 @@ export const StepSuccess: React.FC = () => {
       </div>
 
       <div className="flex gap-2">
-        <button className="border rounded-md px-4 py-2" onClick={() => nav("/login")}>
+        <button className="border rounded-md px-4 py-2" onClick={() => {nav("/login")}}>
           {t("success.cta.login")}
         </button>
         <button className="border rounded-md px-4 py-2" onClick={resetAll}>
