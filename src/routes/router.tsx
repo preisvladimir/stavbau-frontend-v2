@@ -1,5 +1,5 @@
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
-import App from "@/app/App"; // ⬅️ DOPLNĚNO
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import App from "@/app/App";
 
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import LoginPage from "@/features/auth/pages/LoginPage";
@@ -9,11 +9,13 @@ import DashboardPage from "@/pages/DashboardPage";
 import ProjectsListPage from "@/pages/projects/ProjectsListPage";
 import ProjectNewPage from "@/pages/projects/ProjectNewPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
+import ScopeGuard from "@/features/auth/guards/ScopeGuard";
+import TeamPage from "@/features/team/pages/TeamPage";
 
 function RootWithProviders() {
   return (
     <AuthProvider>
-      <App />    {/* ⬅️ App je globální wrapper s <Outlet/> */}
+      <App /> {/* Globální wrapper s <Outlet/> */}
     </AuthProvider>
   );
 }
@@ -21,7 +23,7 @@ function RootWithProviders() {
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootWithProviders />,   // ⬅️ AuthProvider + App wrapper
+    element: <RootWithProviders />,
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: "login", element: <LoginPage /> },
@@ -36,6 +38,14 @@ export const router = createBrowserRouter([
               { path: "dashboard", element: <DashboardPage /> },
               { path: "projects", element: <ProjectsListPage /> },
               { path: "projects/new", element: <ProjectNewPage /> },
+              {
+                path: "team",
+                element: (
+                  <ScopeGuard required={["team:read"]}>
+                    <TeamPage />
+                  </ScopeGuard>
+                ),
+              },
             ],
           },
         ],
