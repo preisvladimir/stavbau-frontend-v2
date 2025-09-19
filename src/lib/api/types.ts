@@ -9,6 +9,7 @@ export type MeResponse = {
   fullName: string;
   avatarUrl?: string | null;
   activeCompany?: { id: string; name: string } | null;
+  companyId: string;
   role: string;
   scopes: string[];
 };
