@@ -62,3 +62,51 @@ export type ProblemDetail = {
   path?: string;
   [k: string]: unknown;  
 };
+
+// =========================================
+// Team (Company Members)
+// =========================================
+
+/** FE role do UI formulářů (mimo BE company role) */
+export type TeamRole = 'ADMIN' | 'MEMBER';
+
+/** Company role vracená BE (rozšířitelná o string pro forward-compat) */
+export type CompanyRole =
+  | 'OWNER'
+  | 'COMPANY_ADMIN'
+  | 'MANAGER'
+  | 'EDITOR'
+  | 'VIEWER'
+  | string;
+
+export interface MemberDto {
+  id: string;
+  email: string;
+  /** Company role z BE (RBAC na úrovni firmy) */
+  role: CompanyRole;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}
+
+/** Pokud BE vrací objekt s položkami, použijeme tento tvar; pro skeleton načítáme pole MemberDto[] */
+export interface MemberListResponse {
+  items: MemberDto[];
+  total?: number;
+}
+
+export interface CreateMemberRequest {
+  email: string;
+  /** Požadovaná company role (FE může poslat konkrétní string pro BE) */
+  role: CompanyRole | string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}
+
+export interface UpdateMemberRequest {
+  role?: CompanyRole | string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}
