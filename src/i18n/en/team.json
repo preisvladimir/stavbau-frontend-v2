@@ -1,0 +1,12 @@
+{
+  "title": "Team",
+  "loading": "Loading…",
+  "empty": "No members yet.",
+  "error": "Failed to load team members.",
+  "columns": {
+    "email": "Email",
+    "role": "Role",
+    "name": "Name",
+    "phone": "Phone"
+  }
+}

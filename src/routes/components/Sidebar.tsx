@@ -7,6 +7,7 @@ export default function Sidebar() {
   const scopes = user?.scopes ?? [];
 
   const canReadProjects = hasScope(scopes, "projects:read", "anyOf");
+  const canReadTeam = hasScope(scopes, "team:read", "anyOf");
 
   return (
     <aside className="w-64 border-r p-4 hidden md:block">
@@ -15,6 +16,9 @@ export default function Sidebar() {
         {canReadProjects && (
           <NavLink to="/app/projects" className="block px-2 py-1 rounded hover:bg-muted">Projekty</NavLink>
         )}
+        {canReadTeam && (
+          <NavLink to="/app/team" className="block px-2 py-1 rounded hover:bg-muted">Team</NavLink>
+        )}        
       </nav>
     </aside>
  );

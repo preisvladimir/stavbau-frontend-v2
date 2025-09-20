@@ -145,3 +145,13 @@ Slouží jako **jediný zdroj pravdy** pro postup v projektu.
    - FE: login page + `/auth/me` + refresh flow.  
 
 ---
+
+## 11. Konvence ID (API & doména)
+
+- **Primární klíč všech entit** dědících z `BaseEntity` je `id: UUID`.  
+- **API response DTO** musí používat `id` pro primární klíč resource (nikoli `userId`, `projectId`, …).  
+- **Cizí klíče** v DTO pojmenovávej jako `<name>Id` (např. `companyId`, `projectId`).  
+- **JWT**: `sub` (string UUID) = user id, `cid` = company id; RBAC claimy beze změny.  
+- **Create/Update request DTO** primární `id` neobsahují (server generuje).  
+- **URL**: `/users/{id}`, `/projects/{id}`, … – odpověď obsahuje `id`.  
+- Důvod: konzistence, snadná normalizace FE store, žádné budoucí migrace názvů polí.  

@@ -5,6 +5,7 @@ export type RefreshRequest = { refreshToken: string; };
 export type RefreshResponse = { accessToken: string; refreshToken: string; expiresAt: string; };
 export type MeResponse = {
   id: string;
+  userId: string;
   email: string;
   fullName: string;
   avatarUrl?: string | null;

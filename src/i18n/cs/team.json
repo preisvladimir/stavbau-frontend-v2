@@ -1,0 +1,12 @@
+{
+  "title": "Tým",
+  "loading": "Načítám…",
+  "empty": "Žádní členové zatím nejsou.",
+  "error": "Nepodařilo se načíst členy týmu.",
+  "columns": {
+    "email": "E-mail",
+    "role": "Role",
+    "name": "Jméno",
+    "phone": "Telefon"
+  }
+}

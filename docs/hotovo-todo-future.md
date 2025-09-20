@@ -443,4 +443,19 @@
 - Rozšíření RBAC (jemné scopy `team:add|remove|update_role` pro PRO tarif).  
 - Swagger: doplnit příklady request/response (201/409/403/404/429) a kódy chyb.
 
+### 20. 9. 2025 — RBAC claims a jemné scopy
 
+- **RBAC:** Naplněny jemné scopy `team:add`, `team:remove`, `team:update_role` atd. v `BuiltInRoles`.
+- **Login:** Upraven `AuthController.login()` – access token nyní při zapnutém `rbacClaimsEnabled` obsahuje `companyRole` a `scopes[]` (fallback na legacy varianta beze změny).
+- **/auth/me:** Rozšířeno o `companyRole`, `projectRoles[]`, `scopes[]`.
+- **Repo:** Zavedeno vyčtení role uživatele z `CompanyMember` (varianta B: načtení entity a čtení z pole `role`).
+- **Docs:** Aktualizováno `RBAC_2.1_STAVBAU_V2.md` (scopes, mapping).
+- **Výsledek:** `/auth/me` vrací kompletní RBAC kontext; login je stabilní i při chybách v RBAC části (fail-safe fallback).
+
+
+### 21. 9. 2025 — Konvence ID a /auth/me rozšíření
+
+- **BE:** Upraveno `MeResponse` (pole `id` místo `userId`) a příslušný controller.
+- **Docs:** Doplněn odstavec o konvenci ID (UUID pouze `id`) do `STAVBAU_GUIDELINES.md`.
+- **OpenAPI:** Snippet `/auth/me` aktualizován – `id`, `companyId`, `companyRole`, `projectRoles[]`, `scopes[]`.
+- **Dopad:** Konsolidace ID konvencí pro všechny entity a DTO → do budoucna nebude nutný rework.
