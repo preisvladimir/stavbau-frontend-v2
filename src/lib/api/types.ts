@@ -12,6 +12,8 @@ export type MeResponse = {
   activeCompany?: { id: string; name: string } | null;
   companyId: string;
   role: string;
+  companyRole: string;
+  projectRoles: string[];
   scopes: string[];
 };
 export type PageResponse<T> = { items: T[]; page: number; size: number; total: number; };

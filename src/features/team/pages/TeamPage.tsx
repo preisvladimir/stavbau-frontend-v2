@@ -1,9 +1,10 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
-import { TeamService } from "@/features/team/services/team.service";
+import { TeamService } from "@/features/team/api/team.service";
 import type { MemberDto } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
+import axios from "axios";
 
 export default function TeamPage() {
   const { t } = useTranslation("team");
@@ -30,8 +31,22 @@ export default function TeamPage() {
       try {
         const res = await TeamService.list(companyId, { signal: ac.signal });
         // očekáváme MemberListResponse { items: MemberDto[] }
-        setItems(Array.isArray((res as any)?.items) ? (res as any).items : []);
+        console.log(res?.items ?? []);
+        setItems(res?.items ?? []);
       } catch (e) {
+        // Ignoruj zrušené požadavky (Axios/Abort/ApiError-canceled)
+        const isAxiosCanceled =
+          (axios.isAxiosError?.(e) && e.code === "ERR_CANCELED") ||
+          (typeof (axios as any).isCancel === "function" && (axios as any).isCancel(e)) ||
+          (e as any)?.message === "canceled" ||
+          (e as any)?.name === "CanceledError" ||
+          (e as any)?.name === "AbortError";
+        const isApiErrorCanceled =
+          e instanceof ApiError &&
+          (e.problem.status === 0 ||
+            /cancel|abort/i.test(e.problem.title || "") ||
+            /cancel|abort/i.test(e.message || ""));
+        if (isAxiosCanceled || isApiErrorCanceled) return;      
         const message =
           e instanceof ApiError
             ? e.problem.detail || e.problem.title || "Request failed"
@@ -75,18 +90,18 @@ export default function TeamPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((m) => {
-                const name =
-                  [m.firstName, m.lastName].filter(Boolean).join(" ") || "—";
-                return (
+             {items.map((m) => {
+                 const name =
+                   [m.firstName, m.lastName].filter(Boolean).join(" ") || "—";
+                 return (
                   <tr key={m.id} className="odd:bg-white even:bg-gray-50">
-                    <td className="p-2 border-b">{m.email}</td>
-                    <td className="p-2 border-b">{m.role}</td>
-                    <td className="p-2 border-b">{name}</td>
-                    <td className="p-2 border-b">{m.phone || "—"}</td>
-                  </tr>
-                );
-              })}
+                     <td className="p-2 border-b">{m.email}</td>
+                     <td className="p-2 border-b">{m.role}</td>
+                     <td className="p-2 border-b">{name}</td>
+                     <td className="p-2 border-b">{m.phone || "—"}</td>
+                   </tr>
+                 );
+               })}
             </tbody>
           </table>
         </div>

@@ -6,6 +6,7 @@ import type {
   MemberDto,
 } from "@/lib/api/types";
 import { mapAndThrow } from "@/lib/api/problem";
+import axios from "axios";
 
 /** Base endpoint pro Company members */
 const endpoint = (companyId: string) =>
@@ -17,14 +18,36 @@ const memberUrl = (companyId: string, memberId: string) =>
 export const TeamService = {
    /** GET /api/v1/tenants/{companyId}/members */
    async list(companyId: string, opts?: { signal?: AbortSignal }) {
-    try {
-      const res = await api.get<MemberListResponse>(endpoint(companyId), {
-        signal: opts?.signal,
-      });
-      return res.data;
-    } catch (e) {
-      mapAndThrow(e);
-    }
+     try {
+      const res = await api.get<any>(endpoint(companyId), { signal: opts?.signal });
+       const payload = res.data;
+       const items = Array.isArray(payload?.items)
+         ? payload.items
+         : Array.isArray(payload)
+         ? payload
+         : [];
+       const normalized: MemberDto[] = items.map((m: any) => ({
+         id: m.id ?? m.memberId ?? m.userId ?? m.email,
+         email: m.email,
+         role: m.role,
+         firstName: m.firstName ?? null,
+         lastName: m.lastName ?? null,
+         phone: m.phone ?? null,
+       }));
+       return { items: normalized, total: payload?.total ?? normalized.length } as MemberListResponse;
+     } catch (e) {
+      // Ne-mapovat cancel → ať si ho komponenta může ignorovat
+      if (
+        (axios.isAxiosError?.(e) && e.code === "ERR_CANCELED") ||
+        (typeof (axios as any).isCancel === "function" && (axios as any).isCancel(e)) ||
+        (e as any)?.message === "canceled" ||
+        (e as any)?.name === "CanceledError" ||
+        (e as any)?.name === "AbortError"
+      ) {
+        throw e;
+      }
+       mapAndThrow(e);
+     }
    },
 
    /** POST /api/v1/tenants/{companyId}/members */

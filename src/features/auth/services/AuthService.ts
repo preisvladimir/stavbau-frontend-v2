@@ -13,10 +13,10 @@ export const AuthService = {
       // ⛳️ První volání po loginu označíme, aby 401 nevyvolala refresh-loop
       _skipRefresh: !!accessToken,
     } as any);
-     return data;
-   },
-  async refresh(payload: RefreshRequest): Promise<RefreshResponse> {
-    const { data } = await api.post<RefreshResponse>("/auth/refresh", payload);
+    return data;
+  },
+  async refresh(payload?: RefreshRequest): Promise<RefreshResponse> {
+    const { data } = await api.post<RefreshResponse>("/auth/refresh", payload ?? {});
     return data;
   },
   // ⬇️ NOVÉ
@@ -26,5 +26,5 @@ export const AuthService = {
     } catch {
       // best-effort: FE logout proběhne i když BE logout selže
     }
-  },  
+  },
 };
