@@ -83,6 +83,13 @@ export type CompanyRole =
   | 'VIEWER'
   | string;
 
+export type MemberStatus =
+  | 'CREATED'
+  | 'ACTIVE'
+  | 'INVITED'
+  | 'DISABLED'
+  | 'REMOVED';
+
 export interface MemberDto {
   id: string;
   email: string;
@@ -91,6 +98,15 @@ export interface MemberDto {
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
+  status: MemberStatus;
+  createdAt?: string;
+  updatedAt?: string;  
+}
+
+export interface FieldError {
+  field: string;
+  message: string;
+  code?: string;
 }
 
 /** Pokud BE vrací objekt s položkami, použijeme tento tvar; pro skeleton načítáme pole MemberDto[] */
@@ -113,4 +129,8 @@ export interface UpdateMemberRequest {
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
+}
+
+export interface UpdateMemberRoleRequest {
+  role: CompanyRole;
 }
