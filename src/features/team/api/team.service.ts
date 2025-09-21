@@ -20,6 +20,9 @@ const endpoint = (companyId: string) =>
 const memberUrl = (companyId: string, memberId: string) =>
   `${endpoint(companyId)}/${encodeURIComponent(memberId)}`;
 
+const memberProfileUrl = (companyId: string, memberId: string) =>
+  `${memberUrl(companyId, memberId)}/profile`;
+
 function normalizeOne(m: any): MemberDto {
   return {
     id: m.id ?? m.memberId ?? m.userId ?? m.email,
@@ -80,7 +83,8 @@ export const TeamService = {
     body: UpdateMemberRequest
   ): Promise<MemberDto> {
     try {
-      const res = await api.patch<any>(memberUrl(companyId, memberId), body);
+      // profil PATCH jde nyní na /profile (role je řešena zvlášť přes updateMemberRole)
+      const res = await api.patch<any>(memberProfileUrl(companyId, memberId), body);
       return normalizeOne(res.data);
     } catch (e) {
       if (isCanceled(e)) throw e;

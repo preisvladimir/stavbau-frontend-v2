@@ -3,30 +3,70 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
+import MemberEditModal from "@/features/team/components/MemberEditModal";
 import { TeamService } from "@/features/team/api/team.service";
-import type { MemberDto } from "@/lib/api/types";
+import type { MemberDto, CompanyRole } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
-//import  { EMAIL_REGEX, EMAIL_REGEX_IMPUT } from "@/lib/utils/regex";
+// import { EMAIL_REGEX, EMAIL_REGEX_INPUT } from "@/lib/utils/regex";
 
 export default function TeamPage() {
-  const { t } = useTranslation("team");
   const { user } = useAuthContext();
+  const { t } = useTranslation("team");
+  const [items, setItems] = React.useState<MemberDto[]>([]);
+
+  // jednotný seznam všech rolí podle BE
+  const ALL_ROLES: CompanyRole[] = [
+    "OWNER",
+    "COMPANY_ADMIN",
+    "ACCOUNTANT",
+    "PURCHASING",
+    "MANAGER",
+    "DOC_CONTROLLER",
+    "FLEET_MANAGER",
+    "HR_MANAGER",
+    "AUDITOR_READONLY",
+    "INTEGRATION",
+    "MEMBER",
+    "VIEWER",
+    "SUPERADMIN",
+  ];
+  const roleLabel = (r: CompanyRole | string) =>
+    t(`roles.${r}`, { defaultValue: r });
+
+  // --- FE pre-guard helpers ---
+  /** V tenant UI NIKDY nenabízíme OWNER ani SUPERADMIN v selectech */
+  const VISIBLE_ROLES: CompanyRole[] = React.useMemo(
+    () => ALL_ROLES.filter((r) => r !== "OWNER" && r !== "SUPERADMIN"),
+    []
+  );
+  /** OWNER nelze editovat */
+  const canEditMemberRole = (member: MemberDto) => member.role !== "OWNER";
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [items, setItems] = React.useState<MemberDto[]>([]);
 
   // Add form state
   const [showAdd, setShowAdd] = React.useState(false);
   const [addEmail, setAddEmail] = React.useState("");
-  const [addRole, setAddRole] = React.useState("MEMBER");
+  const [addRole, setAddRole] = React.useState<CompanyRole | string>("MEMBER");
   const [addFirstName, setAddFirstName] = React.useState("");
   const [addLastName, setAddLastName] = React.useState("");
   const [addPhone, setAddPhone] = React.useState("");
   const [adding, setAdding] = React.useState(false);
   const [addError, setAddError] = React.useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>(
+    {}
+  );
 
+  // Update role state
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [draftRole, setDraftRole] = React.useState<CompanyRole | string>("VIEWER");
+  const [updating, setUpdating] = React.useState(false);
+  const [updateError, setUpdateError] = React.useState<string | null>(null);
+
+  // Edit profile modal state
+  const [editProfileOpen, setEditProfileOpen] = React.useState(false);
+  const [selectedMember, setSelectedMember] = React.useState<MemberDto | null>(null);
 
   const companyId = user?.companyId;
 
@@ -44,14 +84,13 @@ export default function TeamPage() {
     (async () => {
       try {
         const res = await TeamService.list(companyId, { signal: ac.signal });
-        // očekáváme MemberListResponse { items: MemberDto[] }
-        console.log(res?.items ?? []);
         setItems(res?.items ?? []);
       } catch (e) {
         // Ignoruj zrušené požadavky (Axios/Abort/ApiError-canceled)
         const isAxiosCanceled =
           (axios.isAxiosError?.(e) && e.code === "ERR_CANCELED") ||
-          (typeof (axios as any).isCancel === "function" && (axios as any).isCancel(e)) ||
+          (typeof (axios as any).isCancel === "function" &&
+            (axios as any).isCancel(e)) ||
           (e as any)?.message === "canceled" ||
           (e as any)?.name === "CanceledError" ||
           (e as any)?.name === "AbortError";
@@ -61,6 +100,7 @@ export default function TeamPage() {
             /cancel|abort/i.test(e.problem.title || "") ||
             /cancel|abort/i.test(e.message || ""));
         if (isAxiosCanceled || isApiErrorCanceled) return;
+
         const message =
           e instanceof ApiError
             ? e.problem.detail || e.problem.title || "Request failed"
@@ -86,18 +126,43 @@ export default function TeamPage() {
     if (!companyId) return;
     setAddError(null);
     setFieldErrors({});
+
     // FE validace
     if (!addEmail.trim() || !validateEmail(addEmail)) {
-      setFieldErrors((fe) => ({ ...fe, email: t("validation.email", { defaultValue: "Zadejte platný e-mail" }) }));
+      setFieldErrors((fe) => ({
+        ...fe,
+        email: t("validation.email", {
+          defaultValue: "Zadejte platný e-mail",
+        }) as string,
+      }));
       return;
     }
     if (!addRole) {
-      setFieldErrors((fe) => ({ ...fe, role: t("validation.role", { defaultValue: "Vyberte roli" }) }));
+      setFieldErrors((fe) => ({
+        ...fe,
+        role: t("validation.role", { defaultValue: "Vyberte roli" }) as string,
+      }));
       return;
     }
+    // BE-aligned guard: nikdy nepřidávej OWNER/SUPERADMIN
+    if (addRole === "OWNER" || addRole === "SUPERADMIN") {
+      setFieldErrors((fe) => ({
+        ...fe,
+        role:
+          (addRole === "OWNER"
+            ? t("errors.ownerAssignForbidden", {
+              defaultValue: "Roli OWNER nelze přiřadit.",
+            })
+            : t("errors.notAssignable", {
+              defaultValue:
+                "Roli SUPERADMIN nelze v tomto rozhraní přiřadit.",
+            })) as string,
+      }));
+      return;
+    }
+
     setAdding(true);
     try {
-      console.log("voláme api");
       const created = await TeamService.add(companyId, {
         email: addEmail.trim(),
         role: addRole,
@@ -105,7 +170,6 @@ export default function TeamPage() {
         lastName: addLastName.trim() || null,
         phone: addPhone.trim() || null,
       });
-      console.log(created);
       // optimistické doplnění do listu
       setItems((prev) => [created, ...prev]);
       // reset formuláře
@@ -117,11 +181,11 @@ export default function TeamPage() {
       setShowAdd(false);
     } catch (e) {
       if (e instanceof ApiError) {
-        // Field errors z BE (pokud přijdou)
         if (e.problem.status === 403) {
           setAddError(
             t("errors.forbiddenAdd", {
-              defaultValue: "Nemáte oprávnění přidávat členy (vyžaduje scope team:write).",
+              defaultValue:
+                "Nemáte oprávnění přidávat členy (vyžaduje scope team:write).",
             })
           );
           return;
@@ -129,7 +193,8 @@ export default function TeamPage() {
         if (e.problem.status === 409) {
           setAddError(
             t("errors.conflictMember", {
-              defaultValue: "Uživatel už ve firmě existuje nebo je přiřazen k jiné firmě.",
+              defaultValue:
+                "Uživatel už ve firmě existuje nebo je přiřazen k jiné firmě.",
             })
           );
           return;
@@ -144,13 +209,17 @@ export default function TeamPage() {
           }
           setFieldErrors(mapped);
           setAddError(
-            t("errors.validation", { defaultValue: "Zkontrolujte zvýrazněná pole." })
+            t("errors.validation", {
+              defaultValue: "Zkontrolujte zvýrazněná pole.",
+            })
           );
           return;
         }
         // fallback
         setAddError(
-          e.problem.detail || e.problem.title || t("error", { defaultValue: "Nepodařilo se uložit." })
+          e.problem.detail ||
+          e.problem.title ||
+          (t("error", { defaultValue: "Nepodařilo se uložit." }) as string)
         );
       } else if (e instanceof Error) {
         setAddError(e.message);
@@ -160,6 +229,110 @@ export default function TeamPage() {
     }
   };
 
+  // === Update role handlers ===
+  const beginEditRole = (m: MemberDto) => {
+    setEditingId(m.id);
+    setDraftRole(m.role || "VIEWER");
+    setUpdateError(null);
+  };
+
+  const cancelEditRole = () => {
+    setEditingId(null);
+    setUpdateError(null);
+  };
+
+  const submitEditRole = async () => {
+    if (!companyId || !editingId) return;
+    if (!draftRole) {
+      setUpdateError(t("validation.role", { defaultValue: "Vyberte roli" }));
+      return;
+    }
+
+    // najdi editovaného člena
+    const member = items.find((it) => it.id === editingId);
+
+    // 1) No-op (žádná změna)
+    if (member && member.role === draftRole) {
+      setEditingId(null);
+      return;
+    }
+
+    // 2) SUPERADMIN ani OWNER nelze nastavit v tenant UI (obrana proti DOM hacku)
+    if (String(draftRole) === "SUPERADMIN") {
+      setUpdateError(
+        t("errors.notAssignable", {
+          defaultValue: "Roli SUPERADMIN nelze v tomto rozhraní přiřadit.",
+        })
+      );
+      return;
+    }
+    if (String(draftRole) === "OWNER") {
+      setUpdateError(
+        t("errors.ownerAssignForbidden", {
+          defaultValue: "Roli OWNER nelze přiřadit.",
+        })
+      );
+      return;
+    }
+
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      const updated = await TeamService.updateMemberRole(companyId, editingId, {
+        role: draftRole,
+      });
+      // Optimisticky přepiš v lokálním seznamu
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === editingId ? { ...it, role: updated.role } : it
+        )
+      );
+      setEditingId(null);
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.problem.status === 403) {
+          // BE zakazuje změnu role vlastníka (OWNER) – ukaž dedikovanou hlášku
+          setUpdateError(
+            t("errors.ownerChangeForbidden", {
+              defaultValue: "Nelze měnit roli vlastníka.",
+            })
+          );
+          return;
+        } else if (e.problem.status === 409) {
+          setUpdateError(
+            t("errors.conflictUpdateRole", {
+              defaultValue: "Nelze změnit roli – došlo ke konfliktu.",
+            })
+          );
+        } else if (e.problem.status === 400) {
+          const fe = (e.problem.errors ?? {}) as Record<string, any>;
+          const roleMsg = fe?.role
+            ? Array.isArray(fe.role)
+              ? String(fe.role[0])
+              : String(fe.role)
+            : null;
+          setUpdateError(
+            roleMsg ||
+            e.problem.detail ||
+            e.problem.title ||
+            (t("error", { defaultValue: "Nepodařilo se uložit." }) as string)
+          );
+        } else {
+          setUpdateError(
+            e.problem.detail ||
+            e.problem.title ||
+            (t("error", { defaultValue: "Nepodařilo se uložit." }) as string)
+          );
+        }
+      } else if (e instanceof Error) {
+        setUpdateError(e.message);
+      } else {
+        setUpdateError(String(e));
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="p-4">
@@ -204,7 +377,9 @@ export default function TeamPage() {
                   required
                 />
                 {fieldErrors.email && (
-                  <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {fieldErrors.email}
+                  </div>
                 )}
               </div>
               <div>
@@ -216,10 +391,14 @@ export default function TeamPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   value={addFirstName}
                   onChange={(e) => setAddFirstName(e.target.value)}
-                  placeholder={t("placeholders.firstName", { defaultValue: "Jan" }) as string}
+                  placeholder={
+                    t("placeholders.firstName", { defaultValue: "Jan" }) as string
+                  }
                 />
                 {fieldErrors.firstName && (
-                  <div className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {fieldErrors.firstName}
+                  </div>
                 )}
               </div>
               <div>
@@ -231,10 +410,14 @@ export default function TeamPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   value={addLastName}
                   onChange={(e) => setAddLastName(e.target.value)}
-                  placeholder={t("placeholders.lastName", { defaultValue: "Novák" }) as string}
+                  placeholder={
+                    t("placeholders.lastName", { defaultValue: "Novák" }) as string
+                  }
                 />
                 {fieldErrors.lastName && (
-                  <div className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {fieldErrors.lastName}
+                  </div>
                 )}
               </div>
               <div>
@@ -246,12 +429,16 @@ export default function TeamPage() {
                   value={addRole}
                   onChange={(e) => setAddRole(e.target.value)}
                 >
-                  {/* Company role z BE – základní výběr; i18n labely doplníme v PR 5/N */}
-                  <option value="MEMBER">{t("roles.MEMBER", { defaultValue: "Viewer" })}</option>
-                  <option value="ADMIN">{t("roles.COMPANY_ADMIN", { defaultValue: "Company admin" })}</option>
+                  {VISIBLE_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {roleLabel(r)}
+                    </option>
+                  ))}
                 </select>
                 {fieldErrors.role && (
-                  <div className="text-xs text-red-600 mt-1">{fieldErrors.role}</div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {fieldErrors.role}
+                  </div>
                 )}
               </div>
               <div>
@@ -263,10 +450,12 @@ export default function TeamPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   value={addPhone}
                   onChange={(e) => setAddPhone(e.target.value)}
-                  placeholder="+420 123 456 789"
+                  placeholder="420 123 456 789"
                 />
                 {fieldErrors.phone && (
-                  <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {fieldErrors.phone}
+                  </div>
                 )}
               </div>
               <div className="flex items-end gap-2">
@@ -300,7 +489,8 @@ export default function TeamPage() {
 
       {!loading && error && (
         <div role="alert" className="text-red-600">
-          {t("error")} {process.env.NODE_ENV !== "production" ? `(${error})` : null}
+          {t("error")}{" "}
+          {process.env.NODE_ENV !== "production" ? `(${error})` : null}
         </div>
       )}
 
@@ -317,6 +507,9 @@ export default function TeamPage() {
                 <th className="text-left p-2 border-b">{t("columns.role")}</th>
                 <th className="text-left p-2 border-b">{t("columns.name")}</th>
                 <th className="text-left p-2 border-b">{t("columns.phone")}</th>
+                <th className="text-left p-2 border-b w-40">
+                  {t("columns.actions", { defaultValue: "Akce" })}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -326,15 +519,106 @@ export default function TeamPage() {
                 return (
                   <tr key={m.id} className="odd:bg-white even:bg-gray-50">
                     <td className="p-2 border-b">{m.email}</td>
-                    <td className="p-2 border-b">{m.role}</td>
+                    <td className="p-2 border-b">
+                      {editingId === m.id ? (
+                        <select
+                          className="rounded-lg border border-gray-300 px-2 py-1"
+                          value={draftRole}
+                          onChange={(e) => setDraftRole(e.target.value)}
+                          disabled={updating}
+                        >
+                          {VISIBLE_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {roleLabel(r)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        roleLabel(m.role)
+                      )}
+                      {editingId === m.id && updateError && (
+                        <div className="text-xs text-red-600 mt-1">
+                          {updateError}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 border-b">{name}</td>
                     <td className="p-2 border-b">{m.phone || "—"}</td>
+                    <td className="p-2 border-b">
+                      <ScopeGuard anyOf={["team:write", "team:update_role"]}>
+                        {editingId === m.id ? (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-lg bg-black text-white disabled:opacity-50"
+                              onClick={submitEditRole}
+                              disabled={updating}
+                            >
+                              {updating
+                                ? t("actions.saving", {
+                                  defaultValue: "Ukládám…",
+                                })
+                                : t("actions.save", { defaultValue: "Uložit" })}
+                            </button>
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-lg border border-gray-300"
+                              onClick={cancelEditRole}
+                              disabled={updating}
+                            >
+                              {t("actions.cancel", { defaultValue: "Zrušit" })}
+                            </button>
+                          </div>
+                        ) : canEditMemberRole(m) ? (
+                          <button
+                            type="button"
+                            className="px-2 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
+                            onClick={() => beginEditRole(m)}
+                          >
+                            {t("actions.editRole", {
+                              defaultValue: "Upravit roli",
+                            })}
+                          </button>
+                        ) : (
+                          <span className="text-slate-400">
+                            {t("errors.ownerChangeForbidden", {
+                              defaultValue: "Nelze měnit roli vlastníka.",
+                            })}
+                          </span>
+                        )}
+                      </ScopeGuard>
+                      {/* Edit profile action (nezávisle na roli člena) */}
+                      <ScopeGuard anyOf={["team:write", "team:update"]}>
+                        <button
+                          type="button"
+                          className="ml-2 px-2 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
+                          onClick={() => {
+                            setSelectedMember(m);
+                            setEditProfileOpen(true);
+                          }}
+                        >
+                          {t("actions.editProfile", { defaultValue: "Upravit profil" })}
+                        </button>
+                      </ScopeGuard>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+      {/* Modal pro úpravu profilu člena */}
+      {companyId && (
+        <MemberEditModal
+          open={editProfileOpen}
+          companyId={companyId}
+          member={selectedMember}
+          onClose={() => setEditProfileOpen(false)}
+          onSaved={(updated) => {
+            setItems((prev) => prev.map((it) => (it.id === updated.id ? { ...it, ...updated } : it)));
+          }}
+        />
       )}
     </div>
   );

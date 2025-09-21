@@ -64,7 +64,7 @@ export type ProblemDetail = {
   detail?: string;
   code?: string; // např. 'company.exists', 'user.email.exists', 'validation.error'
   path?: string;
-  [k: string]: unknown;  
+  [k: string]: unknown;
 };
 
 // =========================================
@@ -78,9 +78,17 @@ export type TeamRole = 'ADMIN' | 'MEMBER';
 export type CompanyRole =
   | 'OWNER'
   | 'COMPANY_ADMIN'
+  | 'ACCOUNTANT'
+  | 'PURCHASING'
   | 'MANAGER'
-  | 'EDITOR'
+  | 'DOC_CONTROLLER'
+  | 'FLEET_MANAGER'
+  | 'HR_MANAGER'
+  | 'AUDITOR_READONLY'
+  | 'INTEGRATION'
+  | 'MEMBER'
   | 'VIEWER'
+  | 'SUPERADMIN'
   | string;
 
 export type MemberStatus =
@@ -100,7 +108,7 @@ export interface MemberDto {
   phone?: string | null;
   status: MemberStatus;
   createdAt?: string;
-  updatedAt?: string;  
+  updatedAt?: string;
 }
 
 export interface FieldError {

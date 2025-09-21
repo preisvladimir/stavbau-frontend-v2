@@ -9,6 +9,9 @@
     "name": "Jméno",
     "phone": "Telefon"
   },
+  "editModal": {
+    "title": "Upravit profil člena"
+  },
   "actions": {
     "addMember": "Přidat člena",
     "updateRole": "Změnit roli",
@@ -19,7 +22,10 @@
     "cancel": "Zrušit",
     "newUser": "Nový uživatel",
     "saving": "Ukládám…",
-    "add": "Přidat"
+    "add": "Přidat",
+    "locked": "Nelze upravit",
+    "editProfile": "Upravit profil",
+    "close": "Zavřít"
   },
   "form": {
     "email": "E-mail",
@@ -44,16 +50,27 @@
     "generic": "Operace se nezdařila. Zkuste to znovu.",
     "forbiddenAdd": "Nemáte oprávnění přidávat členy (vyžaduje scope team:write).",
     "conflictMember": "Uživatel už ve firmě existuje nebo je přiřazen k jiné firmě.",
-    "validation": "Zkontrolujte zvýrazněná pole."
+    "validation": "Zkontrolujte zvýrazněná pole.",
+    "lastOwner": "Nelze odebrat posledního vlastníka.",
+    "notAssignable": "Roli SUPERADMIN nelze v tomto rozhraní přiřadit.",
+    "onlySuperadminOwner": "Roli OWNER může přiřadit pouze superadmin.",
+    "forbiddenUpdateProfile": "Nemáte oprávnění upravovat profil člena.",
+    "memberNotFound": "Člen nenalezen."
   },
   "roles": {
     "OWNER": "Vlastník",
-    "ADMIN": "Administrátor",
-    "COMPANY_ADMIN": "Firemní administrátor",
+    "COMPANY_ADMIN": "Správce firmy",
+    "ACCOUNTANT": "Účetní",
+    "PURCHASING": "Nákupčí",
     "MANAGER": "Manažer",
-    "WORKER": "Pracovník",
+    "DOC_CONTROLLER": "Správce dokumentů",
+    "FLEET_MANAGER": "Správce flotily",
+    "HR_MANAGER": "HR manažer",
+    "AUDITOR_READONLY": "Auditor (jen čtení)",
+    "INTEGRATION": "Integrace",
+    "MEMBER": "Člen",
     "VIEWER": "Pozorovatel",
-    "MEMBER": "Uživatel"
+    "SUPERADMIN": "Superadmin"
   },
   "status": {
     "CREATED": "Vytvořen",
