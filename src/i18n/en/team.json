@@ -32,7 +32,10 @@
     "invalidRole": "The provided role is invalid.",
     "userNotFound": "No user found with this email.",
     "cannotRemoveOwner": "Owner (OWNER) cannot be removed.",
-    "generic": "Operation failed. Please try again."
+    "generic": "Operation failed. Please try again.",
+    "forbiddenAdd": "You don't have permission to add members (requires scope team:write).",
+    "conflictMember": "The user already exists in the company or is assigned to another company.",
+    "validation": "Please check the highlighted fields."
   },
   "roles": {
     "OWNER": "Owner",
@@ -52,5 +55,5 @@
     "ACTIVE": "Active",
     "INVITED": "Invited",
     "DISABLED": "Disabled"
-  }  
+  }
 }

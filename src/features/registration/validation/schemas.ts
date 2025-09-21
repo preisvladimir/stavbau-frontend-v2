@@ -1,5 +1,5 @@
 import { z } from "zod";
-import  { ICO_REGEX, ZIP_CZ_REGEX, ISO2_REGEX } from "@/lib/utils/schemas";
+import  { ICO_REGEX, ZIP_CZ_REGEX, ISO2_REGEX } from "@/lib/utils/regex";
 
 export const step1IcoSchema = z.object({
   ico: z.string().regex(ICO_REGEX, { message: "validation.ico.invalid" }),

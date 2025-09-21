@@ -6,6 +6,7 @@ import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { TeamService } from "@/features/team/api/team.service";
 import type { MemberDto } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
+//import  { EMAIL_REGEX, EMAIL_REGEX_IMPUT } from "@/lib/utils/regex";
 
 export default function TeamPage() {
   const { t } = useTranslation("team");
@@ -18,7 +19,10 @@ export default function TeamPage() {
   // Add form state
   const [showAdd, setShowAdd] = React.useState(false);
   const [addEmail, setAddEmail] = React.useState("");
-  const [addRole, setAddRole] = React.useState("VIEWER");
+  const [addRole, setAddRole] = React.useState("MEMBER");
+  const [addFirstName, setAddFirstName] = React.useState("");
+  const [addLastName, setAddLastName] = React.useState("");
+  const [addPhone, setAddPhone] = React.useState("");
   const [adding, setAdding] = React.useState(false);
   const [addError, setAddError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
@@ -73,8 +77,9 @@ export default function TeamPage() {
   }, [companyId]);
 
   // === Add member algorithm ===
-  const validateEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  // minimální, tolerantní validátor (alespoň něco@něco.domena)
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+  const validateEmail = (email: string) => emailRe.test(email.trim());
 
   const onAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,28 +97,58 @@ export default function TeamPage() {
     }
     setAdding(true);
     try {
+      console.log("voláme api");
       const created = await TeamService.add(companyId, {
         email: addEmail.trim(),
         role: addRole,
+        firstName: addFirstName.trim() || null,
+        lastName: addLastName.trim() || null,
+        phone: addPhone.trim() || null,
       });
+      console.log(created);
       // optimistické doplnění do listu
       setItems((prev) => [created, ...prev]);
       // reset formuláře
       setAddEmail("");
-      setAddRole("VIEWER");
+      setAddRole("MEMBER");
+      setAddFirstName("");
+      setAddLastName("");
+      setAddPhone("");
       setShowAdd(false);
     } catch (e) {
       if (e instanceof ApiError) {
         // Field errors z BE (pokud přijdou)
+        if (e.problem.status === 403) {
+          setAddError(
+            t("errors.forbiddenAdd", {
+              defaultValue: "Nemáte oprávnění přidávat členy (vyžaduje scope team:write).",
+            })
+          );
+          return;
+        }
+        if (e.problem.status === 409) {
+          setAddError(
+            t("errors.conflictMember", {
+              defaultValue: "Uživatel už ve firmě existuje nebo je přiřazen k jiné firmě.",
+            })
+          );
+          return;
+        }
+        // 400 Validation: zkusíme vytáhnout field-errors
         const errs = (e.problem.errors ?? {}) as Record<string, any>;
-        const mapped: Record<string, string> = {};
-        if (errs) {
+        if (e.problem.status === 400 && errs && Object.keys(errs).length > 0) {
+          const mapped: Record<string, string> = {};
           for (const k of Object.keys(errs)) {
             const v = errs[k];
             mapped[k] = Array.isArray(v) ? String(v[0]) : String(v);
           }
           setFieldErrors(mapped);
+          setAddError(
+            t("errors.validation", { defaultValue: "Zkontrolujte zvýrazněná pole." })
+          );
+          return;
         }
+        // fallback
         setAddError(
           e.problem.detail || e.problem.title || t("error", { defaultValue: "Nepodařilo se uložit." })
         );
@@ -122,18 +157,15 @@ export default function TeamPage() {
       } else {
         setAddError(String(e));
       }
-    } finally {
-      setAdding(false);
     }
   };
 
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold mb-4">{t("title")}</h1>
       <div className="mb-4 flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{t("title")}</h1>
-        <ScopeGuard required={["team:write"]}>
+        <ScopeGuard anyOf={["team:write", "team:add"]}>
           <button
             type="button"
             className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
@@ -146,7 +178,7 @@ export default function TeamPage() {
       </div>
 
       {/* Inline add panel */}
-      <ScopeGuard required={["team:write"]}>
+      <ScopeGuard anyOf={["team:write", "team:add"]}>
         {showAdd && (
           <form
             onSubmit={onAddSubmit}
@@ -157,7 +189,7 @@ export default function TeamPage() {
                 {addError}
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">
                   {t("form.email", { defaultValue: "E-mail" })}
@@ -166,12 +198,43 @@ export default function TeamPage() {
                   type="email"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   value={addEmail}
+                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"
                   onChange={(e) => setAddEmail(e.target.value)}
                   placeholder="user@example.com"
                   required
                 />
                 {fieldErrors.email && (
                   <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  {t("form.firstName", { defaultValue: "Jméno" })}
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={addFirstName}
+                  onChange={(e) => setAddFirstName(e.target.value)}
+                  placeholder={t("placeholders.firstName", { defaultValue: "Jan" }) as string}
+                />
+                {fieldErrors.firstName && (
+                  <div className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  {t("form.lastName", { defaultValue: "Příjmení" })}
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={addLastName}
+                  onChange={(e) => setAddLastName(e.target.value)}
+                  placeholder={t("placeholders.lastName", { defaultValue: "Novák" }) as string}
+                />
+                {fieldErrors.lastName && (
+                  <div className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</div>
                 )}
               </div>
               <div>
@@ -184,12 +247,26 @@ export default function TeamPage() {
                   onChange={(e) => setAddRole(e.target.value)}
                 >
                   {/* Company role z BE – základní výběr; i18n labely doplníme v PR 5/N */}
-                  <option value="VIEWER">{t("roles.VIEWER", { defaultValue: "Viewer" })}</option>
-                  <option value="COMPANY_ADMIN">{t("roles.COMPANY_ADMIN", { defaultValue: "Company admin" })}</option>
-                  <option value="OWNER">{t("roles.OWNER", { defaultValue: "Owner" })}</option>
+                  <option value="MEMBER">{t("roles.MEMBER", { defaultValue: "Viewer" })}</option>
+                  <option value="ADMIN">{t("roles.COMPANY_ADMIN", { defaultValue: "Company admin" })}</option>
                 </select>
                 {fieldErrors.role && (
                   <div className="text-xs text-red-600 mt-1">{fieldErrors.role}</div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  {t("form.phone", { defaultValue: "Telefon" })}
+                </label>
+                <input
+                  type="tel"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={addPhone}
+                  onChange={(e) => setAddPhone(e.target.value)}
+                  placeholder="+420 123 456 789"
+                />
+                {fieldErrors.phone && (
+                  <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div>
                 )}
               </div>
               <div className="flex items-end gap-2">

@@ -16,12 +16,21 @@
     "confirmRemoveTitle": "Odebrat člena?",
     "confirmRemoveText": "Opravdu chcete odebrat člena {{email}}?",
     "submit": "Uložit",
-    "cancel": "Zrušit"
+    "cancel": "Zrušit",
+    "newUser": "Nový uživatel",
+    "saving": "Ukládám…",
+    "add": "Přidat"
   },
   "form": {
     "email": "E-mail",
-    "role": "Role",
-    "status": "Stav"
+    "firstName": "Jméno",
+    "lastName": "Příjmení",
+    "phone": "Telefon",
+    "role": "Role"
+  },
+  "placeholders": {
+    "firstName": "Jan",
+    "lastName": "Novák"
   },
   "validation": {
     "required": "Toto pole je povinné.",
@@ -32,14 +41,19 @@
     "invalidRole": "Zadaná role není platná.",
     "userNotFound": "Uživatel s tímto e-mailem neexistuje.",
     "cannotRemoveOwner": "Vlastníka (OWNER) nelze odebrat.",
-    "generic": "Operace se nezdařila. Zkuste to znovu."
+    "generic": "Operace se nezdařila. Zkuste to znovu.",
+    "forbiddenAdd": "Nemáte oprávnění přidávat členy (vyžaduje scope team:write).",
+    "conflictMember": "Uživatel už ve firmě existuje nebo je přiřazen k jiné firmě.",
+    "validation": "Zkontrolujte zvýrazněná pole."
   },
   "roles": {
     "OWNER": "Vlastník",
+    "ADMIN": "Administrátor",
     "COMPANY_ADMIN": "Firemní administrátor",
     "MANAGER": "Manažer",
     "WORKER": "Pracovník",
-    "VIEWER": "Pozorovatel"
+    "VIEWER": "Pozorovatel",
+    "MEMBER": "Uživatel"
   },
   "status": {
     "CREATED": "Vytvořen",
@@ -52,5 +66,5 @@
     "ACTIVE": "Aktivní",
     "INVITED": "Pozván",
     "DISABLED": "Deaktivován"
-  }  
+  }
 }
