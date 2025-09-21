@@ -25,7 +25,14 @@
     "add": "Přidat",
     "locked": "Nelze upravit",
     "editProfile": "Upravit profil",
-    "close": "Zavřít"
+    "close": "Zavřít",
+    "delete": "Odebrat",
+    "removing": "Odebírám…"
+  },
+  "confirm": {
+    "delete": {
+      "body": "Opravdu chcete odebrat tohoto člena?"
+    }
   },
   "form": {
     "email": "E-mail",
@@ -55,7 +62,8 @@
     "notAssignable": "Roli SUPERADMIN nelze v tomto rozhraní přiřadit.",
     "onlySuperadminOwner": "Roli OWNER může přiřadit pouze superadmin.",
     "forbiddenUpdateProfile": "Nemáte oprávnění upravovat profil člena.",
-    "memberNotFound": "Člen nenalezen."
+    "memberNotFound": "Člen nenalezen.",
+    "forbiddenDelete": "Nemáte oprávnění odebrat člena nebo jde o posledního vlastníka."
   },
   "roles": {
     "OWNER": "Vlastník",

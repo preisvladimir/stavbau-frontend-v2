@@ -22,7 +22,14 @@
     "cancel": "Cancel",
     "locked": "Locked",
     "editProfile": "Edit profile",
-    "close": "Close"
+    "close": "Close",
+    "delete": "Remove",
+    "removing": "Removing…"
+  },
+  "confirm": {
+    "delete": {
+      "body": "Are you sure you want to remove this member?"
+    }
   },
   "form": {
     "email": "Email",
@@ -46,7 +53,8 @@
     "onlySuperadminOwner": "Only a superadmin can assign the OWNER role.",
     "lastOwner": "You cannot remove the last owner.",
     "forbiddenUpdateProfile": "You don't have permission to edit member profiles.",
-    "memberNotFound": "Member not found."
+    "memberNotFound": "Member not found.",
+    "forbiddenDelete": "You don't have permission to remove this member, or they are the last owner."
   },
   "roles": {
     "OWNER": "Owner",
