@@ -8,5 +8,49 @@
     "role": "Role",
     "name": "Jméno",
     "phone": "Telefon"
-  }
+  },
+  "actions": {
+    "addMember": "Přidat člena",
+    "updateRole": "Změnit roli",
+    "removeMember": "Odebrat člena",
+    "confirmRemoveTitle": "Odebrat člena?",
+    "confirmRemoveText": "Opravdu chcete odebrat člena {{email}}?",
+    "submit": "Uložit",
+    "cancel": "Zrušit"
+  },
+  "form": {
+    "email": "E-mail",
+    "role": "Role",
+    "status": "Stav"
+  },
+  "validation": {
+    "required": "Toto pole je povinné.",
+    "email": "Zadejte platný e-mail."
+  },
+  "errors": {
+    "emailExists": "Uživatel s tímto e-mailem je již členem.",
+    "invalidRole": "Zadaná role není platná.",
+    "userNotFound": "Uživatel s tímto e-mailem neexistuje.",
+    "cannotRemoveOwner": "Vlastníka (OWNER) nelze odebrat.",
+    "generic": "Operace se nezdařila. Zkuste to znovu."
+  },
+  "roles": {
+    "OWNER": "Vlastník",
+    "COMPANY_ADMIN": "Firemní administrátor",
+    "MANAGER": "Manažer",
+    "WORKER": "Pracovník",
+    "VIEWER": "Pozorovatel"
+  },
+  "status": {
+    "CREATED": "Vytvořen",
+    "ACTIVE": "Aktivní",
+    "INVITED": "Pozván",
+    "DISABLED": "Deaktivován",
+    "REMOVED": "Odebrán"
+  },
+  "badges": {
+    "ACTIVE": "Aktivní",
+    "INVITED": "Pozván",
+    "DISABLED": "Deaktivován"
+  }  
 }

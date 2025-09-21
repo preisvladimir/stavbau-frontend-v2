@@ -8,5 +8,49 @@
     "role": "Role",
     "name": "Name",
     "phone": "Phone"
-  }
+  },
+  "actions": {
+    "addMember": "Add member",
+    "updateRole": "Update role",
+    "removeMember": "Remove member",
+    "confirmRemoveTitle": "Remove member?",
+    "confirmRemoveText": "Are you sure you want to remove {{email}}?",
+    "submit": "Save",
+    "cancel": "Cancel"
+  },
+  "form": {
+    "email": "Email",
+    "role": "Role",
+    "status": "Status"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Please enter a valid email."
+  },
+  "errors": {
+    "emailExists": "A user with this email is already a member.",
+    "invalidRole": "The provided role is invalid.",
+    "userNotFound": "No user found with this email.",
+    "cannotRemoveOwner": "Owner (OWNER) cannot be removed.",
+    "generic": "Operation failed. Please try again."
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "COMPANY_ADMIN": "Company admin",
+    "MANAGER": "Manager",
+    "WORKER": "Worker",
+    "VIEWER": "Viewer"
+  },
+  "status": {
+    "CREATED": "Created",
+    "ACTIVE": "Active",
+    "INVITED": "Invited",
+    "DISABLED": "Disabled",
+    "REMOVED": "Removed"
+  },
+  "badges": {
+    "ACTIVE": "Active",
+    "INVITED": "Invited",
+    "DISABLED": "Disabled"
+  }  
 }

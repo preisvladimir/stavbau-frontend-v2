@@ -2,9 +2,13 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
 import { TeamService } from "@/features/team/api/team.service";
-import type { MemberDto } from "@/lib/api/types";
+import type { MemberDto, CompanyRole, CreateMemberRequest } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
 import axios from "axios";
+
+
+
+const ROLES: CompanyRole[] = ['OWNER','COMPANY_ADMIN','MANAGER','WORKER','VIEWER'];
 
 export default function TeamPage() {
   const { t } = useTranslation("team");
@@ -13,6 +17,12 @@ export default function TeamPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<MemberDto[]>([]);
+
+  // Add form state (MVP jednoduchý modal-less panel)
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [addEmail, setAddEmail] = React.useState('');
+  const [addRole, setAddRole] = React.useState<CompanyRole>('WORKER');
+  const [addErrors, setAddErrors] = React.useState<Record<string, string>>({});
 
   const companyId = user?.companyId;
 
@@ -61,6 +71,7 @@ export default function TeamPage() {
 
     return () => ac.abort();
   }, [companyId]);
+
 
   return (
     <div className="p-4">

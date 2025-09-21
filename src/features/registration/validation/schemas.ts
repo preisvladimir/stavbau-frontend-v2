@@ -1,9 +1,5 @@
 import { z } from "zod";
-
-// Regexy dle zadání
-export const ICO_REGEX = /^\d{8}$/;
-export const ZIP_CZ_REGEX = /^\d{3}\s?\d{2}$/;     // 12345 nebo 123 45
-export const ISO2_REGEX = /^[A-Z]{2}$/;
+import  { ICO_REGEX, ZIP_CZ_REGEX, ISO2_REGEX } from "@/lib/utils/schemas";
 
 export const step1IcoSchema = z.object({
   ico: z.string().regex(ICO_REGEX, { message: "validation.ico.invalid" }),
