@@ -68,6 +68,10 @@ export default function TeamPage() {
   const [editProfileOpen, setEditProfileOpen] = React.useState(false);
   const [selectedMember, setSelectedMember] = React.useState<MemberDto | null>(null);
 
+  // Delete member state
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
   const companyId = user?.companyId;
 
   React.useEffect(() => {
@@ -599,6 +603,72 @@ export default function TeamPage() {
                         >
                           {t("actions.editProfile", { defaultValue: "Upravit profil" })}
                         </button>
+                      </ScopeGuard>
+                      {/* Delete action */}
+                      <ScopeGuard anyOf={["team:write", "team:remove"]}>
+                        <button
+                          type="button"
+                          className="ml-2 px-2 py-1 rounded-lg border border-red-300 hover:bg-red-50 text-red-700 disabled:opacity-50"
+                          onClick={async () => {
+                            if (!companyId) return;
+                            setDeleteError(null);
+                            // volitelný FE guard: zkuste neodstraňovat posledního OWNERa (BE to stejně hlídá)
+                            const isOwner = m.role === "OWNER";
+                            if (isOwner) {
+                              const ownerCount = items.filter(x => x.role === "OWNER").length;
+                              if (ownerCount <= 1) {
+                                setDeleteError(t("errors.lastOwner", { defaultValue: "Nelze odebrat posledního vlastníka." }) as string);
+                                return;
+                              }
+                            }
+                            const ok = window.confirm(
+                              t("confirm.delete.body", {
+                                defaultValue: "Opravdu chcete odebrat tohoto člena?",
+                              }) as string
+                            );
+                            if (!ok) return;
+                            setDeletingId(m.id);
+                            try {
+                              await TeamService.remove(companyId, m.id);
+                              setItems(prev => prev.filter(it => it.id !== m.id));
+                            } catch (e) {
+                              if (e instanceof ApiError) {
+                                if (e.problem.status === 403) {
+                                  setDeleteError(
+                                    t("errors.forbiddenDelete", {
+                                      defaultValue: "Nemáte oprávnění odebrat člena nebo jde o posledního vlastníka.",
+                                    }) as string
+                                  );
+                                } else if (e.problem.status === 404) {
+                                  setDeleteError(
+                                    t("errors.memberNotFound", { defaultValue: "Člen nenalezen." }) as string
+                                  );
+                                } else {
+                                  setDeleteError(
+                                    e.problem.detail ||
+                                    e.problem.title ||
+                                    (t("error", { defaultValue: "Operaci se nepodařilo dokončit." }) as string)
+                                  );
+                                }
+                              } else if (e instanceof Error) {
+                                setDeleteError(e.message);
+                              } else {
+                                setDeleteError(String(e));
+                              }
+                            } finally {
+                              setDeletingId(null);
+                            }
+                          }}
+                          disabled={deletingId === m.id}
+                          aria-busy={deletingId === m.id}
+                        >
+                          {deletingId === m.id
+                            ? t("actions.removing", { defaultValue: "Odebírám…" })
+                            : t("actions.delete", { defaultValue: "Odebrat" })}
+                        </button>
+                        {deleteError && deletingId === m.id && (
+                          <div className="text-xs text-red-600 mt-1">{deleteError}</div>
+                        )}
                       </ScopeGuard>
                     </td>
                   </tr>
