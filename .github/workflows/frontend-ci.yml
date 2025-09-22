@@ -1,39 +1,27 @@
-name: CI - Frontend (Vite/React)
+name: FE CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/** ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
+      - uses: actions/checkout@v4
+      - name: Use Node (from .nvmrc)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
-
-      - name: Install deps
+      - name: Install
         run: npm ci
-
       - name: Lint
         run: npm run lint --if-present
-
-      - name: Test
-        run: npm test --if-present
-
+      - name: Unit tests
+        run: npm run test:ci
       - name: Build
         run: npm run build
-
-      - name: Upload artifact (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: |
-            dist/**
