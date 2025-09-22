@@ -646,18 +646,3 @@ DataTable v2: server-side paging/sorting/filters, column visibility, density, to
 Form validace: společný useZodForm/useForm helper (podle potřeby).
 
 RBAC FE: centralizovat mapování scopů → UI capabilities.
-
-## ✅ HOTOVO – 22. 9. 2025
-- FE test runner: přidán `vitest.config.ts` s aliasem `@ -> ./src` a `vite-tsconfig-paths`.
-- Vite config sjednocen s aliasy.
-- Importy upraveny na explicitní soubory (`empty-state`), sjednocen název `datatable.tsx`.
-
-## ▶️ TODO
-- Ověřit `npx vitest --config vitest.config.ts`.
-- Po průchodu testů navázat **PR 2 – Sorting + MSW demo**.
-
-## ✅ HOTOVO – 22. 9. 2025
-- FE testy: přidán testovací i18n init (src/test/i18n.ts) + import v setupTests; odstraněno varování NO_I18NEXT_INSTANCE.
-
-## ▶️ TODO
-- PR 2 – Sorting (controlled/uncontrolled) + MSW demo (header kliky, aria-sort, testy).
