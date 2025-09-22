@@ -7,45 +7,48 @@ import MemberEditModal from "@/features/team/components/MemberEditModal";
 import { TeamService } from "@/features/team/api/team.service";
 import type { MemberDto, CompanyRole } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
-// import { EMAIL_REGEX, EMAIL_REGEX_INPUT } from "@/lib/utils/regex";
+import { DataTable, Button, SearchInput, EmptyState, type ColumnDef } from "@/components/ui/stavbau-ui";
+import { Mail, Shield, User as UserIcon, UserPlus, Pencil, Trash2, X } from "@/components/icons";
+import { EMAIL_INPUT_PATTERN, EMAIL_REGEX } from "@/lib/utils/patterns";
+import { useFab, Plus } from "@/components/layout";
+
+const ALL_ROLES: CompanyRole[] = [
+  "OWNER",
+  "COMPANY_ADMIN",
+  "ACCOUNTANT",
+  "PURCHASING",
+  "MANAGER",
+  "DOC_CONTROLLER",
+  "FLEET_MANAGER",
+  "HR_MANAGER",
+  "AUDITOR_READONLY",
+  "INTEGRATION",
+  "MEMBER",
+  "VIEWER",
+  "SUPERADMIN",
+];
 
 export default function TeamPage() {
+  const { setFab } = useFab();
   const { user } = useAuthContext();
   const { t } = useTranslation("team");
   const [items, setItems] = React.useState<MemberDto[]>([]);
 
-  // jednotný seznam všech rolí podle BE
-  const ALL_ROLES: CompanyRole[] = [
-    "OWNER",
-    "COMPANY_ADMIN",
-    "ACCOUNTANT",
-    "PURCHASING",
-    "MANAGER",
-    "DOC_CONTROLLER",
-    "FLEET_MANAGER",
-    "HR_MANAGER",
-    "AUDITOR_READONLY",
-    "INTEGRATION",
-    "MEMBER",
-    "VIEWER",
-    "SUPERADMIN",
-  ];
   const roleLabel = (r: CompanyRole | string) =>
     t(`roles.${r}`, { defaultValue: r });
 
-  // --- FE pre-guard helpers ---
-  /** V tenant UI NIKDY nenabízíme OWNER ani SUPERADMIN v selectech */
+  const validateEmail = (email: string) => EMAIL_REGEX.test(email.trim());
+
   const VISIBLE_ROLES: CompanyRole[] = React.useMemo(
     () => ALL_ROLES.filter((r) => r !== "OWNER" && r !== "SUPERADMIN"),
     []
   );
-  /** OWNER nelze editovat */
   const canEditMemberRole = (member: MemberDto) => member.role !== "OWNER";
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Add form state
+  // Add form
   const [showAdd, setShowAdd] = React.useState(false);
   const [addEmail, setAddEmail] = React.useState("");
   const [addRole, setAddRole] = React.useState<CompanyRole | string>("MEMBER");
@@ -58,19 +61,24 @@ export default function TeamPage() {
     {}
   );
 
-  // Update role state
+  // Update role
   const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [draftRole, setDraftRole] = React.useState<CompanyRole | string>("VIEWER");
+  const [draftRole, setDraftRole] =
+    React.useState<CompanyRole | string>("VIEWER");
   const [updating, setUpdating] = React.useState(false);
   const [updateError, setUpdateError] = React.useState<string | null>(null);
 
-  // Edit profile modal state
+  // Edit profile modal
   const [editProfileOpen, setEditProfileOpen] = React.useState(false);
-  const [selectedMember, setSelectedMember] = React.useState<MemberDto | null>(null);
+  const [selectedMember, setSelectedMember] =
+    React.useState<MemberDto | null>(null);
 
-  // Delete member state
+  // Delete
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  // simple search
+  const [q, setQ] = React.useState("");
 
   const companyId = user?.companyId;
 
@@ -80,17 +88,14 @@ export default function TeamPage() {
       setItems([]);
       return;
     }
-
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-
     (async () => {
       try {
         const res = await TeamService.list(companyId, { signal: ac.signal });
         setItems(res?.items ?? []);
       } catch (e) {
-        // Ignoruj zrušené požadavky (Axios/Abort/ApiError-canceled)
         const isAxiosCanceled =
           (axios.isAxiosError?.(e) && e.code === "ERR_CANCELED") ||
           (typeof (axios as any).isCancel === "function" &&
@@ -116,22 +121,14 @@ export default function TeamPage() {
         setLoading(false);
       }
     })();
-
     return () => ac.abort();
   }, [companyId]);
-
-  // === Add member algorithm ===
-  // minimální, tolerantní validátor (alespoň něco@něco.domena)
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-  const validateEmail = (email: string) => emailRe.test(email.trim());
 
   const onAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyId) return;
     setAddError(null);
     setFieldErrors({});
-
-    // FE validace
     if (!addEmail.trim() || !validateEmail(addEmail)) {
       setFieldErrors((fe) => ({
         ...fe,
@@ -148,7 +145,6 @@ export default function TeamPage() {
       }));
       return;
     }
-    // BE-aligned guard: nikdy nepřidávej OWNER/SUPERADMIN
     if (addRole === "OWNER" || addRole === "SUPERADMIN") {
       setFieldErrors((fe) => ({
         ...fe,
@@ -174,9 +170,7 @@ export default function TeamPage() {
         lastName: addLastName.trim() || null,
         phone: addPhone.trim() || null,
       });
-      // optimistické doplnění do listu
       setItems((prev) => [created, ...prev]);
-      // reset formuláře
       setAddEmail("");
       setAddRole("MEMBER");
       setAddFirstName("");
@@ -203,7 +197,6 @@ export default function TeamPage() {
           );
           return;
         }
-        // 400 Validation: zkusíme vytáhnout field-errors
         const errs = (e.problem.errors ?? {}) as Record<string, any>;
         if (e.problem.status === 400 && errs && Object.keys(errs).length > 0) {
           const mapped: Record<string, string> = {};
@@ -219,7 +212,6 @@ export default function TeamPage() {
           );
           return;
         }
-        // fallback
         setAddError(
           e.problem.detail ||
           e.problem.title ||
@@ -230,10 +222,12 @@ export default function TeamPage() {
       } else {
         setAddError(String(e));
       }
+    } finally {
+      setAdding(false);
     }
   };
 
-  // === Update role handlers ===
+  // Update role
   const beginEditRole = (m: MemberDto) => {
     setEditingId(m.id);
     setDraftRole(m.role || "VIEWER");
@@ -251,17 +245,11 @@ export default function TeamPage() {
       setUpdateError(t("validation.role", { defaultValue: "Vyberte roli" }));
       return;
     }
-
-    // najdi editovaného člena
     const member = items.find((it) => it.id === editingId);
-
-    // 1) No-op (žádná změna)
     if (member && member.role === draftRole) {
       setEditingId(null);
       return;
     }
-
-    // 2) SUPERADMIN ani OWNER nelze nastavit v tenant UI (obrana proti DOM hacku)
     if (String(draftRole) === "SUPERADMIN") {
       setUpdateError(
         t("errors.notAssignable", {
@@ -285,7 +273,6 @@ export default function TeamPage() {
       const updated = await TeamService.updateMemberRole(companyId, editingId, {
         role: draftRole,
       });
-      // Optimisticky přepiš v lokálním seznamu
       setItems((prev) =>
         prev.map((it) =>
           it.id === editingId ? { ...it, role: updated.role } : it
@@ -295,7 +282,6 @@ export default function TeamPage() {
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.problem.status === 403) {
-          // BE zakazuje změnu role vlastníka (OWNER) – ukaž dedikovanou hlášku
           setUpdateError(
             t("errors.ownerChangeForbidden", {
               defaultValue: "Nelze měnit roli vlastníka.",
@@ -338,20 +324,294 @@ export default function TeamPage() {
     }
   };
 
+  const handleDelete = async (m: MemberDto) => {
+    if (!companyId) return;
+    setDeleteError(null);
+    const isOwner = m.role === "OWNER";
+    if (isOwner) {
+      const ownerCount = items.filter((x) => x.role === "OWNER").length;
+      if (ownerCount <= 1) {
+        setDeleteError(
+          t("errors.lastOwner", {
+            defaultValue: "Nelze odebrat posledního vlastníka.",
+          }) as string
+        );
+        return;
+      }
+    }
+    const ok = window.confirm(
+      t("confirm.delete.body", {
+        defaultValue: "Opravdu chcete odebrat tohoto člena?",
+      }) as string
+    );
+    if (!ok) return;
+    setDeletingId(m.id);
+    try {
+      await TeamService.remove(companyId, m.id);
+      setItems((prev) => prev.filter((it) => it.id !== m.id));
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.problem.status === 403) {
+          setDeleteError(
+            t("errors.forbiddenDelete", {
+              defaultValue:
+                "Nemáte oprávnění odebrat člena nebo jde o posledního vlastníka.",
+            }) as string
+          );
+        } else if (e.problem.status === 404) {
+          setDeleteError(
+            t("errors.memberNotFound", { defaultValue: "Člen nenalezen." }) as string
+          );
+        } else {
+          setDeleteError(
+            e.problem.detail ||
+            e.problem.title ||
+            (t("error", { defaultValue: "Operaci se nepodařilo dokončit." }) as string)
+          );
+        }
+      } else if (e instanceof Error) {
+        setDeleteError(e.message);
+      } else {
+        setDeleteError(String(e));
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const columns: ColumnDef<MemberDto>[] = [
+    {
+      id: "avatar",
+      header: "",
+      width: "w-12",
+      align: "text-center",
+      cell: () => (
+        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+          <UserIcon size={16} />
+        </div>
+      ),
+    },
+    {
+      id: "email",
+      header: t("columns.email"),
+      width: "min-w-[220px]",
+      accessor: (m) => (
+        <span className="inline-flex items-center gap-1">
+          <Mail size={14} /> {m.email}
+        </span>
+      ),
+    },
+    {
+      id: "role",
+      header: t("columns.role"),
+      width: "min-w-[180px]",
+      cell: (m) =>
+        editingId === m.id ? (
+          <select
+            className="rounded-lg border border-gray-300 px-2 py-1"
+            value={draftRole}
+            onChange={(e) => setDraftRole(e.target.value)}
+            disabled={updating}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                void submitEditRole();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelEditRole();
+              }
+            }}
+          >
+            {VISIBLE_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <Shield size={14} /> {roleLabel(m.role)}
+          </span>
+        ),
+    },
+    // 2) Inline error pod selectem, pouze pro editovaný řádek
+    ...(updateError && editingId
+      ? [{
+        id: "roleError",
+        header: "",
+        width: "w-0", // vizuálně nezabírá místo v hlavičce
+        cellClass: "pt-0",
+        cell: (m: MemberDto) =>
+          m.id === editingId ? (
+            <div className="text-xs text-red-600 mt-1">{updateError}</div>
+          ) : null,
+      } as ColumnDef<MemberDto>]
+      : []),
+    {
+      id: "name",
+      header: t("columns.name"),
+      width: "min-w-[180px]",
+      accessor: (m) =>
+        [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
+    },
+    {
+      id: "phone",
+      header: t("columns.phone"),
+      width: "min-w-[140px]",
+      accessor: (m) => m.phone || "—",
+    },
+    {
+      id: "actions",
+      header: t("columns.actions", { defaultValue: "Akce" }),
+      width: "w-[180px]",
+      align: "text-right",
+      cell: (m) => (
+        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          <ScopeGuard anyOf={["team:write", "team:update_role"]}>
+            {editingId === m.id ? (
+              <>
+                <Button size="sm" onClick={submitEditRole} isLoading={updating}>
+                  {t("actions.save", { defaultValue: "Uložit" })}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelEditRole}
+                  disabled={updating}
+                >
+                  {t("actions.cancel", { defaultValue: "Zrušit" })}
+                </Button>
+              </>
+            ) : canEditMemberRole(m) ? (
+              <Button
+                size="sm"
+                variant="outline"
+                ariaLabel={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
+                leftIcon={<Pencil size={16} />}
+                onClick={() => beginEditRole(m)}
+                title={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
+              />
+            ) : null}
+          </ScopeGuard>
+
+          <ScopeGuard anyOf={["team:write", "team:update"]}>
+            <Button
+              size="sm"
+              variant="outline"
+              ariaLabel={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
+              leftIcon={<UserIcon size={16} />}
+              onClick={() => {
+                setSelectedMember(m);
+                setEditProfileOpen(true);
+              }}
+              title={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
+            />
+          </ScopeGuard>
+
+          <ScopeGuard anyOf={["team:write", "team:remove"]}>
+            <Button
+              size="sm"
+              variant="danger"
+              ariaLabel={t("actions.delete", { defaultValue: "Odebrat" }) as string}
+              leftIcon={<Trash2 size={16} />}
+              onClick={() => handleDelete(m)}
+              isLoading={deletingId === m.id}
+              title={t("actions.delete", { defaultValue: "Odebrat" }) as string}
+            />
+          </ScopeGuard>
+          {deletingId === m.id && deleteError && (
+            <div className="text-xs text-red-600">{deleteError}</div>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  // --- Klientský filtr (email, jméno, telefon, role label) ---
+  const filtered = React.useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter((m) => {
+      const name = [m.firstName, m.lastName].filter(Boolean).join(" ");
+      const roleText = String(m.role ?? "");
+      return (
+        m.email?.toLowerCase().includes(needle) ||
+        name.toLowerCase().includes(needle) ||
+        (m.phone ?? "").toLowerCase().includes(needle) ||
+        roleText.toLowerCase().includes(needle)
+      );
+    });
+  }, [items, q]);
+
+  // --- Empty state kontextově: bez filtru vs s filtrem ---
+  const emptyNode = q
+    ? (
+      <EmptyState
+        title={t("emptyFilteredTitle", { defaultValue: "Žádné výsledky" }) as string}
+        description={t("emptyFilteredDesc", { defaultValue: "Upravte filtr nebo jej vymažte." }) as string}
+        action={
+          <Button
+            variant="outline"
+            leftIcon={<X size={16} />}
+            onClick={() => setQ("")}
+          >
+            {t("actions.clearFilter", { defaultValue: "Vymazat filtr" })}
+          </Button>
+        }
+      />
+    )
+    : (
+      <EmptyState
+        title={t("emptyTitle", { defaultValue: "Žádní uživatelé" }) as string}
+        description={t("emptyDesc", { defaultValue: "Zatím jste nepřidal žádného uživatele." }) as string}
+        action={
+          <ScopeGuard anyOf={["team:write", "team:add"]}>
+            <Button leftIcon={<UserPlus size={16} />} onClick={() => setShowAdd((s) => !s)}>
+              {t("actions.createUser", { defaultValue: "Vytvořit" })}
+            </Button>
+          </ScopeGuard>
+        }
+      />
+    );
+
+    React.useEffect(() => {
+    setFab({ label: "Nový Uživatel", onClick: () => setShowAdd((s) => !s), icon: <Plus className="h-6 w-6" /> });
+    return () => setFab(null);
+  }, [setFab]);
+
   return (
     <div className="p-4">
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
         <h1 className="text-xl font-semibold">{t("title")}</h1>
-        <ScopeGuard anyOf={["team:write", "team:add"]}>
-          <button
-            type="button"
-            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
-            onClick={() => setShowAdd((s) => !s)}
-            disabled={loading}
-          >
-            {t("actions.newUser", { defaultValue: "Nový uživatel" })}
-          </button>
-        </ScopeGuard>
+        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto min-w-0">
+          <SearchInput
+            preset="v1"             // ⬅️ v1 = přesný vzhled jako ruční kód
+            value={q}
+            onChange={setQ}
+            leftIcon="search"       // alias → <Search …/>
+            clearable
+            className="w-full md:max-w-lg"
+            placeholder={t("search.placeholder", { defaultValue: "Hledat e-mail, jméno, telefon…" }) as string}
+            ariaLabel={t("search.aria", { defaultValue: "Hledat v uživatelích" }) as string}
+          />
+          <ScopeGuard anyOf={["team:write", "team:add"]}>
+            <Button
+              type="button"
+              onClick={() => setShowAdd((s) => !s)}
+              disabled={loading}
+              ariaLabel={t("actions.newUser", { defaultValue: "Nový uživatel" }) as string}
+              leftIcon={<UserPlus size={16} />}
+              className="shrink-0 whitespace-nowrap"
+            >
+              <span>{t("actions.newUser", { defaultValue: "Nový uživatel" })}</span>
+            </Button>
+          </ScopeGuard>
+        </div>
       </div>
 
       {/* Inline add panel */}
@@ -375,7 +635,7 @@ export default function TeamPage() {
                   type="email"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   value={addEmail}
-                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"
+                  pattern={EMAIL_INPUT_PATTERN}
                   onChange={(e) => setAddEmail(e.target.value)}
                   placeholder="user@example.com"
                   required
@@ -463,18 +723,12 @@ export default function TeamPage() {
                 )}
               </div>
               <div className="flex items-end gap-2">
-                <button
-                  type="submit"
-                  className="px-3 py-2 rounded-lg bg-black text-white disabled:opacity-50"
-                  disabled={adding}
-                >
-                  {adding
-                    ? t("actions.saving", { defaultValue: "Ukládám…" })
-                    : t("actions.add", { defaultValue: "Přidat" })}
-                </button>
-                <button
+                <Button type="submit" isLoading={adding}>
+                  {t("actions.add", { defaultValue: "Přidat" })}
+                </Button>
+                <Button
                   type="button"
-                  className="px-3 py-2 rounded-lg border border-gray-300"
+                  variant="outline"
                   onClick={() => {
                     setShowAdd(false);
                     setAddError(null);
@@ -482,7 +736,7 @@ export default function TeamPage() {
                   }}
                 >
                   {t("actions.cancel", { defaultValue: "Zrušit" })}
-                </button>
+                </Button>
               </div>
             </div>
           </form>
@@ -493,8 +747,7 @@ export default function TeamPage() {
 
       {!loading && error && (
         <div role="alert" className="text-red-600">
-          {t("error")}{" "}
-          {process.env.NODE_ENV !== "production" ? `(${error})` : null}
+          {t("error")} {process.env.NODE_ENV !== "production" ? `(${error})` : null}
         </div>
       )}
 
@@ -502,182 +755,15 @@ export default function TeamPage() {
         <div className="text-slate-600">{t("empty")}</div>
       )}
 
-      {!loading && !error && items.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left p-2 border-b">{t("columns.email")}</th>
-                <th className="text-left p-2 border-b">{t("columns.role")}</th>
-                <th className="text-left p-2 border-b">{t("columns.name")}</th>
-                <th className="text-left p-2 border-b">{t("columns.phone")}</th>
-                <th className="text-left p-2 border-b w-40">
-                  {t("columns.actions", { defaultValue: "Akce" })}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((m) => {
-                const name =
-                  [m.firstName, m.lastName].filter(Boolean).join(" ") || "—";
-                return (
-                  <tr key={m.id} className="odd:bg-white even:bg-gray-50">
-                    <td className="p-2 border-b">{m.email}</td>
-                    <td className="p-2 border-b">
-                      {editingId === m.id ? (
-                        <select
-                          className="rounded-lg border border-gray-300 px-2 py-1"
-                          value={draftRole}
-                          onChange={(e) => setDraftRole(e.target.value)}
-                          disabled={updating}
-                        >
-                          {VISIBLE_ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {roleLabel(r)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        roleLabel(m.role)
-                      )}
-                      {editingId === m.id && updateError && (
-                        <div className="text-xs text-red-600 mt-1">
-                          {updateError}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 border-b">{name}</td>
-                    <td className="p-2 border-b">{m.phone || "—"}</td>
-                    <td className="p-2 border-b">
-                      <ScopeGuard anyOf={["team:write", "team:update_role"]}>
-                        {editingId === m.id ? (
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="px-2 py-1 rounded-lg bg-black text-white disabled:opacity-50"
-                              onClick={submitEditRole}
-                              disabled={updating}
-                            >
-                              {updating
-                                ? t("actions.saving", {
-                                  defaultValue: "Ukládám…",
-                                })
-                                : t("actions.save", { defaultValue: "Uložit" })}
-                            </button>
-                            <button
-                              type="button"
-                              className="px-2 py-1 rounded-lg border border-gray-300"
-                              onClick={cancelEditRole}
-                              disabled={updating}
-                            >
-                              {t("actions.cancel", { defaultValue: "Zrušit" })}
-                            </button>
-                          </div>
-                        ) : canEditMemberRole(m) ? (
-                          <button
-                            type="button"
-                            className="px-2 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
-                            onClick={() => beginEditRole(m)}
-                          >
-                            {t("actions.editRole", {
-                              defaultValue: "Upravit roli",
-                            })}
-                          </button>
-                        ) : (
-                          <span className="text-slate-400">
-                            {t("errors.ownerChangeForbidden", {
-                              defaultValue: "Nelze měnit roli vlastníka.",
-                            })}
-                          </span>
-                        )}
-                      </ScopeGuard>
-                      {/* Edit profile action (nezávisle na roli člena) */}
-                      <ScopeGuard anyOf={["team:write", "team:update"]}>
-                        <button
-                          type="button"
-                          className="ml-2 px-2 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
-                          onClick={() => {
-                            setSelectedMember(m);
-                            setEditProfileOpen(true);
-                          }}
-                        >
-                          {t("actions.editProfile", { defaultValue: "Upravit profil" })}
-                        </button>
-                      </ScopeGuard>
-                      {/* Delete action */}
-                      <ScopeGuard anyOf={["team:write", "team:remove"]}>
-                        <button
-                          type="button"
-                          className="ml-2 px-2 py-1 rounded-lg border border-red-300 hover:bg-red-50 text-red-700 disabled:opacity-50"
-                          onClick={async () => {
-                            if (!companyId) return;
-                            setDeleteError(null);
-                            // volitelný FE guard: zkuste neodstraňovat posledního OWNERa (BE to stejně hlídá)
-                            const isOwner = m.role === "OWNER";
-                            if (isOwner) {
-                              const ownerCount = items.filter(x => x.role === "OWNER").length;
-                              if (ownerCount <= 1) {
-                                setDeleteError(t("errors.lastOwner", { defaultValue: "Nelze odebrat posledního vlastníka." }) as string);
-                                return;
-                              }
-                            }
-                            const ok = window.confirm(
-                              t("confirm.delete.body", {
-                                defaultValue: "Opravdu chcete odebrat tohoto člena?",
-                              }) as string
-                            );
-                            if (!ok) return;
-                            setDeletingId(m.id);
-                            try {
-                              await TeamService.remove(companyId, m.id);
-                              setItems(prev => prev.filter(it => it.id !== m.id));
-                            } catch (e) {
-                              if (e instanceof ApiError) {
-                                if (e.problem.status === 403) {
-                                  setDeleteError(
-                                    t("errors.forbiddenDelete", {
-                                      defaultValue: "Nemáte oprávnění odebrat člena nebo jde o posledního vlastníka.",
-                                    }) as string
-                                  );
-                                } else if (e.problem.status === 404) {
-                                  setDeleteError(
-                                    t("errors.memberNotFound", { defaultValue: "Člen nenalezen." }) as string
-                                  );
-                                } else {
-                                  setDeleteError(
-                                    e.problem.detail ||
-                                    e.problem.title ||
-                                    (t("error", { defaultValue: "Operaci se nepodařilo dokončit." }) as string)
-                                  );
-                                }
-                              } else if (e instanceof Error) {
-                                setDeleteError(e.message);
-                              } else {
-                                setDeleteError(String(e));
-                              }
-                            } finally {
-                              setDeletingId(null);
-                            }
-                          }}
-                          disabled={deletingId === m.id}
-                          aria-busy={deletingId === m.id}
-                        >
-                          {deletingId === m.id
-                            ? t("actions.removing", { defaultValue: "Odebírám…" })
-                            : t("actions.delete", { defaultValue: "Odebrat" })}
-                        </button>
-                        {deleteError && deletingId === m.id && (
-                          <div className="text-xs text-red-600 mt-1">{deleteError}</div>
-                        )}
-                      </ScopeGuard>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* 3) DataTable renderujeme vždy – on si řeší loading i empty */}
+      <DataTable<MemberDto>
+        columns={columns}
+        data={filtered}
+        keyField={(m) => m.id}
+        loading={loading}
+        empty={emptyNode}
+      />
+
       {/* Modal pro úpravu profilu člena */}
       {companyId && (
         <MemberEditModal
@@ -686,7 +772,9 @@ export default function TeamPage() {
           member={selectedMember}
           onClose={() => setEditProfileOpen(false)}
           onSaved={(updated) => {
-            setItems((prev) => prev.map((it) => (it.id === updated.id ? { ...it, ...updated } : it)));
+            setItems((prev) =>
+              prev.map((it) => (it.id === updated.id ? { ...it, ...updated } : it))
+            );
           }}
         />
       )}

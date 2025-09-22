@@ -5,10 +5,14 @@
 export { Eye, EyeOff } from "lucide-react";
 
 // Navigation / Sidebar
-export { Home, FolderKanban, PlusCircle, Users, FileText, LogOut } from "lucide-react";
+export { Home, FolderKanban, LayoutDashboard, Folder, PlusCircle, Users, FileText, LogOut } from "lucide-react";
 
 // Status / Alerts
 export { AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 // Misc
-export { Settings, Globe, Languages } from "lucide-react";
+export { Settings, Globe, Languages, Mail, Shield, Plus, Search, X } from "lucide-react";
+
+// Actions
+export { Pencil, User, Trash2, UserPlus } from "lucide-react";
+
