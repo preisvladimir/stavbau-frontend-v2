@@ -12,5 +12,11 @@
         "dashboard": "Dashboard",
         "projects": "Projects",
         "newProject": "New project"
+    },
+    "datatable": {
+        "empty": {
+            "title": "No data",
+            "desc": "Try adjusting filters or add a new record."
+        }
     }
 }

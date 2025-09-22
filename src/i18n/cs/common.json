@@ -12,5 +12,11 @@
     "dashboard": "Přehled",
     "projects": "Projekty",
     "newProject": "Nový projekt"
+  },
+  "datatable": {
+    "empty": {
+      "title": "Žádná data",
+      "desc": "Zkuste upravit filtr nebo přidat novou položku."
+    }
   }
 }
