@@ -17,6 +17,11 @@
         "empty": {
             "title": "No data",
             "desc": "Try adjusting filters or add a new record."
+        },
+        "sort": {
+            "asc": "Sort ascending",
+            "desc": "Sort descending",
+            "none": "Clear sorting"
         }
     }
 }

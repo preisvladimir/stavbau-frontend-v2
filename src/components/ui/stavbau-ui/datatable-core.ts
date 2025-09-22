@@ -3,10 +3,14 @@ import * as React from 'react';
 import {
     type ColumnDef as TSColumnDef,
     getCoreRowModel,
+    getSortedRowModel,        // ← NEW
+    type SortingState,             // ← NEW
     useReactTable,
     flexRender,
     type RowData,
 } from '@tanstack/react-table';
+
+export type DataTableSort = Array<{ id: string; desc: boolean }>;
 
 export type DataTableColumnDef<TData extends RowData> = {
     id: string;
@@ -27,41 +31,48 @@ export type DataTableProps<TData extends RowData> = {
     emptyContent?: React.ReactNode;
     errorContent?: React.ReactNode;
     onRowClick?: (row: TData) => void;
-    // toolbar sloty přidáme v PR 4
+
+    // PR2: sorting
+    sort?: DataTableSort;                                  // controlled
+    onSortChange?: (s: DataTableSort) => void;             // controlled cb
+    defaultSort?: DataTableSort;                           // uncontrolled
+    enableClientSort?: boolean;                            // default true
 };
 
 export function useDataTableCore<TData extends RowData>(props: DataTableProps<TData>) {
+    const [internalSort, setInternalSort] = React.useState<SortingState>(props.defaultSort ?? []);
+    const sorting = (props.sort ?? internalSort) as SortingState;
+
     const tanColumns = React.useMemo<TSColumnDef<TData>[]>(() => {
         return props.columns.map((c) => {
             const acc = c.accessor;
-
             let accessorFn: ((row: TData) => unknown) | undefined;
-            if (typeof acc === 'function') {
-                // ✅ TS vidí 'acc' jako funkci
-                accessorFn = (row: TData) => (acc as (row: TData) => unknown)(row);
-            } else if (acc != null) {
-                // ✅ 'acc' je keyof TData → čtení z objektu
-                accessorFn = (row: TData) => (row as any)[acc as keyof TData];
-            }
+            if (typeof acc === 'function') accessorFn = (row) => (acc as (r: TData) => unknown)(row);
+            else if (acc != null) accessorFn = (row) => (row as any)[acc as keyof TData];
 
             return {
                 id: c.id,
                 header: () => c.header,
                 accessorFn,
-                cell: ({ row, getValue }) =>
-                    c.cell ? c.cell(row.original as TData) : String(getValue?.() ?? ''),
+                cell: ({ row, getValue }) => (c.cell ? c.cell(row.original as TData) : String(getValue?.() ?? '')),
                 enableHiding: true,
+                enableSorting: props.enableClientSort !== false,   // ← allow sort unless disabled
             } as TSColumnDef<TData>;
         });
-    }, [props.columns]);
+    }, [props.columns, props.enableClientSort]);
 
     const table = useReactTable<TData>({
         data: props.data,
         columns: tanColumns,
+        state: { sorting },
+        onSortingChange: (updater) => {
+            const next = typeof updater === 'function' ? updater(sorting) : updater;
+            if (props.onSortChange) props.onSortChange(next as DataTableSort);
+            else setInternalSort(next as SortingState);
+        },
         getCoreRowModel: getCoreRowModel(),
-        // PR 2+: sorting
-        // PR 3+: pagination
-        // PR 4+: column visibility controlled
+        getSortedRowModel: props.enableClientSort === false ? undefined : getSortedRowModel(),
+        // server-side sort: ponecháme onSortChange + parent fetch (bez getSortedRowModel)
     });
 
     const getRowKey = React.useCallback((row: TData, idx: number) => {

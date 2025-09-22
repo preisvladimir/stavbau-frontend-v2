@@ -17,6 +17,11 @@
     "empty": {
       "title": "Žádná data",
       "desc": "Zkuste upravit filtr nebo přidat novou položku."
+    },
+    "sort": {
+      "asc": "Seřadit vzestupně",
+      "desc": "Seřadit sestupně",
+      "none": "Zrušit řazení"
     }
   }
 }
