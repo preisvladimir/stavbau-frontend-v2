@@ -10,7 +10,7 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom", "vitest", "node"],
+    "types": ["vitest", "node"],
     "resolveJsonModule": true,
     "esModuleInterop": true
   }
