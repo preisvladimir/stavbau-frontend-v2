@@ -1,3 +1,4 @@
+// PATCH: datatable-v2-core.ts
 import * as React from 'react';
 import {
   type ColumnDef as TSColumnDef,
@@ -5,8 +6,9 @@ import {
   useReactTable,
   flexRender,
   type RowData,
-  getSortedRowModel,   // ← NEW
-  type SortingState,        // ← NEW
+  getSortedRowModel,
+  type SortingState,
+  getPaginationRowModel,        // ← NEW
 } from '@tanstack/react-table';
 
 export type DataTableV2Column<T extends RowData> = {
@@ -27,13 +29,23 @@ export type DataTableV2Props<T extends RowData> = {
   emptyContent?: React.ReactNode;
   onRowClick?: (row: T) => void;
 
-  // PR2: sorting
-  sort?: DataTableV2Sort;                           // controlled stav
-  onSortChange?: (s: DataTableV2Sort) => void;      // controlled callback
-  defaultSort?: DataTableV2Sort;                    // uncontrolled výchozí
-  enableClientSort?: boolean;                       // default = true
-};
+  // Sorting (PR2)
+  sort?: DataTableV2Sort;
+  onSortChange?: (s: DataTableV2Sort) => void;
+  defaultSort?: DataTableV2Sort;
+  enableClientSort?: boolean; // default true
 
+  // Paging (PR3)
+  page?: number;                         // 1-based (controlled)
+  pageSize?: number;                     // controlled
+  total?: number;                        // required pro server mode
+  onPageChange?: (page: number) => void; // 1-based
+  onPageSizeChange?: (size: number) => void;
+  defaultPage?: number;                  // 1-based (uncontrolled init)
+  defaultPageSize?: number;              // uncontrolled init
+  enableClientPaging?: boolean;          // default true
+  showPager?: boolean;                   // default true
+};
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
   const tanColumns = React.useMemo<TSColumnDef<T>[]>(() => {
@@ -49,26 +61,65 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
         accessorFn,
         cell: ({ row, getValue }) => (c.cell ? c.cell(row.original as T) : String(getValue?.() ?? '')),
         enableHiding: true,
-        enableSorting: props.enableClientSort !== false, // sorting povolen, pokud není vypnuto
+        enableSorting: props.enableClientSort !== false,
       } as TSColumnDef<T>;
     });
   }, [props.columns, props.enableClientSort]);
 
-  // ---- PR2: controlled/uncontrolled sorting stav ----
+  // ---- Sorting (PR2) ----
   const [internalSort, setInternalSort] = React.useState<SortingState>(props.defaultSort ?? []);
-  const sorting = (props.sort ?? internalSort) as SortingState;  
+  const sorting = (props.sort ?? internalSort) as SortingState;
+
+  // ---- Paging (PR3) ----
+  const initialPageIndex = Math.max(0, (props.defaultPage ?? 1) - 1);
+  const initialPageSize = props.defaultPageSize ?? props.pageSize ?? 10;
+
+  const controlledPageIndex = props.page != null ? Math.max(0, props.page - 1) : undefined;
+  const controlledPageSize = props.pageSize;
+
+  const [internalPageIndex, setInternalPageIndex] = React.useState<number>(initialPageIndex);
+  const [internalPageSize, setInternalPageSize] = React.useState<number>(initialPageSize);
+
+  const pageIndex = controlledPageIndex ?? internalPageIndex;
+  const pageSize = controlledPageSize ?? internalPageSize;
+
+  // Page count: client ↔ server
+  const total = props.enableClientPaging === false && typeof props.total === 'number'
+    ? props.total
+    : props.data.length;
+  const pageCount = Math.max(1, Math.ceil((total || 0) / (pageSize || 1)));
 
   const table = useReactTable<T>({
     data: props.data,
     columns: tanColumns,
-    state: { sorting },
+    state: {
+      sorting,
+      pagination: { pageIndex, pageSize },
+    },
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
       if (props.onSortChange) props.onSortChange(next as DataTableV2Sort);
       else setInternalSort(next as SortingState);
     },
+    onPaginationChange: (updater) => {
+      const prev = { pageIndex, pageSize };
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // 0-based → 1-based callbacky
+      if (next.pageIndex !== prev.pageIndex) {
+        props.onPageChange
+          ? props.onPageChange(next.pageIndex + 1)
+          : setInternalPageIndex(next.pageIndex);
+      }
+      if (next.pageSize !== prev.pageSize) {
+        props.onPageSizeChange
+          ? props.onPageSizeChange(next.pageSize)
+          : setInternalPageSize(next.pageSize);
+      }
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: props.enableClientSort === false ? undefined : getSortedRowModel(),
+    getPaginationRowModel: props.enableClientPaging === false ? undefined : getPaginationRowModel(), // client-only
+    pageCount, // i pro server mode, aby TanStack věděl limit
   });
 
   const getRowKey = React.useCallback((row: T, idx: number) => {
@@ -77,5 +128,18 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     return k ? String(k) : `row-${idx}`;
   }, [props.keyField]);
 
-  return { table, flexRender, getRowKey };
+  // exposed helpers (1-based page)
+  const api = {
+    page: pageIndex + 1,
+    pageSize,
+    pageCount,
+    total,
+    setPage: (p: number) => table.setPageIndex(Math.max(0, p - 1)),
+    nextPage: () => table.nextPage(),
+    prevPage: () => table.previousPage(),
+    canNextPage: table.getCanNextPage(),
+    canPrevPage: table.getCanPreviousPage(),
+  };
+
+  return { table, flexRender, getRowKey, api };
 }

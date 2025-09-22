@@ -1,9 +1,11 @@
+// PATCH: datatable-v2.tsx
+import * as React from 'react';
 import { useDataTableV2Core, type DataTableV2Props } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
-  const { table, flexRender, getRowKey } = useDataTableV2Core(props);
+  const { table, flexRender, getRowKey, api } = useDataTableV2Core(props);
   const isEmpty = !props.loading && props.data.length === 0;
 
   return (
@@ -62,6 +64,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </tr>
           ))}
         </thead>
+
         <tbody>
           {props.loading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -98,6 +101,41 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           )}
         </tbody>
       </table>
+
+      {/* Pager */}
+      {props.showPager !== false && api.pageCount > 1 && (
+        <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+          <div aria-live="polite">
+            Stránka {api.page} / {api.pageCount} • Záznamů: {api.total}
+          </div>
+          <div className="inline-flex items-center gap-2">
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1 rounded border',
+                api.canPrevPage ? 'hover:bg-muted' : 'opacity-50 cursor-not-allowed'
+              )}
+              onClick={() => api.prevPage()}
+              disabled={!api.canPrevPage}
+              aria-label="Předchozí stránka"
+            >
+              Předchozí
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1 rounded border',
+                api.canNextPage ? 'hover:bg-muted' : 'opacity-50 cursor-not-allowed'
+              )}
+              onClick={() => api.nextPage()}
+              disabled={!api.canNextPage}
+              aria-label="Další stránka"
+            >
+              Další
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
