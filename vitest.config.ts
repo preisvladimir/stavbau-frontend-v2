@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/setupTests.ts'],
+    setupFiles: ['./src/setupTests.ts'], // ← tento soubor teď existuje
     globals: true, // volitelné – pokud chceš `describe/it/expect` bez importu
     css: true,     // pokud renderuješ komponenty závislé na CSS
   },
