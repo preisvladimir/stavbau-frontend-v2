@@ -12,11 +12,53 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
         <thead>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
-              {hg.headers.map((header) => (
-                <th key={header.id} scope="col" className="px-3 py-2 text-xs font-semibold text-foreground/80">
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
+              {hg.headers.map((header) => {
+                const canSort = header.column.getCanSort?.() ?? false;
+                const sorted = header.column.getIsSorted?.() as false | 'asc' | 'desc';
+                const aria = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+
+                const onClick = (e: React.MouseEvent) => {
+                  if (!canSort) return;
+                  header.column.toggleSorting(undefined, e.shiftKey);
+                };
+
+                return (
+                  <th
+                    key={header.id}
+                    scope="col"
+                    aria-sort={aria as any}
+                    className={cn(
+                      'px-3 py-2 text-xs font-semibold text-foreground/80 select-none',
+                      canSort && 'cursor-pointer hover:text-foreground'
+                    )}
+                    onClick={onClick}
+                    tabIndex={canSort ? 0 : -1}
+                    onKeyDown={(e) => {
+                      if (!canSort) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        header.column.toggleSorting(undefined, e.shiftKey);
+                      }
+                    }}
+                    title={
+                      sorted === 'asc'
+                        ? 'Seřadit sestupně'
+                        : sorted === 'desc'
+                        ? 'Zrušit řazení'
+                        : 'Seřadit vzestupně'
+                    }
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {canSort && (
+                        <span aria-hidden className="text-foreground/50">
+                          {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
