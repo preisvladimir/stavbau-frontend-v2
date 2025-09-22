@@ -23,13 +23,13 @@ export default function Sidebar() {
     'before:content-[""] before:absolute before:left-1 before:top-1/2 before:-translate-y-1/2 ' +
     "before:h-5 before:w-1 before:rounded-full before:transition-opacity before:duration-150";
 
-const linkInactive =
-  "text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.25)] " +
-  "before:bg-[rgb(var(--sb-border))] before:opacity-0 hover:before:opacity-60";
+  const linkInactive =
+    "text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.25)] " +
+    "before:bg-[rgb(var(--sb-border))] before:opacity-0 hover:before:opacity-60";
 
-const linkActive =
-  "bg-[rgba(var(--sb-border)/0.35)] text-[rgb(var(--sb-fg))] font-medium " +
-  "before:bg-[rgb(var(--sb-fg))] before:opacity-100";
+  const linkActive =
+    "bg-[rgba(var(--sb-border)/0.35)] text-[rgb(var(--sb-fg))] font-medium " +
+    "before:bg-[rgb(var(--sb-fg))] before:opacity-100";
 
   // 🔧 utilita: vrátí kompletní className podle aktivního stavu
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
