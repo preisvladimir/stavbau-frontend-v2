@@ -388,59 +388,59 @@
 ### 20. 9. 2025 — Sprint 2/1: Team (Company Members) — checkpoint
 
 **Hotovo (BE)**
-- PR 2A: Přidán stav uživatele a invite flagy  
-  - `users.state (INVITED|ACTIVE|DISABLED|LOCKED)`, `users.password_needs_reset`, `users.invited_at`.
-  - `User` rozšířen o nové fieldy; JPA smoke test OK.
-- PR 2B: Implementována business logika TeamService  
-  - `TeamServiceImpl` (add/list/update/remove), lokální helpery (normalizeEmail/validateEmail/requireTeamRole, generateRandomSecret).  
-  - Mapování **TeamRole → CompanyRoleName** (`ADMIN→COMPANY_ADMIN`, `MEMBER→VIEWER`).  
-  - Guardy a konflikty: `member.exists`, `user.assigned_to_other_company`, `errors.owner.last_owner_forbidden`, `errors.not.found.member`.  
-  - `MemberMapper` čte `firstName/lastName/phone` z `CompanyMember`.  
-  - (Pokud chybělo) mikro migrace `company_members.{first_name,last_name,phone}` doplněna.
-- PR 3: Controller + RBAC + companyId guard  
-  - `TeamMembersController` (POST/GET/PATCH/DELETE) + `@PreAuthorize` (`team:read|team:write`).  
-  - `BuiltInRoles`: OWNER/COMPANY_ADMIN → read+write; VIEWER/AUDITOR_READONLY → read.  
-  - Company guard: path `{companyId}` vs principal.companyId (přes `@AuthenticationPrincipal`).  
-  - Swagger: sekce **Team** viditelná a běží.  
-  - Drobné výjimky: `NotFoundException`, `ForbiddenException` doplněny.  
-  - Oprava utilu/varianty pro `currentCompanyId()` (Optional nebo obalení v controlleru).
+- PR 2A: Přidán stav uživatele a invite flagy
+    - `users.state (INVITED|ACTIVE|DISABLED|LOCKED)`, `users.password_needs_reset`, `users.invited_at`.
+    - `User` rozšířen o nové fieldy; JPA smoke test OK.
+- PR 2B: Implementována business logika TeamService
+    - `TeamServiceImpl` (add/list/update/remove), lokální helpery (normalizeEmail/validateEmail/requireTeamRole, generateRandomSecret).
+    - Mapování **TeamRole → CompanyRoleName** (`ADMIN→COMPANY_ADMIN`, `MEMBER→VIEWER`).
+    - Guardy a konflikty: `member.exists`, `user.assigned_to_other_company`, `errors.owner.last_owner_forbidden`, `errors.not.found.member`.
+    - `MemberMapper` čte `firstName/lastName/phone` z `CompanyMember`.
+    - (Pokud chybělo) mikro migrace `company_members.{first_name,last_name,phone}` doplněna.
+- PR 3: Controller + RBAC + companyId guard
+    - `TeamMembersController` (POST/GET/PATCH/DELETE) + `@PreAuthorize` (`team:read|team:write`).
+    - `BuiltInRoles`: OWNER/COMPANY_ADMIN → read+write; VIEWER/AUDITOR_READONLY → read.
+    - Company guard: path `{companyId}` vs principal.companyId (přes `@AuthenticationPrincipal`).
+    - Swagger: sekce **Team** viditelná a běží.
+    - Drobné výjimky: `NotFoundException`, `ForbiddenException` doplněny.
+    - Oprava utilu/varianty pro `currentCompanyId()` (Optional nebo obalení v controlleru).
 
 **Hotovo (i18n & errors)**
-- Přidány/ujasněny klíče:  
-  - `errors.forbidden.company.mismatch` (cs/en),  
-  - `errors.validation.role.invalid`,  
-  - re-use: `errors.member.exists`, `errors.user.assigned_to_other_company`, `errors.owner.last_owner_forbidden`, `errors.not.found.member`, `errors.validation.email`.
+- Přidány/ujasněny klíče:
+    - `errors.forbidden.company.mismatch` (cs/en),
+    - `errors.validation.role.invalid`,
+    - re-use: `errors.member.exists`, `errors.user.assigned_to_other_company`, `errors.owner.last_owner_forbidden`, `errors.not.found.member`, `errors.validation.email`.
 
 **Hotovo (FE příprava)**
-- Vyjasněna integrace FE skeletonu (PR 4/N) bez duplicit: použít `lib/api/client.ts`, sdílené typy v `lib/api/types.ts`.  
+- Vyjasněna integrace FE skeletonu (PR 4/N) bez duplicit: použít `lib/api/client.ts`, sdílené typy v `lib/api/types.ts`.
 - Připraven prompt pro nové vlákno: **PR 4/N — FE skeleton: Team** (route `/app/team`, TeamPage, TeamService nad existujícím klientem, i18n, msw, smoke test).
 
 **Dopad na security**
-- Aktivní scopy `team:read|team:write` + přiřazení k rolím v `BuiltInRoles`.  
-- CompanyId guard na všech Team endpointech (403 při mismatch).  
+- Aktivní scopy `team:read|team:write` + přiřazení k rolím v `BuiltInRoles`.
+- CompanyId guard na všech Team endpointech (403 při mismatch).
 - Rate-limit zatím **neaktivován** pro tyto endpointy (viz TODO).
 
 ---
 
 **TODO (nejbližší)**
 - **PR 3a:** zapnout rate-limit (např. 5/min) pro `POST /members` a `DELETE /members/{memberId}`; i18n `errors.rate.limit` + RFC7807 mapping na 429.
-- **PR 4/N (FE skeleton):**  
-  - Route `/app/team` s `ProtectedRoute` + `ScopeGuard(['team:read'])`.  
-  - `TeamService` **nad** `lib/api/client.ts` (žádný nový Axios klient).  
-  - Typy **do** `lib/api/types.ts` (TeamRole, MemberDto, MemberListResponse, Create/UpdateMemberRequest).  
-  - `TeamPage` (tabulka, loading/empty/error).  
-  - i18n `team.json` (cs/en) + připojení do initu.  
-  - MSW handler GET (prázdný seznam) + smoke test.
+- **PR 4/N (FE skeleton):**
+    - Route `/app/team` s `ProtectedRoute` + `ScopeGuard(['team:read'])`.
+    - `TeamService` **nad** `lib/api/client.ts` (žádný nový Axios klient).
+    - Typy **do** `lib/api/types.ts` (TeamRole, MemberDto, MemberListResponse, Create/UpdateMemberRequest).
+    - `TeamPage` (tabulka, loading/empty/error).
+    - i18n `team.json` (cs/en) + připojení do initu.
+    - MSW handler GET (prázdný seznam) + smoke test.
 - **PR 5/N (FE actions):** Add member (modal), Change role, Remove (confirm), error mapping (RFC7807→i18n), MSW pro POST/PATCH/DELETE, testy (unit + msw).
 - **PR 6/N (E2E):** základní e2e scénář (login → /app/team → add → change role → remove), CI job.
 
 **Future (po MVP)**
-- Invite e-mail flow: invitation token + expirace, resend, aktivace účtu (endpoint), audit.  
-- Paging/sorting pro `GET /members` + filtr role.  
-- Konsolidace ProblemDetails (stálý `code` na BE, sdílený FE mapper).  
-- Audit log rozšířit (structured logging, korelace, metriky).  
-- Přechod na **contacts/**: `company_members.contact_id` + přesun osobních údajů (zpětně kompatibilní mapper).  
-- Rozšíření RBAC (jemné scopy `team:add|remove|update_role` pro PRO tarif).  
+- Invite e-mail flow: invitation token + expirace, resend, aktivace účtu (endpoint), audit.
+- Paging/sorting pro `GET /members` + filtr role.
+- Konsolidace ProblemDetails (stálý `code` na BE, sdílený FE mapper).
+- Audit log rozšířit (structured logging, korelace, metriky).
+- Přechod na **contacts/**: `company_members.contact_id` + přesun osobních údajů (zpětně kompatibilní mapper).
+- Rozšíření RBAC (jemné scopy `team:add|remove|update_role` pro PRO tarif).
 - Swagger: doplnit příklady request/response (201/409/403/404/429) a kódy chyb.
 
 ### 20. 9. 2025 — RBAC claims a jemné scopy
@@ -452,10 +452,197 @@
 - **Docs:** Aktualizováno `RBAC_2.1_STAVBAU_V2.md` (scopes, mapping).
 - **Výsledek:** `/auth/me` vrací kompletní RBAC kontext; login je stabilní i při chybách v RBAC části (fail-safe fallback).
 
-
 ### 21. 9. 2025 — Konvence ID a /auth/me rozšíření
 
 - **BE:** Upraveno `MeResponse` (pole `id` místo `userId`) a příslušný controller.
 - **Docs:** Doplněn odstavec o konvenci ID (UUID pouze `id`) do `STAVBAU_GUIDELINES.md`.
 - **OpenAPI:** Snippet `/auth/me` aktualizován – `id`, `companyId`, `companyRole`, `projectRoles[]`, `scopes[]`.
 - **Dopad:** Konsolidace ID konvencí pro všechny entity a DTO → do budoucna nebude nutný rework.
+
+### 21. 9. 2025 — RBAC & AuthService refactor
+
+- **RBAC rozšíření**
+    - Přidány jemné scopy `team:add`, `team:remove`, `team:update_role`.
+    - Rozšířen `BuiltInRoles.COMPANY_ROLE_SCOPES` podle návrhu z `RBAC_2.1_STAVBAU_V2.md`.
+    - `/auth/me` nyní vrací i `companyRole`, `projectRoles[]`, `scopes[]`.
+
+- **AuthController → AuthService**
+    - Vytvořena servisní třída `AuthService` (metody `login`, `refresh`, `logout`, `buildMeResponse`).
+    - Controller refaktorován na tenkou vrstvu – pouze deleguje na `AuthService`.
+    - Zavedeno DTO `RefreshResponse` pro konzistentní odpověď `/auth/refresh`.
+    - Návratové typy z `AuthService` refaktorovány: místo celého `Set-Cookie` header stringu vrací čistý `cookieValue` a DTO (`AuthResponse` / `RefreshResponse`).
+    - V `AuthController` tím odpadl hack se `substring("Set-Cookie: ".length())`.
+
+- **Konzistence ID**
+    - Zavedena konvence: všechny entity dědí z `BaseEntity` (`id: UUID`).
+    - Upraveno `MeResponse` a `AuthController` – FE dostává jednotně pole `id`.
+    - Doplněna dokumentace do `STAVBAU_GUIDELINES.md` + snippet do `openapi.yml`.
+
+## 2025-09-21 — PR 4/N — FE skeleton: Team / Company Members
+
+### HOTOVO
+- **Router:** přidána chráněná route `/app/team` (ProtectedRoute + ScopeGuard `required=['team:read']`, bez nové router instance).
+- **TeamPage:** skeleton (stavy `loading / empty / error`, tabulka: *E-mail*, *Role* — company role z BE, *Jméno*, *Telefon*); čtení `companyId` z Auth (`useAuthContext`).
+- **API typy (centrálně):** `lib/api/types.ts` rozšířeno o `TeamRole`, `CompanyRole`, `MemberDto`, `MemberListResponse`, `CreateMemberRequest`, `UpdateMemberRequest`.
+- **TeamService:** `features/team/api/team.service.ts` (pouze existující `lib/api/client.ts`; metody `list/add/update/remove`; normalizace `memberId → id`; guard na `cancel`/`abort`; sdílené mapování chyb).
+- **Sdílené mapování chyb:** `lib/api/problem.ts` (`toApiProblem`, `ApiError`, `mapAndThrow`) a zapojení v TeamService.
+- **i18n:** přidán namespace `team` (cs/en) + registrace v `src/i18n/index.ts`.
+- **MSW:** handler `GET /api/v1/tenants/:companyId/members` → `{ items: [] }`; agregace v `mocks/handlers`, worker v DEV, `setupTests.ts` pro Vitest.
+- **Testy:** smoke test `TeamPage` (render title „Tým“) s mock Auth (scopes `['team:read']`, `companyId`).
+
+### DoD / ověřeno
+- Build + testy + MSW **OK**; `/app/team` je chráněná a načte prázdný seznam.
+- **Bez nového Axios klienta** (použit `lib/api/client.ts`), typy jsou **centrálně** v `lib/api/types.ts`, error-mapper je **sdílený** v `lib/api/problem.ts`.
+- **Žádné duplicity** souborů vůči stávajícímu repo stavu.
+- Commity dle **Conventional Commits**, PR popis + štítky + **CODEOWNERS**.
+
+### TODO (PR 5/N)
+- Akce na TeamPage: **add/remove/update role** (scope `team:write`), formuláře a validace.
+- MSW + testy pro **POST/PATCH/DELETE**; zobrazení field-errors z BE.
+- i18n labely pro company role/status; UI badge pro `status`.
+- (Volitelně) mapování `CompanyRole → i18n` na jednom místě.
+
+### FUTURE
+- Paging/filtrace/řazení + hledání (email/jméno).
+- Detail člena + proklik na profil.
+- Contract testy FE/BE a E2E flow.
+- Výkon: virtualizace tabulky pro velké seznamy.
+
+---
+
+## 🔜 TODO (další sprint)
+
+- **Testy**
+    - Unit testy: `BuiltInRolesTest`, `AuthServiceTest` (happy path login/refresh, 401 při špatném hesle, 403 při scope chybě).
+    - Slice testy: `@WebMvcTest` pro `AuthController` (`/login`, `/refresh`, `/me`).
+    - Integrační testy: end-to-end login → refresh → přístup k chráněnému endpointu.
+
+- **i18n**
+    - Přidat klíče `auth.invalid_credentials`, `auth.refresh_revoked`, `auth.forbidden_missing_scope`.
+
+---
+
+## 💡 FUTURE
+
+- Migrace RBAC do DB (`role_definitions`, `scope_definitions`, `role_scopes`).
+- FE hooky: `useHasScope(scope)`, `ScopeGuard`.
+- Admin UI pro správu rolí a scopes.
+
+## 2025-09-21 — FE Team / Layout / UI (PR 4/N + část 5/N)
+✅ Hotovo
+
+Routing & Guards
+
+Přidána route /app/team v src/routes/router.tsx přes ProtectedRoute + ScopeGuard(['team:read']).
+
+Opraveno API ScopeGuard (prop anyOf), sjednocené použití.
+
+Auth
+
+useAuth()/useAuthContext() bez state wrapperu; čtení user.companyId.
+
+Typy (lib/api/types.ts)
+
+TeamRole = 'ADMIN' | 'MEMBER'.
+
+CompanyRole (OWNER, COMPANY_ADMIN, …, SUPERADMIN).
+
+MemberDto, MemberListResponse, CreateMemberRequest, UpdateMemberRequest, UpdateMemberRoleRequest.
+
+API klient
+
+features/team/api/team.service.ts (bez nového axios klienta; používá lib/api/client.ts), normalizace payloadů z BE.
+
+Sdílené mapování chyb lib/api/problem.ts + ApiError.
+
+TeamPage (features/team/pages/TeamPage.tsx)
+
+Skeleton tabulky (email, role, jméno, telefon) + loading/empty/error.
+
+Add Member panel (email, role, jméno, příjmení, telefon) + tolerantní validace e-mailu.
+
+Update Role (inline select) s FE/BE guardy:
+
+Nelze nastavovat SUPERADMIN ani OWNER z tenant UI.
+
+Nelze měnit roli člena s OWNER (hlídá FE i BE).
+
+FE ochrana „last owner“ (nelze „sundat“ posledního vlastníka).
+
+Edit Profile přes MemberEditModal (PATCH detailu člena; připraveno na rozšiřování polí).
+
+Delete Member (guard posledního OWNERa + chybové stavy).
+
+Integrace DataTable (@/components/ui/stavbau-ui) + akční sloupec s ikonami.
+
+UI používá Button a ikony z @/components/icons.
+
+Zobrazení deleteError inline pod řádkem (fix „never read“).
+
+i18n
+
+team.json (cs/en): title, columns, actions, errors (notAssignable, onlySuperadminOwner, lastOwner) a placeholdery.
+
+MSW
+
+Základní handler GET /api/v1/tenants/:companyId/members (prázdný/ukázkový list) zapojen do mocks/handlers.
+
+UI/UX – společné komponenty
+
+SearchInput (aliasy ikon, default styly pro left/right ikonu).
+
+patterns.ts (EMAIL_INPUT_PATTERN, EMAIL_REGEX, EMAIL_REGEX_STRICT) a sjednocené používání.
+
+Sidebar: aktivní stav + „sticky“ indikátor (pseudo-element), util getNavClass({isActive}), a11y + i18n.
+
+AppLayout: integrace prvků z v1 bez duplicit
+
+FabProvider, MobileFab (≤ md), MobileBottomBar (≤ md).
+
+TopbarActions slot (desktop) – jediný zdroj pravdy pro stránkové akce.
+
+Topbar upraven, Sidebar zachován.
+
+RBAC scopy (FE)
+
+Add: team:write | team:add
+
+Update role: team:write | team:update_role
+
+Delete: team:write | team:remove
+
+Read: team:read
+
+🧪 Test/Infra
+
+Založen smoke test pro TeamPage (render title) – (doplnit, pokud ještě není).
+
+Ignorování cancel chyb (Axios/Abort/ApiError) ve všech efektech.
+
+📝 BE poznámky (sladěno s FE)
+
+POST (přidání): @PreAuthorize("@rbac.hasAnyScope('team:write','team:add')").
+
+PATCH role: @PreAuthorize("@rbac.hasAnyScope('team:write','team:update_role')"), zákaz změny OWNER, validace role.
+
+PATCH detailu membera: navrženo (jméno/příjmení/telefon) – sladěno s FE modalem.
+
+DELETE: zákaz smazání posledního OWNERa, guard companyId; scopy: team:write | team:remove.
+
+⏭ Todo (další PR 5/N kroky)
+
+MSW: doplnit handlery POST/PATCH/DELETE + field-errors.
+
+Testy: integrační testy (add/update/delete), i18n klíče, a11y (axe).
+
+TeamPage: badge pro status, centralizované mapování CompanyRole → i18n.
+
+Topbar: volitelně rozšířit „right actions“ slot pro více tlačítek (multi-fab).
+
+🔭 Future
+
+DataTable v2: server-side paging/sorting/filters, column visibility, density, toolbar, export, mobilní „cards“ layout, virtualizace (dle potřeby). → Zahájeno novým vláknem (Step Plan připraven).
+
+Form validace: společný useZodForm/useForm helper (podle potřeby).
+
+RBAC FE: centralizovat mapování scopů → UI capabilities.
