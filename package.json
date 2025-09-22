@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "clean": "rimraf node_modules package-lock.json"
+    "clean": "rimraf node_modules package-lock.json",
+    "test": "vitest",
+    "test:ci": "vitest run --reporter=dot"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
