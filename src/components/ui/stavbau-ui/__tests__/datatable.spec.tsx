@@ -1,6 +1,6 @@
 // src/components/ui/stavbau-ui/__tests__/datatable.spec.tsx
 import { render, screen } from '@testing-library/react';
-import { DataTable } from '../DataTable';
+import { DataTable } from '../datatable';
 
 type Row = { id: string; name: string };
 

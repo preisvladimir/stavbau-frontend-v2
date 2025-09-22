@@ -1,12 +1,13 @@
 // src/components/ui/stavbau-ui/index.ts
-export { Button } from "./Button";
-export { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./Card";
-export { Badge } from "./Badge";
-export { Modal } from "./Modal";
-export { DataTable } from "./DataTable";
-export { EmptyState } from "./EmptyState";
-export { TabButton } from "./TabButton";
-export { LinkButton } from "./LinkButton";
+export { Button } from "./button";
+export { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
+export { Badge } from "./badge";
+export { Modal } from "./modal";
+export { DataTable } from "./datatable";
+export { EmptyState } from "./emptystate";
+export { TabButton } from "./tabbutton";
+export { LinkButton } from "./linkbutton";
 export { ToastProvider, useToast } from "../toast/ToastProvider";
-export { IconButton } from "./IconButton";
-export { SearchInput  } from "./SearchInput";
+export { IconButton } from "./iconbutton";
+export { SearchInput  } from "./searchinput";
+export { type DataTableColumnDef as columnDef  } from "./datatable-core";

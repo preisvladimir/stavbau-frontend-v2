@@ -1,10 +1,23 @@
-import { defineConfig } from 'vitest/config';
+// vitest.config.ts (v rootu projektu)
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import path from 'path'
 
 export default defineConfig({
+  plugins: [
+    react(),
+    tsconfigPaths(), // načte "paths" z tsconfig.json
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'), // pevné mapování pro jistotu
+    },
+  },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/setupTests.ts'], // ← tento soubor teď existuje
-    globals: true, // volitelné – pokud chceš `describe/it/expect` bez importu
-    css: true,     // pokud renderuješ komponenty závislé na CSS
+    setupFiles: ['./src/setupTests.ts'],
+    globals: true,
+    css: true,
   },
-});
+})

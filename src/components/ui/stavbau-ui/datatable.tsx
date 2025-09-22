@@ -2,7 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import { useDataTableCore, type DataTableProps } from './datatable-core';
 import { cn } from '@/lib/utils/cn'; // existující util
-import { EmptyState } from '@/components/ui/stavbau-ui'; // dle UI kitu
+import { EmptyState } from '@/components/ui/stavbau-ui/emptystate'; // dle UI kitu
 
 export function DataTable<TData>(props: DataTableProps<TData>) {
   const { t } = useTranslation();
