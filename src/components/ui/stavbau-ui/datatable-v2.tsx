@@ -104,12 +104,9 @@ function DataTableV2Toolbar({
         leftIcon={<X size={16} />}
         onClick={onReset}
       />
-
     </div>
   );
 }
-
-
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
   const { t } = useTranslation('common');
