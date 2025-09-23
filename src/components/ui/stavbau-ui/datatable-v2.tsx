@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { useDataTableV2Core, type DataTableV2Props } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
+import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 
@@ -25,14 +26,19 @@ function DataTableV2Toolbar({
   const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-background">
-      {/* Search */}
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-        placeholder={t('datatable.searchPlaceholder')}
-        aria-label={t('datatable.search')}
-        className="h-9 w-52 rounded border px-3"
-      />
+      <div className="min-w-[240px] md:min-w-[320px] lg:min-w-[420px] flex-1">
+        
+        {/* Search */}
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          preset="v1"
+          leftIcon="search"
+          clearable
+          ariaLabel={t("datatable.search", { defaultValue: "Hledat" })}
+          placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
+        />
+      </div>
 
       {/* Page size */}
       <label className="ml-2 inline-flex items-center gap-2 text-sm" aria-label={t('datatable.pageSize')}>
