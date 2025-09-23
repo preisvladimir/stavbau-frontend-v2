@@ -4,6 +4,7 @@ import { useDataTableV2Core, type DataTableV2Props } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
+import { Select } from '@/components/ui/stavbau-ui/select';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 
 
@@ -27,7 +28,7 @@ function DataTableV2Toolbar({
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-background">
       <div className="min-w-[240px] md:min-w-[320px] lg:min-w-[420px] flex-1">
-        
+
         {/* Search */}
         <SearchInput
           value={search}
@@ -41,20 +42,17 @@ function DataTableV2Toolbar({
       </div>
 
       {/* Page size */}
-      <label className="ml-2 inline-flex items-center gap-2 text-sm" aria-label={t('datatable.pageSize')}>
-        <span className="text-xs text-foreground/70">{t('datatable.pageSize')}</span>
-        <select
-          value={pageSize}
-          onChange={(e) => setPageSize(Number(e.currentTarget.value))}
-          className="h-9 rounded border px-2"
-        >
-          {pageSizeOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              {t('datatable.pageSizeOption', { count: opt })}
-            </option>
-          ))}
-        </select>
-      </label>
+ <div className="inline-flex items-center gap-2">
+   <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
+   <Select
+     size="md"
+     variant="outline"
+    value={String(pageSize)}
+     onChange={(v) => setPageSize(Number(v))}
+     ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
+     options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
+   />
+ </div>
 
 
       {/* Column visibility */}

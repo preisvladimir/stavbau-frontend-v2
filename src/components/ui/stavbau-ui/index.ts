@@ -9,6 +9,7 @@ export { LinkButton } from "./linkbutton";
 export { ToastProvider, useToast } from "../toast/ToastProvider";
 export { IconButton } from "./iconbutton";
 export { SearchInput  } from "./searchinput";
+export { Select } from './select';
 
 export { DataTable, type ColumnDef } from "./datatable";
 export { DataTableV2 } from './datatable-v2';
