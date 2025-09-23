@@ -10,7 +10,6 @@ import { ApiError } from "@/lib/api/problem";
 import { DataTableV2 } from "@/components/ui/stavbau-ui/datatable-v2";
 import { Button } from "@/components/ui/stavbau-ui/button";
 import { EmptyState } from "@/components/ui/stavbau-ui/emptystate";
-import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
 import { Mail, Shield, User as UserIcon, UserPlus, Pencil, Trash2, X } from "@/components/icons";
 import { EMAIL_INPUT_PATTERN, EMAIL_REGEX } from "@/lib/utils/patterns";
 import { useFab, Plus } from "@/components/layout";
@@ -440,16 +439,6 @@ export default function TeamPageV2() {
       <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
         <h1 className="text-xl font-semibold">{t("title")}</h1>
         <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto min-w-0">
-          <SearchInput
-            preset="v1"
-            value={search}
-            onChange={setSearch}
-            leftIcon="search"
-            clearable
-            className="w-full md:max-w-lg"
-            placeholder={t("search.placeholder", { defaultValue: "Hledat e-mail, jméno, telefon…" }) as string}
-            ariaLabel={t("search.aria", { defaultValue: "Hledat v uživatelích" }) as string}
-          />
           <ScopeGuard anyOf={["team:write", "team:add"]}>
             <Button
               type="button"
