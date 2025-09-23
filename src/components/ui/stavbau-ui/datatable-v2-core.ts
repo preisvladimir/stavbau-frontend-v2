@@ -68,6 +68,12 @@ export type DataTableV2Props<T extends RowData> = {
 
   // Row actions (PR 5)
   rowActions?: (row: T) => React.ReactNode;
+
+    /** Vizuální varianta vzhledu tabulky */
+  variant?: 'surface' | 'plain'; // default: 'plain'
+
+  /** Volitelná třída na wrapperu tabulky */
+  className?: string;
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
@@ -209,7 +215,7 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     api,
     // PR4 exposes
     search, setSearch,
-    density, setDensity, densityClasses, resetAll, 
+    density, setDensity, densityClasses, resetAll,
     pageSizeOptions: props.pageSizeOptions ?? [5, 10, 20],
   };
 }

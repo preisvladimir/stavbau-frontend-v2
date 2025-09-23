@@ -116,8 +116,8 @@ export default function TeamPageV2() {
           e instanceof ApiError
             ? e.problem.detail || e.problem.title || "Request failed"
             : e instanceof Error
-            ? e.message
-            : String(e);
+              ? e.message
+              : String(e);
         setError(message);
       } finally {
         setLoading(false);
@@ -337,7 +337,7 @@ export default function TeamPageV2() {
       title={t("emptyFilteredTitle", { defaultValue: "Žádné výsledky" }) as string}
       description={t("emptyFilteredDesc", { defaultValue: "Upravte filtr nebo jej vymažte." }) as string}
       action={
-        <Button variant="outline" leftIcon={<X size={16} />} onClick={() => setSearch("")}> 
+        <Button variant="outline" leftIcon={<X size={16} />} onClick={() => setSearch("")}>
           {t("actions.clearFilter", { defaultValue: "Vymazat filtr" })}
         </Button>
       }
@@ -562,6 +562,8 @@ export default function TeamPageV2() {
 
       {/* DataTableV2 — toolbar + paging + sorting + actions */}
       <DataTableV2<MemberDto>
+        variant="surface"
+        className="mt-2"
         data={filtered}
         columns={columns}
         keyField={(m) => m.id}
@@ -571,7 +573,7 @@ export default function TeamPageV2() {
         onSearchChange={setSearch}
         defaultDensity="cozy"
         pageSizeOptions={[5, 10, 20]}
-        showToolbar
+        showToolbar={true} // toolbar řeší stránka, aby layout odpovídal původnímu designu
         // Pager (PR3) — klientský režim (enableClientPaging default true)
         showPager
         // Row actions (PR5)

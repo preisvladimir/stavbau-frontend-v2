@@ -147,8 +147,15 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
   const isEmpty = !props.loading && props.data.length === 0;
   const hasRowActions = typeof (props as any).rowActions === 'function';
 
+  const v = props.variant ?? 'plain';
+  const wrapperClass =
+    v === 'surface'
+      ? "overflow-x-auto rounded-xl border border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]"
+      : "overflow-x-auto"; // plain = bez karty
+
   return (
-    <div className="w-full overflow-x-auto">
+    <div className={cn(wrapperClass, props.className)}>
+
       {/* Toolbar */}
       {props.showToolbar !== false && (
         <DataTableV2Toolbar
@@ -166,10 +173,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           onReset={resetAll}
         />
       )}
-      <table role="table" className={cn('w-full text-left border-separate border-spacing-0', 'min-w-[640px]')}>
+      <table role="table" className={cn("sb-table min-w-full text-sm")}>
         <thead>
           {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
+            <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
               {hg.headers.map((header) => {
                 const canSort = header.column.getCanSort?.() ?? false;
                 const sorted = header.column.getIsSorted?.() as false | 'asc' | 'desc';
@@ -186,9 +193,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     scope="col"
                     aria-sort={aria as any}
                     className={cn(
+                      "px-3 py-2 font-medium",
                       densityClasses.th,
-                      'text-foreground/80 select-none',
-                      canSort && 'cursor-pointer hover:text-foreground'
+                      "text-foreground/80 select-none",
+                      canSort && "cursor-pointer hover:text-foreground"
                     )}
                     onClick={onClick}
                     tabIndex={canSort ? 0 : -1}
@@ -221,7 +229,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               {hasRowActions && (
                 <th
                   scope="col"
-                  className={cn(densityClasses.th, 'text-right text-foreground/80 select-none')}
+                  className={cn("px-3 py-2 font-medium", densityClasses.th, "text-right text-foreground/80 select-none")}
                   data-testid="dtv2-actions-header"
                 >
                   {t('datatable.actions', { defaultValue: 'Akce' })}
@@ -252,13 +260,21 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             table.getRowModel().rows.map((row, idx) => (
               <tr
                 key={getRowKey(row.original as T, idx)}
-                className={cn('hover:bg-muted/40', props.onRowClick && 'cursor-pointer')}
+                className={cn(
+                  v === 'surface'
+                    ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] hover:bg-slate-50"
+                    : "hover:bg-muted/40",
+                  props.onRowClick && "cursor-pointer"
+                )}
                 onClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
                 tabIndex={props.onRowClick ? 0 : -1}
                 aria-label={props.onRowClick ? 'Row clickable' : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className={cn(densityClasses.td)}>
+                  <td
+                    key={cell.id}
+                    className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -269,7 +285,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                 )}
 
                 {hasRowActions && (
-                  <td className={cn(densityClasses.td, 'text-right')}>
+                  <td className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td, "text-right")}>
                     <div
                       className="inline-flex items-center gap-1"
                       onClick={(e) => {
