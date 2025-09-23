@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { Row } from '@tanstack/react-table';
 import { normalizeMobileMeta } from './mobileMeta';
 
@@ -21,6 +21,8 @@ export function DataRowCard<TData>({
     onRowClick?: () => void;
 }) {
     const [expanded, setExpanded] = useState(false);
+    const titleId = useId();
+    const detailsId = useId();
 
     // 1) Získáme všechny viditelné buňky a obohatíme je o mobilní metadata
     const cells = row.getVisibleCells().map((cell) => {
@@ -74,20 +76,21 @@ export function DataRowCard<TData>({
 
     return (
         <div
-            className="rounded-2xl border bg-background p-3 shadow-sm"
+            className="rounded-2xl border bg-background p-3 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--sb-focus))] focus-visible:ring-offset-background"
             onClick={onRowClick}
-            role={onRowClick ? 'button' : undefined}
+            role={onRowClick ? 'button' : 'listitem'}
             tabIndex={onRowClick ? 0 : -1}
             aria-label={onRowClick ? 'Row clickable' : undefined}
+            aria-labelledby={titleId}
         >
             {/* Header */}
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                    <div className="font-medium leading-6 line-clamp-2 break-words">
+                    <div id={titleId} className="font-medium leading-6 line-clamp-2 break-words">
                         {fallbackTitle?.render ?? <span className="text-muted-foreground">—</span>}
                     </div>
                     {subtitle && (
-                        <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                        <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2 break-words">
                             {subtitle.render}
                         </div>
                     )}
@@ -103,7 +106,7 @@ export function DataRowCard<TData>({
 
             {/* Body – detailní dvojice: Název pole  hodnota */}
             {visibleInfo.length > 0 && (
-                <div className="mt-3 grid grid-cols-1 gap-2">
+                <div id={detailsId} className="mt-3 grid grid-cols-1 gap-2">
                     {visibleInfo.map((c) => (
                         <div key={c.id} className="flex items-start justify-between gap-3">
                             <div className="text-xs text-muted-foreground shrink-0">{c.header}</div>
@@ -118,8 +121,9 @@ export function DataRowCard<TData>({
                 <div className="mt-2">
                     <button
                         type="button"
-                        className="text-sm underline underline-offset-4 hover:no-underline"
+                        className="text-sm underline underline-offset-4 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--sb-focus))] focus-visible:ring-offset-background rounded"
                         aria-expanded={expanded}
+                        aria-controls={detailsId}
                         onClick={() => setExpanded((v) => !v)}
                     >
                         {expanded ? 'Zobrazit méně' : `Zobrazit více (${infoFields.length - COLLAPSED_COUNT})`}

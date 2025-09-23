@@ -5,6 +5,7 @@
 // Viz: src/types/datatable.mobile.d.ts a helper: datatable/mobileMeta.ts
 
 import * as React from 'react';
+import { useId } from 'react';
 import { useDataTableV2Core, type DataTableV2Props, type TableDensity } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
@@ -112,6 +113,7 @@ function DataTableV2Toolbar({
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
   const { t } = useTranslation('common');
   const tt = (k: string, o?: any) => String(t(k, o));
+  const tableId = useId();
   const {
     table, flexRender, getRowKey, api,
     search, setSearch, density, setDensity, densityClasses,
@@ -150,7 +152,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
       )}
 
       {/* ===== MOBILE <md: KARTY ===== */}
-      <div className="md:hidden px-3 py-3 space-y-3">
+      <div className="md:hidden px-3 py-3 space-y-3" role="list" aria-label={tt('datatable.mobileListLabel', { defaultValue: 'Seznam záznamů' })}>
         {props.loading ? (
           // jednoduchý skeleton pro 3 karty
           Array.from({ length: 3 }).map((_, i) => (
@@ -183,10 +185,11 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
         <div className={cn("md:overflow-x-auto")}>
           <table
             role="table"
+            id={tableId}
             className={cn(
               // na md dáme minimální šířku, aby vznikl přirozený H-scroll,
               // na lg vracíme min-w-full (plná tabulka)
-              "sb-table text-sm md:min-w-[900px] lg:min-w-full"
+              "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
             )}
           >
             <thead>
@@ -211,8 +214,8 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         className={cn(
                           "px-3 py-2 font-medium",
                           densityClasses.th,
-                          "text-foreground/80 select-none",
-                          canSort && "cursor-pointer hover:text-foreground",
+                          "text-foreground/80 select-none break-words",
+                          canSort && "cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--sb-focus))] focus-visible:ring-offset-background rounded",
                           // sticky na md, static na lg
                           stickyHeaderClasses(stickySide),
                           // malá pomocná bordura, ať je sticky hranice patrná
@@ -270,7 +273,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             <tbody>
               {props.loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={`sk-${i}`} className="animate-pulse">
+                  <tr key={`sk-${i}`} className="motion-safe:animate-pulse">
                     {table.getAllColumns().map((c) => {
                       const side = getStickySide(c);
                       return (
@@ -279,6 +282,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                           className={cn(
                             "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
                             densityClasses.td,
+                            "break-words",
                             stickyCellClasses(side),
                             side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
                             side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
@@ -293,6 +297,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         className={cn(
                           "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
                           densityClasses.td,
+                          "text-right break-words",
                           stickyCellClasses('right'),
                           "md:border-l md:border-[rgb(var(--sb-border))]"
                         )}
@@ -330,6 +335,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                           className={cn(
                             "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
                             densityClasses.td,
+                            "break-words",
                             stickyCellClasses(side),
                             side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
                             side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
@@ -384,6 +390,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               onClick={() => api.prevPage()}
               disabled={!api.canPrevPage}
               aria-label="Předchozí stránka"
+              aria-controls={tableId}
             >
               Předchozí
             </button>
@@ -396,6 +403,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               onClick={() => api.nextPage()}
               disabled={!api.canNextPage}
               aria-label="Další stránka"
+              aria-controls={tableId}
             >
               Další
             </button>
