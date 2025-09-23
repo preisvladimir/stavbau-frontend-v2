@@ -11,19 +11,19 @@ import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 import { Select } from '@/components/ui/stavbau-ui/select';
 import { Button } from "@/components/ui/stavbau-ui/button";
-import { DensitySelect } from "@/components/ui/stavbau-ui/density-select";
+import { DensitySelect } from "@/components/ui/stavbau-ui/datatable/density-select";
 import { ColumnVisibilityMenu } from '@/components/ui/stavbau-ui/column-visibility';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
-
+import { DataRowCard } from './DataRowCard';
 
 function DataTableV2Toolbar({
   table,
   search, setSearch,
   density, setDensity,
   t,
-  page, pageCount, pageSize, setPageSize, pageSizeOptions,  // ← NEW
-  onReset,                                                  // ← NEW
+  page, pageCount, pageSize, setPageSize, pageSizeOptions,
+  onReset,
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
   search: string; setSearch: (s: string) => void;
@@ -72,13 +72,13 @@ function DataTableV2Toolbar({
             col?.toggleVisibility(value);
           }}
           onReset={() => table.resetColumnVisibility()}
-          variant="popover" // až budeme mít <Popover>, přepneme na "popover" nebo "details"
+          variant="popover"
         />
       )}
       {/* Paging */}
       <div className="ml-2 text-xs text-foreground/70" aria-live="polite">
         {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
-      </div>      
+      </div>
       {/* Search */}
       <div className="min-w-[240px] md:min-w-[320px] lg:min-w-[420px] flex-1">
         <SearchInput
@@ -100,15 +100,10 @@ function DataTableV2Toolbar({
         optionCompact={t("datatable.density_compact")}
         optionCozy={t("datatable.density_cozy")}
         optionComfortable={t("datatable.density_comfortable")}
-        className="ml-auto" // nebo kam potřebuješ zarovnání
+        className="ml-auto"
       />
       {/* Reset */}
-      <Button
-        variant="ghost"
-        size="sm"
-        leftIcon={<X size={16} />}
-        onClick={onReset}
-      />
+      <Button variant="ghost" size="sm" leftIcon={<X size={16} />} onClick={onReset} />
     </div>
   );
 }
@@ -121,18 +116,20 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
     search, setSearch, density, setDensity, densityClasses,
     resetAll, pageSizeOptions,
   } = useDataTableV2Core(props);
+
   const isEmpty = !props.loading && props.data.length === 0;
   const hasRowActions = typeof (props as any).rowActions === 'function';
 
   const v = props.variant ?? 'plain';
   const wrapperClass =
     v === 'surface'
-      ? "overflow-x-auto rounded-xl border border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]"
-      : "overflow-x-auto"; // plain = bez karty
+      ? "rounded-xl border border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]"
+      : ""; // plain = bez karty
+
+  const rows = table.getRowModel().rows;
 
   return (
-    <div className={cn(wrapperClass, props.className)}>
-
+    <div className={cn("w-full", wrapperClass, props.className)}>
       {/* Toolbar */}
       {props.showToolbar !== false && (
         <DataTableV2Toolbar
@@ -150,135 +147,168 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           onReset={resetAll}
         />
       )}
-      <table role="table" className={cn("sb-table min-w-full text-sm")}>
-        <thead>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
-              {hg.headers.map((header) => {
-                const canSort = header.column.getCanSort?.() ?? false;
-                const sorted = header.column.getIsSorted?.() as false | 'asc' | 'desc';
-                const aria = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
 
-                const onClick = (e: React.MouseEvent) => {
-                  if (!canSort) return;
-                  header.column.toggleSorting(undefined, e.shiftKey);
-                };
+      {/* ===== MOBILE <md: KARTY ===== */}
+      <div className="md:hidden px-3 py-3 space-y-3">
+        {props.loading ? (
+          // jednoduchý skeleton pro 3 karty
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={`sk-card-${i}`} className="rounded-2xl border p-3 shadow-sm animate-pulse">
+              <div className="h-5 w-2/3 bg-muted rounded mb-2" />
+              <div className="h-4 w-1/3 bg-muted rounded mb-3" />
+              <div className="h-4 w-full bg-muted rounded mb-1" />
+              <div className="h-4 w-3/4 bg-muted rounded" />
+            </div>
+          ))
+        ) : isEmpty ? (
+          props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />
+        ) : (
+          rows.map((row, idx) => (
+            <DataRowCard
+              key={getRowKey(row.original as T, idx)}
+              row={row}
+              // volitelný prop – předej do DataRowCard a tam vlož do actions místa:
+              // {actionsRenderer?.(row.original)}
+              actionsRenderer={hasRowActions ? (props as any).rowActions : undefined}
+              onRowClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
+            />
+          ))
+        )}
+      </div>
 
-                return (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    aria-sort={aria as any}
-                    className={cn(
-                      "px-3 py-2 font-medium",
-                      densityClasses.th,
-                      "text-foreground/80 select-none",
-                      canSort && "cursor-pointer hover:text-foreground"
-                    )}
-                    onClick={onClick}
-                    tabIndex={canSort ? 0 : -1}
-                    onKeyDown={(e) => {
+      {/* ===== DESKTOP md+: TABULKA ===== */}
+      <div className="hidden md:block">
+        <div className={cn("overflow-x-auto")}>
+          <table role="table" className={cn("sb-table min-w-full text-sm")}>
+            <thead>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
+                  {hg.headers.map((header) => {
+                    const canSort = header.column.getCanSort?.() ?? false;
+                    const sorted = header.column.getIsSorted?.() as false | 'asc' | 'desc';
+                    const aria = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+
+                    const onClick = (e: React.MouseEvent) => {
                       if (!canSort) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        header.column.toggleSorting(undefined, e.shiftKey);
-                      }
-                    }}
-                    title={
-                      sorted === 'asc'
-                        ? t('datatable.sort.desc')
-                        : sorted === 'desc'
-                          ? t('datatable.sort.none')
-                          : t('datatable.sort.asc')
-                    }
-                  >
-                    <div className="inline-flex items-center gap-1">
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      {canSort && (
-                        <span aria-hidden className="text-foreground/50">
-                          {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
-              {hasRowActions && (
-                <th
-                  scope="col"
-                  className={cn("px-3 py-2 font-medium", densityClasses.th, "text-right text-foreground/80 select-none")}
-                  data-testid="dtv2-actions-header"
-                >
-                  {t('datatable.actions', { defaultValue: 'Akce' })}
-                </th>
-              )}
-            </tr>
-          ))}
-        </thead>
+                      header.column.toggleSorting(undefined, e.shiftKey);
+                    };
 
-        <tbody>
-          {props.loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <tr key={`sk-${i}`} className="animate-pulse">
-                {table.getAllColumns().map((c) => (
-                  <td key={c.id} className={cn(densityClasses.td)}>
-                    <div className="h-4 w-24 rounded bg-muted" />
-                  </td>
-                ))}
-              </tr>
-            ))
-          ) : isEmpty ? (
-            <tr>
-              <td colSpan={table.getAllColumns().length} className={cn(densityClasses.td, 'py-6')}>
-                {props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />}
-              </td>
-            </tr>
-          ) : (
-            table.getRowModel().rows.map((row, idx) => (
-              <tr
-                key={getRowKey(row.original as T, idx)}
-                className={cn(
-                  v === 'surface'
-                    ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] hover:bg-slate-50"
-                    : "hover:bg-muted/40",
-                  props.onRowClick && "cursor-pointer"
-                )}
-                onClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
-                tabIndex={props.onRowClick ? 0 : -1}
-                aria-label={props.onRowClick ? 'Row clickable' : undefined}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td)}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-                {hasRowActions && (
-                  <th scope="col" className={cn(densityClasses.th, 'text-right text-foreground/80 select-none')}>
-                    {t('datatable.actions', { defaultValue: 'Akce' })}
-                  </th>
-                )}
-
-                {hasRowActions && (
-                  <td className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td, "text-right")}>
-                    <div
-                      className="inline-flex items-center gap-1"
-                      onClick={(e) => {
-                        // Zabrání přeposílání na onRowClick
-                        e.stopPropagation();
-                      }}
+                    return (
+                      <th
+                        key={header.id}
+                        scope="col"
+                        aria-sort={aria as any}
+                        className={cn(
+                          "px-3 py-2 font-medium",
+                          densityClasses.th,
+                          "text-foreground/80 select-none",
+                          canSort && "cursor-pointer hover:text-foreground"
+                        )}
+                        onClick={onClick}
+                        tabIndex={canSort ? 0 : -1}
+                        onKeyDown={(e) => {
+                          if (!canSort) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.column.toggleSorting(undefined, e.shiftKey);
+                          }
+                        }}
+                        title={
+                          sorted === 'asc'
+                            ? t('datatable.sort.desc')
+                            : sorted === 'desc'
+                              ? t('datatable.sort.none')
+                              : t('datatable.sort.asc')
+                        }
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          {canSort && (
+                            <span aria-hidden className="text-foreground/50">
+                              {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
+                  {hasRowActions && (
+                    <th
+                      scope="col"
+                      className={cn("px-3 py-2 font-medium", densityClasses.th, "text-right text-foreground/80 select-none")}
+                      data-testid="dtv2-actions-header"
                     >
-                      {(props as any).rowActions(row.original as T)}
-                    </div>
+                      {t('datatable.actions', { defaultValue: 'Akce' })}
+                    </th>
+                  )}
+                </tr>
+              ))}
+            </thead>
+
+            <tbody>
+              {props.loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={`sk-${i}`} className="animate-pulse">
+                    {table.getAllColumns().map((c) => (
+                      <td key={c.id} className={cn(densityClasses.td)}>
+                        <div className="h-4 w-24 rounded bg-muted" />
+                      </td>
+                    ))}
+                    {hasRowActions && (
+                      <td className={cn(densityClasses.td)}>
+                        <div className="h-4 w-10 rounded bg-muted" />
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : isEmpty ? (
+                <tr>
+                  <td colSpan={table.getAllColumns().length + (hasRowActions ? 1 : 0)} className={cn(densityClasses.td, 'py-6')}>
+                    {props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />}
                   </td>
-                )}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+                </tr>
+              ) : (
+                rows.map((row, idx) => (
+                  <tr
+                    key={getRowKey(row.original as T, idx)}
+                    className={cn(
+                      v === 'surface'
+                        ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] hover:bg-slate-50"
+                        : "hover:bg-muted/40",
+                      props.onRowClick && "cursor-pointer"
+                    )}
+                    onClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
+                    tabIndex={props.onRowClick ? 0 : -1}
+                    aria-label={props.onRowClick ? 'Row clickable' : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td)}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                    {hasRowActions && (
+                      <td className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td, "text-right")}>
+                        <div
+                          className="inline-flex items-center gap-1"
+                          onClick={(e) => {
+                            // Zabrání přeposílání na onRowClick
+                            e.stopPropagation();
+                          }}
+                        >
+                          {(props as any).rowActions(row.original as T)}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Pager */}
       {props.showPager !== false && api.pageCount > 1 && (
