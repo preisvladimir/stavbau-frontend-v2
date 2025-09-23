@@ -7,7 +7,7 @@ import MemberEditModal from "@/features/team/components/MemberEditModal";
 import { TeamService } from "@/features/team/api/team.service";
 import type { MemberDto, CompanyRole } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/problem";
-import { DataTableV2 } from "@/components/ui/stavbau-ui/datatable-v2";
+import { DataTableV2 } from "@/components/ui/stavbau-ui/datatable/datatable-v2";
 import { Button } from "@/components/ui/stavbau-ui/button";
 import { EmptyState } from "@/components/ui/stavbau-ui/emptystate";
 import { Mail, Shield, User as UserIcon, UserPlus, Pencil, Trash2, X } from "@/components/icons";
