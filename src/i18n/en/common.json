@@ -12,5 +12,31 @@
         "dashboard": "Dashboard",
         "projects": "Projects",
         "newProject": "New project"
+    },
+    "datatable": {
+        "search": "Search",
+        "searchPlaceholder": "Search…",
+        "showColumns": "Columns",
+        "columns": "Columns list",
+        "reset": "Reset",
+        "density": "Density",
+        "density_compact": "Compact",
+        "density_cozy": "Cozy",
+        "density_comfortable": "Comfortable",
+        "pageSize": "Page size",
+        "pageSizeOption": "{{count}} / page",
+        "resetFilters": "Reset filters",
+        "sort": {
+            "asc": "Sort ascending",
+            "desc": "Sort descending",
+            "none": "Clear sort"
+        },
+        "empty": {
+            "title": "No data",
+            "desc": "Try adjusting the filter or add an entry."
+        },
+        "prev": "Previous",
+        "next": "Next",
+        "pageStatus": "Page {{page}} / {{pageCount}} • Items: {{total}}"
     }
 }

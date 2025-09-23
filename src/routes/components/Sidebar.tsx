@@ -1,5 +1,4 @@
 // src/app/components/Sidebar.tsx
-import * as React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { hasScope } from "@/features/auth/utils/hasScope";

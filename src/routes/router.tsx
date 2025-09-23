@@ -10,7 +10,7 @@ import ProjectsListPage from "@/pages/projects/ProjectsListPage";
 import ProjectNewPage from "@/pages/projects/ProjectNewPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
-import TeamPage from "@/features/team/pages/TeamPage";
+import TeamPage from "@/features/team/pages/TeamPageV2";
 
 function RootWithProviders() {
   return (

@@ -16,3 +16,5 @@ export { Settings, Globe, Languages, Mail, Shield, Plus, Search, X } from "lucid
 // Actions
 export { Pencil, User, Trash2, UserPlus } from "lucide-react";
 
+// Density
+export { Rows2, Rows3, StretchVertical } from "lucide-react";

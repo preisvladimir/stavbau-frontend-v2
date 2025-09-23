@@ -12,5 +12,31 @@
     "dashboard": "Přehled",
     "projects": "Projekty",
     "newProject": "Nový projekt"
+  },
+  "datatable": {
+    "search": "Hledat",
+    "searchPlaceholder": "Hledat…",
+    "showColumns": "Sloupce",
+    "columns": "Seznam sloupců",
+    "reset": "Reset",
+    "density": "Hustota",
+    "density_compact": "Kompaktní",
+    "density_cozy": "Střední",
+    "density_comfortable": "Vzdušná",
+    "pageSize": "Počet na stránku",
+    "pageSizeOption": "{{count}} / strana",
+    "resetFilters": "Reset filtrů",
+    "sort": {
+      "asc": "Seřadit vzestupně",
+      "desc": "Seřadit sestupně",
+      "none": "Zrušit řazení"
+    },
+    "empty": {
+      "title": "Žádná data",
+      "desc": "Zkuste upravit filtr nebo přidat záznam."
+    },
+    "prev": "Předchozí",
+    "next": "Další",
+    "pageStatus": "Stránka {{page}} / {{pageCount}} • Záznamů: {{total}}"
   }
 }
