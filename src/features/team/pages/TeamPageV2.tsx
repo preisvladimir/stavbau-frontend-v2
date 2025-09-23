@@ -423,16 +423,6 @@ export default function TeamPageV2() {
           </span>
         ),
     },
-    // inline error řádek pro editovaný záznam
-    {
-      id: "roleError",
-      header: "",
-      accessor: (_m: MemberDto) => "",
-      enableSorting: false,
-      cell: (m: MemberDto) => (m.id === editingId && updateError ? (
-        <div className="text-xs text-red-600 mt-1">{updateError}</div>
-      ) : null),
-    },
     {
       id: "name",
       header: t("columns.name"),

@@ -12,6 +12,8 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 
+export type TableDensity = "compact" | "cozy" | "comfortable";
+
 export type DataTableV2Column<T extends RowData> = {
   id: string;
   header: React.ReactNode;
@@ -56,9 +58,9 @@ export type DataTableV2Props<T extends RowData> = {
   onColumnVisibilityChange?: (v: VisibilityState) => void;
   defaultColumnVisibility?: VisibilityState; // uncontrolled init
 
-  density?: 'compact' | 'cozy' | 'comfortable';
-  onDensityChange?: (d: 'compact' | 'cozy' | 'comfortable') => void;
-  defaultDensity?: 'compact' | 'cozy' | 'comfortable';
+  density?: TableDensity;
+  onDensityChange?: (d: TableDensity) => void;
+  defaultDensity?: TableDensity;
 
   showToolbar?: boolean;                     // default true  
 
@@ -128,9 +130,9 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
   const visibility = props.columnVisibility ?? internalVisibility;
 
   // ---- PR4: density ----
-  const [internalDensity, setInternalDensity] = React.useState<'compact' | 'cozy' | 'comfortable'>(props.defaultDensity ?? 'cozy');
+  const [internalDensity, setInternalDensity] = React.useState<TableDensity>(props.defaultDensity ?? 'cozy');
   const density = props.density ?? internalDensity;
-  const setDensity = (d: 'compact' | 'cozy' | 'comfortable') => (props.onDensityChange ? props.onDensityChange(d) : setInternalDensity(d));
+  const setDensity = (d: TableDensity) => (props.onDensityChange ? props.onDensityChange(d) : setInternalDensity(d));
 
 
 

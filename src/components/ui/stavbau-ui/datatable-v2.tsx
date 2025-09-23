@@ -1,11 +1,15 @@
 // PATCH: datatable-v2.tsx
 import * as React from 'react';
-import { useDataTableV2Core, type DataTableV2Props } from './datatable-v2-core';
+import { useDataTableV2Core, type DataTableV2Props, type TableDensity } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 import { Select } from '@/components/ui/stavbau-ui/select';
+import { Button } from "@/components/ui/stavbau-ui/button";
+import { DensitySelect } from "@/components/ui/stavbau-ui/density-select";
+import { ColumnVisibilityMenu } from '@/components/ui/stavbau-ui/column-visibility';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
+import { X } from "@/components/icons";
 
 
 function DataTableV2Toolbar({
@@ -18,7 +22,7 @@ function DataTableV2Toolbar({
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
   search: string; setSearch: (s: string) => void;
-  density: 'compact' | 'cozy' | 'comfortable'; setDensity: (d: 'compact' | 'cozy' | 'comfortable') => void;
+  density: TableDensity; setDensity: (d: TableDensity) => void;
   t: (key: string, opts?: any) => string;
   page: number; pageCount: number; pageSize: number; setPageSize: (n: number) => void;
   pageSizeOptions: number[];
@@ -26,11 +30,54 @@ function DataTableV2Toolbar({
 }) {
   const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
   return (
-    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-background">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]">
+      {/* Page size */}
+      <div className="inline-flex items-center gap-2">
+        <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
+        <Select
+          size="md"
+          variant="outline"
+          value={String(pageSize)}
+          onChange={(v) => setPageSize(Number(v))}
+          ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
+          options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
+        />
+      </div>
+      {/* Column visibility */}
+      {columns.length > 0 && (
+        <ColumnVisibilityMenu
+          triggerLabel={t('datatable.showColumns', { defaultValue: 'Sloupce' })}
+          title={t('datatable.columns', { defaultValue: 'Sloupce' })}
+          resetLabel={t('datatable.reset', { defaultValue: 'Reset' })}
+          ariaLabel={t('datatable.showColumns', { defaultValue: 'Zobrazit sloupce' })}
+          items={columns.map((col) => {
+            const labelText =
+              typeof col.columnDef.header === 'string'
+                ? col.columnDef.header
+                : (col.id ?? '');
+            return {
+              id: col.id!,
+              label: labelText,
+              checked: col.getIsVisible(),
+              disabled: col.columnDef.enableHiding === false,
+            };
+          })}
+          onToggle={(id, value) => {
+            const col = columns.find((c) => c.id === id);
+            col?.toggleVisibility(value);
+          }}
+          onReset={() => table.resetColumnVisibility()}
+          variant="popover" // až budeme mít <Popover>, přepneme na "popover" nebo "details"
+        />
+      )}
+      {/* Paging */}
+      <div className="ml-2 text-xs text-foreground/70" aria-live="polite">
+        {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
+      </div>      
+      {/* Search */}
       <div className="min-w-[240px] md:min-w-[320px] lg:min-w-[420px] flex-1">
-
-        {/* Search */}
         <SearchInput
+          size="md"
           value={search}
           onChange={setSearch}
           preset="v1"
@@ -40,100 +87,24 @@ function DataTableV2Toolbar({
           placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
         />
       </div>
-
-      {/* Page size */}
- <div className="inline-flex items-center gap-2">
-   <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
-   <Select
-     size="md"
-     variant="outline"
-    value={String(pageSize)}
-     onChange={(v) => setPageSize(Number(v))}
-     ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
-     options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
-   />
- </div>
-
-
-      {/* Column visibility */}
-      {columns.length > 0 && (
-        <div className="relative">
-          <details>
-            <summary
-              className="cursor-pointer select-none text-sm px-2 py-1 rounded border hover:bg-muted"
-              aria-label={t('datatable.showColumns')}
-              data-testid="dtv2-columns-trigger"
-            >
-              {t('datatable.showColumns')}
-            </summary>
-            <div className="absolute z-10 mt-1 w-56 rounded border bg-popover p-2 shadow">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-foreground/70">{t('datatable.columns')}</span>
-                <button
-                  type="button"
-                  className="text-xs underline"
-                  onClick={() => table.resetColumnVisibility()}
-                >
-                  {t('datatable.reset')}
-                </button>
-              </div>
-              <ul className="max-h-56 overflow-auto space-y-1">
-                {columns.map((col) => {
-                  const labelText =
-                    typeof col.columnDef.header === 'string'
-                      ? col.columnDef.header
-                      : (col.id ?? ''); // fallback na id
-
-                  return (
-                    <li key={col.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        id={`col-${col.id}`}
-                        type="checkbox"
-                        checked={col.getIsVisible()}
-                        onChange={(e) => col.toggleVisibility(e.currentTarget.checked)}
-                      />
-                      <label htmlFor={`col-${col.id}`}>{labelText}</label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </details>
-        </div>
-      )}
-
       {/* Density */}
-      <div className="ml-auto inline-flex items-center gap-1">
-        <span className="text-xs text-foreground/70">{t('datatable.density')}</span>
-        {(['compact', 'cozy', 'comfortable'] as const).map(d => (
-          <button
-            key={d}
-            type="button"
-            className={cn(
-              'px-2 py-1 text-xs rounded border',
-              density === d ? 'bg-muted font-medium' : 'hover:bg-muted'
-            )}
-            onClick={() => setDensity(d)}
-            aria-pressed={density === d}
-          >
-            {t(`datatable.density_${d}`)}
-          </button>
-        ))}
-      </div>
-
+      <DensitySelect
+        value={density}
+        onChange={(d) => setDensity(d)}
+        label={t("datatable.density")}
+        optionCompact={t("datatable.density_compact")}
+        optionCozy={t("datatable.density_cozy")}
+        optionComfortable={t("datatable.density_comfortable")}
+        className="ml-auto" // nebo kam potřebuješ zarovnání
+      />
       {/* Reset */}
-      <button
-        type="button"
-        className="ml-auto px-3 py-1 text-sm rounded border hover:bg-muted"
+      <Button
+        variant="ghost"
+        size="sm"
+        leftIcon={<X size={16} />}
         onClick={onReset}
-        aria-label={t('datatable.resetFilters')}
-        title={t('datatable.resetFilters')}
-      >
-        {t('datatable.resetFilters')}
-      </button>
-      <div className="ml-2 text-xs text-foreground/70" aria-live="polite">
-        {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
-      </div>
+      />
+
     </div>
   );
 }

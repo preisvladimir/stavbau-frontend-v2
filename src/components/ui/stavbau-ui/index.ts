@@ -13,4 +13,4 @@ export { Select } from './select';
 
 export { DataTable, type ColumnDef } from "./datatable";
 export { DataTableV2 } from './datatable-v2';
-export type { DataTableV2Props, DataTableV2Column } from './datatable-v2-core';
+export type { DataTableV2Props, DataTableV2Column, TableDensity} from './datatable-v2-core';
