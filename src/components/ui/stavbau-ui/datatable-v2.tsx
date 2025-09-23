@@ -16,7 +16,7 @@ function DataTableV2Toolbar({
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
   search: string; setSearch: (s: string) => void;
-  density: 'compact'|'cozy'|'comfortable'; setDensity: (d: 'compact'|'cozy'|'comfortable') => void;
+  density: 'compact' | 'cozy' | 'comfortable'; setDensity: (d: 'compact' | 'cozy' | 'comfortable') => void;
   t: (key: string, opts?: any) => string;
   page: number; pageCount: number; pageSize: number; setPageSize: (n: number) => void;
   pageSizeOptions: number[];
@@ -127,7 +127,9 @@ function DataTableV2Toolbar({
       >
         {t('datatable.resetFilters')}
       </button>
-
+      <div className="ml-2 text-xs text-foreground/70" aria-live="polite">
+        {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
+      </div>
     </div>
   );
 }
@@ -136,6 +138,7 @@ function DataTableV2Toolbar({
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
   const { t } = useTranslation('common');
+  const tt = (k: string, o?: any) => String(t(k, o));
   const {
     table, flexRender, getRowKey, api,
     search, setSearch, density, setDensity, densityClasses,
@@ -154,13 +157,13 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           setSearch={setSearch}
           density={density}
           setDensity={setDensity}
-          t={(k) => t(k)}
-      page={api.page}
-      pageCount={api.pageCount}
-      pageSize={api.pageSize}
-      setPageSize={api.setPageSize}
-      pageSizeOptions={pageSizeOptions}
-      onReset={resetAll}          
+          t={tt}
+          page={api.page}
+          pageCount={api.pageCount}
+          pageSize={api.pageSize}
+          setPageSize={api.setPageSize}
+          pageSizeOptions={pageSizeOptions}
+          onReset={resetAll}
         />
       )}
       <table role="table" className={cn('w-full text-left border-separate border-spacing-0', 'min-w-[640px]')}>
