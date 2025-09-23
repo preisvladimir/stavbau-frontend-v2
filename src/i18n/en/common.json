@@ -23,6 +23,9 @@
         "density_compact": "Compact",
         "density_cozy": "Cozy",
         "density_comfortable": "Comfortable",
+        "pageSize": "Page size",
+        "pageSizeOption": "{{count}} / page",
+        "resetFilters": "Reset filters",
         "sort": {
             "asc": "Sort ascending",
             "desc": "Sort descending",

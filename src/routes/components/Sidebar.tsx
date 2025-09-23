@@ -1,5 +1,4 @@
 // src/app/components/Sidebar.tsx
-import * as React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { hasScope } from "@/features/auth/utils/hasScope";
@@ -63,6 +62,12 @@ export default function Sidebar() {
               {t("nav.team", { defaultValue: "Tým" })}
             </NavLink>
           )}
+          {canReadTeam && (
+            <NavLink to="/app/team2" className={getNavClass}>
+              {t("nav.teamv2", { defaultValue: "TýmV2" })}
+            </NavLink>
+          )}
+
         </nav>
       </div>
     </aside>

@@ -61,6 +61,13 @@ export type DataTableV2Props<T extends RowData> = {
   defaultDensity?: 'compact' | 'cozy' | 'comfortable';
 
   showToolbar?: boolean;                     // default true  
+
+    /** Toolbar: page size options for selector (PR 4.1) */
+  onReset?: () => void;
+  pageSizeOptions?: number[]; // výběr velikosti stránky (default [5,10,20])
+
+  // Row actions (PR 5)
+  rowActions?: (row: T) => React.ReactNode;
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
@@ -179,10 +186,22 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     pageCount,
     total,
     setPage: (p: number) => table.setPageIndex(Math.max(0, p - 1)),
+    setPageSize: (s: number) => table.setPageSize(Math.max(1, s)),   // ← NEW
     nextPage: () => table.nextPage(),
     prevPage: () => table.previousPage(),
     canNextPage: table.getCanNextPage(),
     canPrevPage: table.getCanPreviousPage(),
+  };
+
+    // ← NEW helper: úplný reset toolbar stavů
+  const resetAll = () => {
+    table.resetSorting();
+    table.resetColumnVisibility();
+    table.setPageIndex(0);
+    table.setPageSize(props.defaultPageSize ?? pageSize);
+    setDensity(props.defaultDensity ?? 'cozy');
+    setSearch(props.defaultSearch ?? '');
+    props.onReset?.();
   };
 
   return {
@@ -190,6 +209,7 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     api,
     // PR4 exposes
     search, setSearch,
-    density, setDensity, densityClasses,
+    density, setDensity, densityClasses, resetAll, 
+    pageSizeOptions: props.pageSizeOptions ?? [5, 10, 20],
   };
 }

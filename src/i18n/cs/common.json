@@ -23,6 +23,9 @@
     "density_compact": "Kompaktní",
     "density_cozy": "Střední",
     "density_comfortable": "Vzdušná",
+    "pageSize": "Počet na stránku",
+    "pageSizeOption": "{{count}} / strana",
+    "resetFilters": "Reset filtrů",
     "sort": {
       "asc": "Seřadit vzestupně",
       "desc": "Seřadit sestupně",

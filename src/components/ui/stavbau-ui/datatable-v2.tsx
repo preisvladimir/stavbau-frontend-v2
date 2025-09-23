@@ -5,16 +5,22 @@ import { cn } from '@/lib/utils/cn';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 
+
 function DataTableV2Toolbar({
   table,
   search, setSearch,
   density, setDensity,
   t,
+  page, pageCount, pageSize, setPageSize, pageSizeOptions,  // ← NEW
+  onReset,                                                  // ← NEW
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
   search: string; setSearch: (s: string) => void;
-  density: 'compact' | 'cozy' | 'comfortable'; setDensity: (d: 'compact' | 'cozy' | 'comfortable') => void;
-  t: (key: string) => string;
+  density: 'compact'|'cozy'|'comfortable'; setDensity: (d: 'compact'|'cozy'|'comfortable') => void;
+  t: (key: string, opts?: any) => string;
+  page: number; pageCount: number; pageSize: number; setPageSize: (n: number) => void;
+  pageSizeOptions: number[];
+  onReset: () => void;
 }) {
   const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
   return (
@@ -27,6 +33,23 @@ function DataTableV2Toolbar({
         aria-label={t('datatable.search')}
         className="h-9 w-52 rounded border px-3"
       />
+
+      {/* Page size */}
+      <label className="ml-2 inline-flex items-center gap-2 text-sm" aria-label={t('datatable.pageSize')}>
+        <span className="text-xs text-foreground/70">{t('datatable.pageSize')}</span>
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.currentTarget.value))}
+          className="h-9 rounded border px-2"
+        >
+          {pageSizeOptions.map((opt) => (
+            <option key={opt} value={opt}>
+              {t('datatable.pageSizeOption', { count: opt })}
+            </option>
+          ))}
+        </select>
+      </label>
+
 
       {/* Column visibility */}
       {columns.length > 0 && (
@@ -93,6 +116,18 @@ function DataTableV2Toolbar({
           </button>
         ))}
       </div>
+
+      {/* Reset */}
+      <button
+        type="button"
+        className="ml-auto px-3 py-1 text-sm rounded border hover:bg-muted"
+        onClick={onReset}
+        aria-label={t('datatable.resetFilters')}
+        title={t('datatable.resetFilters')}
+      >
+        {t('datatable.resetFilters')}
+      </button>
+
     </div>
   );
 }
@@ -101,8 +136,13 @@ function DataTableV2Toolbar({
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
   const { t } = useTranslation('common');
-  const { table, flexRender, getRowKey, api, search, setSearch, density, setDensity, densityClasses } = useDataTableV2Core(props);
+  const {
+    table, flexRender, getRowKey, api,
+    search, setSearch, density, setDensity, densityClasses,
+    resetAll, pageSizeOptions,
+  } = useDataTableV2Core(props);
   const isEmpty = !props.loading && props.data.length === 0;
+  const hasRowActions = typeof (props as any).rowActions === 'function';
 
   return (
     <div className="w-full overflow-x-auto">
@@ -115,6 +155,12 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           density={density}
           setDensity={setDensity}
           t={(k) => t(k)}
+      page={api.page}
+      pageCount={api.pageCount}
+      pageSize={api.pageSize}
+      setPageSize={api.setPageSize}
+      pageSizeOptions={pageSizeOptions}
+      onReset={resetAll}          
         />
       )}
       <table role="table" className={cn('w-full text-left border-separate border-spacing-0', 'min-w-[640px]')}>
@@ -169,6 +215,15 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                   </th>
                 );
               })}
+              {hasRowActions && (
+                <th
+                  scope="col"
+                  className={cn(densityClasses.th, 'text-right text-foreground/80 select-none')}
+                  data-testid="dtv2-actions-header"
+                >
+                  {t('datatable.actions', { defaultValue: 'Akce' })}
+                </th>
+              )}
             </tr>
           ))}
         </thead>
@@ -204,6 +259,25 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
+                {hasRowActions && (
+                  <th scope="col" className={cn(densityClasses.th, 'text-right text-foreground/80 select-none')}>
+                    {t('datatable.actions', { defaultValue: 'Akce' })}
+                  </th>
+                )}
+
+                {hasRowActions && (
+                  <td className={cn(densityClasses.td, 'text-right')}>
+                    <div
+                      className="inline-flex items-center gap-1"
+                      onClick={(e) => {
+                        // Zabrání přeposílání na onRowClick
+                        e.stopPropagation();
+                      }}
+                    >
+                      {(props as any).rowActions(row.original as T)}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))
           )}

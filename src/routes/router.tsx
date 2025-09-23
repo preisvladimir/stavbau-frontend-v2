@@ -11,6 +11,7 @@ import ProjectNewPage from "@/pages/projects/ProjectNewPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import TeamPage from "@/features/team/pages/TeamPage";
+import TeamPageV2 from "@/features/team/pages/TeamPageV2";
 
 function RootWithProviders() {
   return (
@@ -43,6 +44,14 @@ export const router = createBrowserRouter([
                 element: (
                   <ScopeGuard required={["team:read"]}>
                     <TeamPage />
+                  </ScopeGuard>
+                ),
+              },
+              {
+                path: "team2",
+                element: (
+                  <ScopeGuard required={["team:read"]}>
+                    <TeamPageV2 />
                   </ScopeGuard>
                 ),
               },
