@@ -16,6 +16,7 @@ import { ColumnVisibilityMenu } from '@/components/ui/stavbau-ui/column-visibili
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
+import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
 
 function DataTableV2Toolbar({
   table,
@@ -178,8 +179,16 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
 
       {/* ===== DESKTOP md+: TABULKA ===== */}
       <div className="hidden md:block">
-        <div className={cn("overflow-x-auto")}>
-          <table role="table" className={cn("sb-table min-w-full text-sm")}>
+        {/* H-scroll pro md–lg; na lg už typicky min-w stačí = full */}
+        <div className={cn("md:overflow-x-auto")}>
+          <table
+            role="table"
+            className={cn(
+              // na md dáme minimální šířku, aby vznikl přirozený H-scroll,
+              // na lg vracíme min-w-full (plná tabulka)
+              "sb-table text-sm md:min-w-[900px] lg:min-w-full"
+            )}
+          >
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
@@ -187,6 +196,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     const canSort = header.column.getCanSort?.() ?? false;
                     const sorted = header.column.getIsSorted?.() as false | 'asc' | 'desc';
                     const aria = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+                    const stickySide = getStickySide(header.column);
 
                     const onClick = (e: React.MouseEvent) => {
                       if (!canSort) return;
@@ -202,7 +212,12 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                           "px-3 py-2 font-medium",
                           densityClasses.th,
                           "text-foreground/80 select-none",
-                          canSort && "cursor-pointer hover:text-foreground"
+                          canSort && "cursor-pointer hover:text-foreground",
+                          // sticky na md, static na lg
+                          stickyHeaderClasses(stickySide),
+                          // malá pomocná bordura, ať je sticky hranice patrná
+                          stickySide === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
+                          stickySide === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
                         )}
                         onClick={onClick}
                         tabIndex={canSort ? 0 : -1}
@@ -235,7 +250,14 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                   {hasRowActions && (
                     <th
                       scope="col"
-                      className={cn("px-3 py-2 font-medium", densityClasses.th, "text-right text-foreground/80 select-none")}
+                      className={cn(
+                        "px-3 py-2 font-medium",
+                        densityClasses.th,
+                        "text-right text-foreground/80 select-none",
+                        // akční header sticky vpravo (md), static na lg
+                        stickyHeaderClasses('right'),
+                        "md:border-l md:border-[rgb(var(--sb-border))]"
+                      )}
                       data-testid="dtv2-actions-header"
                     >
                       {t('datatable.actions', { defaultValue: 'Akce' })}
@@ -249,13 +271,32 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               {props.loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={`sk-${i}`} className="animate-pulse">
-                    {table.getAllColumns().map((c) => (
-                      <td key={c.id} className={cn(densityClasses.td)}>
-                        <div className="h-4 w-24 rounded bg-muted" />
-                      </td>
-                    ))}
+                    {table.getAllColumns().map((c) => {
+                      const side = getStickySide(c);
+                      return (
+                        <td
+                          key={c.id}
+                          className={cn(
+                            "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                            densityClasses.td,
+                            stickyCellClasses(side),
+                            side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
+                            side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
+                          )}
+                        >
+                          <div className="h-4 w-24 rounded bg-muted" />
+                        </td>
+                      );
+                    })}
                     {hasRowActions && (
-                      <td className={cn(densityClasses.td)}>
+                      <td
+                        className={cn(
+                          "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                          densityClasses.td,
+                          stickyCellClasses('right'),
+                          "md:border-l md:border-[rgb(var(--sb-border))]"
+                        )}
+                      >
                         <div className="h-4 w-10 rounded bg-muted" />
                       </td>
                     )}
@@ -281,16 +322,33 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     tabIndex={props.onRowClick ? 0 : -1}
                     aria-label={props.onRowClick ? 'Row clickable' : undefined}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td)}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const side = getStickySide(cell.column);
+                      return (
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                            densityClasses.td,
+                            stickyCellClasses(side),
+                            side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
+                            side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      );
+                    })}
                     {hasRowActions && (
-                      <td className={cn("px-3 py-2 border-t border-[rgb(var(--sb-border))]", densityClasses.td, "text-right")}>
+                      <td
+                        className={cn(
+                          "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                          densityClasses.td,
+                          "text-right",
+                          stickyCellClasses('right'),
+                          "md:border-l md:border-[rgb(var(--sb-border))]"
+                        )}
+                      >
                         <div
                           className="inline-flex items-center gap-1"
                           onClick={(e) => {
