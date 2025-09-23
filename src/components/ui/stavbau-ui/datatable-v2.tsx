@@ -1,4 +1,4 @@
-// PATCH: datatable-v2.tsx
+// PATCH: datatable-v2.tsx // feat(ui): DataTableV2 responsive (hybrid) — step 1/6 (card fields API)
 import * as React from 'react';
 import { useDataTableV2Core, type DataTableV2Props, type TableDensity } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
