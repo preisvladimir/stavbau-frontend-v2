@@ -3,13 +3,120 @@ import * as React from 'react';
 import { useDataTableV2Core, type DataTableV2Props } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
+import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
+
+function DataTableV2Toolbar({
+  table,
+  search, setSearch,
+  density, setDensity,
+  t,
+}: {
+  table: ReturnType<typeof useDataTableV2Core<any>>['table'];
+  search: string; setSearch: (s: string) => void;
+  density: 'compact' | 'cozy' | 'comfortable'; setDensity: (d: 'compact' | 'cozy' | 'comfortable') => void;
+  t: (key: string) => string;
+}) {
+  const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-background">
+      {/* Search */}
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        placeholder={t('datatable.searchPlaceholder')}
+        aria-label={t('datatable.search')}
+        className="h-9 w-52 rounded border px-3"
+      />
+
+      {/* Column visibility */}
+      {columns.length > 0 && (
+        <div className="relative">
+          <details>
+            <summary
+              className="cursor-pointer select-none text-sm px-2 py-1 rounded border hover:bg-muted"
+              aria-label={t('datatable.showColumns')}
+              data-testid="dtv2-columns-trigger"
+            >
+              {t('datatable.showColumns')}
+            </summary>
+            <div className="absolute z-10 mt-1 w-56 rounded border bg-popover p-2 shadow">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-foreground/70">{t('datatable.columns')}</span>
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => table.resetColumnVisibility()}
+                >
+                  {t('datatable.reset')}
+                </button>
+              </div>
+              <ul className="max-h-56 overflow-auto space-y-1">
+                {columns.map((col) => {
+                  const labelText =
+                    typeof col.columnDef.header === 'string'
+                      ? col.columnDef.header
+                      : (col.id ?? ''); // fallback na id
+
+                  return (
+                    <li key={col.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        id={`col-${col.id}`}
+                        type="checkbox"
+                        checked={col.getIsVisible()}
+                        onChange={(e) => col.toggleVisibility(e.currentTarget.checked)}
+                      />
+                      <label htmlFor={`col-${col.id}`}>{labelText}</label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Density */}
+      <div className="ml-auto inline-flex items-center gap-1">
+        <span className="text-xs text-foreground/70">{t('datatable.density')}</span>
+        {(['compact', 'cozy', 'comfortable'] as const).map(d => (
+          <button
+            key={d}
+            type="button"
+            className={cn(
+              'px-2 py-1 text-xs rounded border',
+              density === d ? 'bg-muted font-medium' : 'hover:bg-muted'
+            )}
+            onClick={() => setDensity(d)}
+            aria-pressed={density === d}
+          >
+            {t(`datatable.density_${d}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
-  const { table, flexRender, getRowKey, api } = useDataTableV2Core(props);
+  const { t } = useTranslation('common');
+  const { table, flexRender, getRowKey, api, search, setSearch, density, setDensity, densityClasses } = useDataTableV2Core(props);
   const isEmpty = !props.loading && props.data.length === 0;
 
   return (
     <div className="w-full overflow-x-auto">
+      {/* Toolbar */}
+      {props.showToolbar !== false && (
+        <DataTableV2Toolbar
+          table={table}
+          search={search}
+          setSearch={setSearch}
+          density={density}
+          setDensity={setDensity}
+          t={(k) => t(k)}
+        />
+      )}
       <table role="table" className={cn('w-full text-left border-separate border-spacing-0', 'min-w-[640px]')}>
         <thead>
           {table.getHeaderGroups().map((hg) => (
@@ -30,7 +137,8 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     scope="col"
                     aria-sort={aria as any}
                     className={cn(
-                      'px-3 py-2 text-xs font-semibold text-foreground/80 select-none',
+                      densityClasses.th,
+                      'text-foreground/80 select-none',
                       canSort && 'cursor-pointer hover:text-foreground'
                     )}
                     onClick={onClick}
@@ -44,10 +152,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     }}
                     title={
                       sorted === 'asc'
-                        ? 'Seřadit sestupně'
+                        ? t('datatable.sort.desc')
                         : sorted === 'desc'
-                        ? 'Zrušit řazení'
-                        : 'Seřadit vzestupně'
+                          ? t('datatable.sort.none')
+                          : t('datatable.sort.asc')
                     }
                   >
                     <div className="inline-flex items-center gap-1">
@@ -70,7 +178,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             Array.from({ length: 3 }).map((_, i) => (
               <tr key={`sk-${i}`} className="animate-pulse">
                 {table.getAllColumns().map((c) => (
-                  <td key={c.id} className="px-3 py-3">
+                  <td key={c.id} className={cn(densityClasses.td)}>
                     <div className="h-4 w-24 rounded bg-muted" />
                   </td>
                 ))}
@@ -78,8 +186,8 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             ))
           ) : isEmpty ? (
             <tr>
-              <td colSpan={table.getAllColumns().length} className="px-3 py-6">
-                {props.emptyContent ?? <EmptyState title="Žádná data" description="Zkuste upravit filtr nebo přidat záznam." />}
+              <td colSpan={table.getAllColumns().length} className={cn(densityClasses.td, 'py-6')}>
+                {props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />}
               </td>
             </tr>
           ) : (
@@ -92,7 +200,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                 aria-label={props.onRowClick ? 'Row clickable' : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2 text-sm">
+                  <td key={cell.id} className={cn(densityClasses.td)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

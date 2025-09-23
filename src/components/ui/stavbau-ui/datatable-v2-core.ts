@@ -8,7 +8,8 @@ import {
   type RowData,
   getSortedRowModel,
   type SortingState,
-  getPaginationRowModel,        // ← NEW
+  getPaginationRowModel,
+  type VisibilityState,
 } from '@tanstack/react-table';
 
 export type DataTableV2Column<T extends RowData> = {
@@ -45,6 +46,21 @@ export type DataTableV2Props<T extends RowData> = {
   defaultPageSize?: number;              // uncontrolled init
   enableClientPaging?: boolean;          // default true
   showPager?: boolean;                   // default true
+
+  // Toolbar (PR4)
+  search?: string;                           // controlled
+  onSearchChange?: (q: string) => void;
+  defaultSearch?: string;                    // uncontrolled init
+
+  columnVisibility?: VisibilityState;        // controlled { [columnId]: boolean }
+  onColumnVisibilityChange?: (v: VisibilityState) => void;
+  defaultColumnVisibility?: VisibilityState; // uncontrolled init
+
+  density?: 'compact' | 'cozy' | 'comfortable';
+  onDensityChange?: (d: 'compact' | 'cozy' | 'comfortable') => void;
+  defaultDensity?: 'compact' | 'cozy' | 'comfortable';
+
+  showToolbar?: boolean;                     // default true  
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
@@ -89,17 +105,39 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     : props.data.length;
   const pageCount = Math.max(1, Math.ceil((total || 0) / (pageSize || 1)));
 
+  // ---- PR4: search (zatím jen prop, filtr necháme na parentu v PR 4.2) ----
+  const [internalSearch, setInternalSearch] = React.useState(props.defaultSearch ?? '');
+  const search = props.search ?? internalSearch;
+  const setSearch = (q: string) => (props.onSearchChange ? props.onSearchChange(q) : setInternalSearch(q));
+
+  // ---- PR4: column visibility ----
+  const [internalVisibility, setInternalVisibility] = React.useState<VisibilityState>(props.defaultColumnVisibility ?? {});
+  const visibility = props.columnVisibility ?? internalVisibility;
+
+  // ---- PR4: density ----
+  const [internalDensity, setInternalDensity] = React.useState<'compact' | 'cozy' | 'comfortable'>(props.defaultDensity ?? 'cozy');
+  const density = props.density ?? internalDensity;
+  const setDensity = (d: 'compact' | 'cozy' | 'comfortable') => (props.onDensityChange ? props.onDensityChange(d) : setInternalDensity(d));
+
+
+
   const table = useReactTable<T>({
     data: props.data,
     columns: tanColumns,
     state: {
       sorting,
       pagination: { pageIndex, pageSize },
+      columnVisibility: visibility,
     },
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
       if (props.onSortChange) props.onSortChange(next as DataTableV2Sort);
       else setInternalSort(next as SortingState);
+    },
+    onColumnVisibilityChange: (updater) => {
+      const next = typeof updater === 'function' ? updater(visibility) : updater;
+      if (props.onColumnVisibilityChange) props.onColumnVisibilityChange(next);
+      else setInternalVisibility(next);
     },
     onPaginationChange: (updater) => {
       const prev = { pageIndex, pageSize };
@@ -128,6 +166,12 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     return k ? String(k) : `row-${idx}`;
   }, [props.keyField]);
 
+  const densityClasses = {
+    compact: { th: 'px-2 py-1 text-xs', td: 'px-2 py-1 text-xs' },
+    cozy: { th: 'px-3 py-2 text-xs', td: 'px-3 py-2 text-sm' },
+    comfortable: { th: 'px-4 py-3 text-sm', td: 'px-4 py-3 text-base' },
+  }[density];
+
   // exposed helpers (1-based page)
   const api = {
     page: pageIndex + 1,
@@ -141,5 +185,11 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     canPrevPage: table.getCanPreviousPage(),
   };
 
-  return { table, flexRender, getRowKey, api };
+  return {
+    table, flexRender, getRowKey,
+    api,
+    // PR4 exposes
+    search, setSearch,
+    density, setDensity, densityClasses,
+  };
 }
