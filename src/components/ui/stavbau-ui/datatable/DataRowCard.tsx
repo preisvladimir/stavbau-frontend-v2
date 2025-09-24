@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { Row } from '@tanstack/react-table';
 import { normalizeMobileMeta } from './mobileMeta';
+import { sbCardBase, sbCardPadding, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 //type AnyRow = Row<any>;
 
@@ -76,7 +77,7 @@ export function DataRowCard<TData>({
 
     return (
         <div
-            className="rounded-2xl border bg-background p-3 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--sb-focus))] focus-visible:ring-offset-background"
+            className={`${sbCardBase} ${sbCardPadding} ${sbFocusRing}`}
             onClick={onRowClick}
             role={onRowClick ? 'button' : 'listitem'}
             tabIndex={onRowClick ? 0 : -1}

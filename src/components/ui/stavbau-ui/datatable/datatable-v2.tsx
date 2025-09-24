@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
+import { sbCardBase, sbDivider, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 function DataTableV2Toolbar({
   table,
@@ -37,7 +38,7 @@ function DataTableV2Toolbar({
 }) {
   const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
   return (
-    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]">
+    <div className={cn("flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))]", sbDivider)}>
       {/* Page size */}
       <div className="inline-flex items-center gap-2">
         <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
@@ -125,9 +126,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
 
   const v = props.variant ?? 'plain';
   const wrapperClass =
-    v === 'surface'
-      ? "rounded-xl border border-[rgb(var(--sb-border))] bg-[rgb(var(--sb-surface))]"
-      : ""; // plain = bez karty
+    v === 'surface' ? sbCardBase : ""; // plain = bez karty
 
   const rows = table.getRowModel().rows;
 
@@ -215,7 +214,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                           "px-3 py-2 font-medium",
                           densityClasses.th,
                           "text-foreground/80 select-none break-words",
-                          canSort && "cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--sb-focus))] focus-visible:ring-offset-background rounded",
+                          canSort && cn("cursor-pointer hover:text-foreground rounded", sbFocusRing),
                           // sticky na md, static na lg
                           stickyHeaderClasses(stickySide),
                           // malá pomocná bordura, ať je sticky hranice patrná
@@ -319,7 +318,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     key={getRowKey(row.original as T, idx)}
                     className={cn(
                       v === 'surface'
-                        ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] hover:bg-slate-50"
+                        ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] " + "hover:bg-[rgb(var(--sb-surface-hover))]"
                         : "hover:bg-muted/40",
                       props.onRowClick && "cursor-pointer"
                     )}
