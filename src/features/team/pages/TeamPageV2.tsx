@@ -362,77 +362,109 @@ export default function TeamPageV2() {
   }, [setFab]);
 
   // --- Columns for DataTableV2 ---
-  const columns = React.useMemo(() => [
-    {
-      id: "avatar",
-      header: "",
-      accessor: (_m: MemberDto) => "", // headless; cell níže
-      cell: () => (
-        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-          <UserIcon size={16} />
-        </div>
-      ),
-      enableSorting: false,
-    },
-    {
-      id: "email",
-      header: t("columns.email"),
-      accessor: (m: MemberDto) => m.email,
-      cell: (m: MemberDto) => (
-        <span className="inline-flex items-center gap-1">
-          <Mail size={14} /> {m.email}
-        </span>
-      ),
-    },
-    {
-      id: "role",
-      header: t("columns.role"),
-      accessor: (m: MemberDto) => m.role,
-      cell: (m: MemberDto) =>
-        editingId === m.id ? (
-          <select
-            className="rounded-lg border border-gray-300 px-2 py-1"
-            value={draftRole}
-            onChange={(e) => setDraftRole(e.target.value)}
-            disabled={updating}
-            onClick={(e) => e.stopPropagation()}
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                void submitEditRole();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                e.stopPropagation();
-                cancelEditRole();
-              }
-            }}
-          >
-            {VISIBLE_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {roleLabel(r)}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="inline-flex items-center gap-1">
-            <Shield size={14} /> {roleLabel(m.role)}
-          </span>
-        ),
-    },
-    {
-      id: "name",
-      header: t("columns.name"),
-      accessor: (m: MemberDto) => [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
-    },
-    {
-      id: "phone",
-      header: t("columns.phone"),
-      accessor: (m: MemberDto) => m.phone || "—",
-    },
-  ], [t, editingId, draftRole, updateError, updating]);
+const columns = React.useMemo(() => [
+     {
+       id: "avatar",
+       header: "",
+       accessor: (_m: MemberDto) => "", // headless; cell níže
+       cell: () => (
+         <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+           <UserIcon size={16} />
+         </div>
+       ),
+       enableSorting: false,
+     meta: {
+       stbMobile: {
+         priority: 99,
+         mobileHidden: true, // na kartě nechceme tříštit header
+       }
+     },
+     },
+     {
+       id: "email",
+       header: t("columns.email"),
+       accessor: (m: MemberDto) => m.email,
+       cell: (m: MemberDto) => (
+         <span className="inline-flex items-center gap-1">
+           <Mail size={14} /> {m.email}
+         </span>
+       ),
+     meta: {
+       stbMobile: {
+         isSubtitle: true,
+         priority: 1,
+       }
+     },
+     },
+     {
+       id: "role",
+       header: t("columns.role"),
+       accessor: (m: MemberDto) => m.role,
+       cell: (m: MemberDto) =>
+         editingId === m.id ? (
+           <select
+             className="rounded-lg border border-gray-300 px-2 py-1"
+             value={draftRole}
+             onChange={(e) => setDraftRole(e.target.value)}
+             disabled={updating}
+             onClick={(e) => e.stopPropagation()}
+             autoFocus
+             onKeyDown={(e) => {
+               if (e.key === "Enter") {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 void submitEditRole();
+               }
+               if (e.key === "Escape") {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 cancelEditRole();
+               }
+             }}
+           >
+             {VISIBLE_ROLES.map((r) => (
+               <option key={r} value={r}>
+                 {roleLabel(r)}
+               </option>
+             ))}
+           </select>
+         ) : (
+           <span className="inline-flex items-center gap-1">
+             <Shield size={14} /> {roleLabel(m.role)}
+           </span>
+         ),
+     meta: {
+       stbMobile: {
+         priority: 2,
+         // volitelně formatter, kdybys chtěl bez ikonky na kartě:
+         // formatter: (_value, row) => roleLabel((row as MemberDto).role),
+       }
+     },
+     },
+     {
+       id: "name",
+       header: t("columns.name"),
+       accessor: (m: MemberDto) => [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
+     meta: {
+       stbMobile: {
+         isTitle: true,
+         priority: 0,
+       }
+     },
+     },
+     {
+       id: "phone",
+       header: t("columns.phone"),
+       accessor: (m: MemberDto) => m.phone || "—",
+     meta: {
+       stbMobile: {
+         priority: 3,
+         // Příklad vlastního zkrácení na kartě:
+         // formatter: (value) => String(value ?? "—"),
+       }
+     },
+     },
+   ], [t, editingId, draftRole, updateError, updating]);
 
   return (
     <div className="p-4">
@@ -539,7 +571,7 @@ export default function TeamPageV2() {
         </div>
       )}
 
-      {/* DataTableV2 — toolbar + paging + sorting + actions */}
+      {/* DataTableV2 — toolbar paging sorting actions */}
       <DataTableV2<MemberDto>
         variant="surface"
         className="mt-2"
