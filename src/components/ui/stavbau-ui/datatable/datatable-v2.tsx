@@ -1,9 +1,3 @@
-// NOTE (Step 1/6 – responsive hybrid):
-// Přidána module augmentation @tanstack/react-table → columnDef.meta.stbMobile
-// Umožní nám v dalších krocích (Step 2/3) vyrenderovat <md karty a md–lg scroll s prioritami.
-// Tento krok NEMĚNÍ žádné UI chování; pouze typy.
-// Viz: src/types/datatable.mobile.d.ts a helper: datatable/mobileMeta.ts
-
 import * as React from 'react';
 import { useId } from 'react';
 import { useDataTableV2Core, type DataTableV2Props, type TableDensity } from './datatable-v2-core';
