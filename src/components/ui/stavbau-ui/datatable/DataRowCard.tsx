@@ -1,5 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Row } from '@tanstack/react-table';
+import { flexRender } from '@tanstack/react-table';
 import { normalizeMobileMeta } from './mobileMeta';
 import { sbCardBase, sbCardPadding, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
@@ -24,17 +26,41 @@ export function DataRowCard<TData>({
     const [expanded, setExpanded] = useState(false);
     const titleId = useId();
     const detailsId = useId();
+    const { t } = useTranslation(['team', 'common']); // použije aktuální namespace stránky (např. "team")
 
+    // Bezpečné odvození krátkého textového štítku pro kartu
+    const getCardLabel = (col: any): string | ReactNode => {
+        const metaLabel = col?.columnDef?.meta?.stbMobile?.label;
+        if (metaLabel) return metaLabel; // string nebo ReactNode
+        const header = col?.columnDef?.header;
+        if (typeof header === 'string') return header;
+        // i18n fallback: zkus "columns.<id>"
+        const idRaw = String(col?.id ?? '');
+        if (idRaw) {
+            const startCase = idRaw
+                .replace(/[_-]+/g, ' ')
+                .replace(/\b\w/g, (m) => m.toUpperCase());
+            const translated = t(`columns.${idRaw}`, { defaultValue: startCase });
+            return translated;
+        }
+        return '';
+    };
     // 1) Získáme všechny viditelné buňky a obohatíme je o mobilní metadata
     const cells = row.getVisibleCells().map((cell) => {
         const col = cell.column;
         const meta = normalizeMobileMeta<any, any>(col.columnDef.meta?.stbMobile);
         const value = cell.getValue();
+        // ⚠️ DŮLEŽITÉ: pro konzistenci s desktopem renderujeme přes columnDef.cell
+        // (překlady, ikonky atp.). Když cell není definované, použijeme prostou hodnotu.
+        const defaultRendered =
+            col.columnDef.cell
+                ? (flexRender(col.columnDef.cell as any, cell.getContext()) as ReactNode)
+                : (value as ReactNode);
         const render: ReactNode =
-            meta.formatter ? meta.formatter(value, row.original) : (cell.renderValue() as ReactNode);
+            meta.formatter ? meta.formatter(value, row.original) : defaultRendered;
         return {
             id: col.id,
-            header: (col.columnDef.header as any)?.toString?.() ?? '',
+            header: getCardLabel(col),
             meta,
             render,
             isActions: col.id === 'actions', // heuristika: akční sloupec
@@ -110,7 +136,9 @@ export function DataRowCard<TData>({
                 <div id={detailsId} className="mt-3 grid grid-cols-1 gap-2">
                     {visibleInfo.map((c) => (
                         <div key={c.id} className="flex items-start justify-between gap-3">
-                            <div className="text-xs text-muted-foreground shrink-0">{c.header}</div>
+                            <div className="text-xs text-muted-foreground shrink-0">
+                                {c.header ?? ' '}
+                            </div>
                             <div className="text-sm min-w-0 text-right break-words">{c.render}</div>
                         </div>
                     ))}

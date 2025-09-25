@@ -22,6 +22,8 @@ declare module '@tanstack/react-table' {
       priority?: number;
       /** Skrytí v mobilní kartě */
       mobileHidden?: boolean;
+      /** Přeložený popisek pole pro mobilní kartu (má prioritu) */
+      label?: string | ReactNode;      
       /**
        * Formatter pro mobilní zobrazení.
        * Pokud není uveden, použijeme defaultní render hodnoty.

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
-import { sbCardBase, sbDivider, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
+import { sbCardBase, sbDivider, sbDividerBottom, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 function DataTableV2Toolbar({
   table,
@@ -38,7 +38,7 @@ function DataTableV2Toolbar({
 }) {
   const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))]", sbDivider)}>
+    <div className={cn("flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))]", sbDividerBottom)}>
       {/* Page size */}
       <div className="inline-flex items-center gap-2">
         <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
@@ -186,11 +186,9 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             role="table"
             id={tableId}
             className={cn(
-              // na md dáme minimální šířku, aby vznikl přirozený H-scroll,
-              // na lg vracíme min-w-full (plná tabulka)
-              "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
+             "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
             )}
-          >
+         >
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">

@@ -6,6 +6,8 @@ export interface StbMobileMeta<TData, TValue = unknown> {
   priority?: number;
   mobileHidden?: boolean;
   formatter?: (value: TValue, row: TData) => ReactNode;
+  /** volitelný lokálně přeložený popisek pole pro mobilní kartu */
+  label?: string | ReactNode;
 }
 
 export const defaultMobileMeta: Required<Omit<StbMobileMeta<any, any>, 'formatter'>> = {
@@ -13,6 +15,7 @@ export const defaultMobileMeta: Required<Omit<StbMobileMeta<any, any>, 'formatte
   isSubtitle: false,
   priority: 99,
   mobileHidden: false,
+  label:"",
 };
 
 export function normalizeMobileMeta<TData, TValue = unknown>(

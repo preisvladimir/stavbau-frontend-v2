@@ -393,6 +393,7 @@ const columns = React.useMemo(() => [
        stbMobile: {
          isSubtitle: true,
          priority: 1,
+         label: t("columns.email"),
        }
      },
      },
@@ -436,6 +437,7 @@ const columns = React.useMemo(() => [
      meta: {
        stbMobile: {
          priority: 2,
+         label: t("columns.role"),
          // volitelně formatter, kdybys chtěl bez ikonky na kartě:
          // formatter: (_value, row) => roleLabel((row as MemberDto).role),
        }
@@ -446,9 +448,10 @@ const columns = React.useMemo(() => [
        header: t("columns.name"),
        accessor: (m: MemberDto) => [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
      meta: {
-       stbMobile: {
+       stbMobile: {        
          isTitle: true,
          priority: 0,
+         label: t("columns.name"),
        }
      },
      },
@@ -459,6 +462,7 @@ const columns = React.useMemo(() => [
      meta: {
        stbMobile: {
          priority: 3,
+         label: t("columns.phone"),
          // Příklad vlastního zkrácení na kartě:
          // formatter: (value) => String(value ?? "—"),
        }
