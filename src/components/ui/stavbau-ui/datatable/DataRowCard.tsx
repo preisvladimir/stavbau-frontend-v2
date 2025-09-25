@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import type { Row } from '@tanstack/react-table';
 import { flexRender } from '@tanstack/react-table';
 import { normalizeMobileMeta } from './mobileMeta';
-import { sbCardBase, sbCardPadding, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
+import { sbCardBase, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 //type AnyRow = Row<any>;
 
@@ -104,7 +104,7 @@ export function DataRowCard<TData>({
 
     return (
         <div
-            className={`${sbCardBase} ${sbCardPadding} ${sbFocusRing}`}
+            className={`${sbCardBase} ${sbFocusRing} p-3 md:p-4`}
             onClick={onRowClick}
             role={onRowClick ? 'button' : 'listitem'}
             tabIndex={onRowClick ? 0 : -1}
@@ -126,8 +126,15 @@ export function DataRowCard<TData>({
                 {/* Actions (pokud existují) */}
                 {(actions || actionsRenderer) && (
                     <div className="shrink-0" onClick={handleActionClick}>
-                        {/* 1) preferuj akční cell z tabulky, 2) fallback na prop actionsRenderer */}
-                        {actions?.render ?? (actionsRenderer && actionsRenderer(row.original))}
+            {/* Akce: kapsle + min. dotykový target 36x36 */}
+            <div className="
+              flex items-center gap-2 sm:gap-2.5
+              rounded-full bg-[rgb(var(--sb-surface-2))] p-1
+              [&>*]:min-w-[36px] [&>*]:h-9
+              [&>*]:inline-flex [&>*]:items-center [&>*]:justify-center
+            ">
+                            {actions?.render ?? (actionsRenderer && actionsRenderer(row.original))}
+                        </div>
                     </div>
                 )}
             </div>

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
-import { sbCardBase, sbDividerBottom, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
+import { sbCardBase, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 function DataTableV2Toolbar({
   table,
@@ -36,54 +36,14 @@ function DataTableV2Toolbar({
   pageSizeOptions: number[];
   onReset: () => void;
 }) {
-  const columns = table.getAllLeafColumns().filter(c => c.getCanHide?.());
+  const columns = table
+    .getAllLeafColumns()
+    .filter((c) => (c.getCanHide?.() ?? false));
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))]", sbDividerBottom)}>
-      {/* Page size */}
-      <div className="inline-flex items-center gap-2">
-        <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
-        <Select
-          size="md"
-          variant="outline"
-          value={String(pageSize)}
-          onChange={(v) => setPageSize(Number(v))}
-          ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
-          options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
-        />
-      </div>
-      {/* Column visibility */}
-      {columns.length > 0 && (
-        <ColumnVisibilityMenu
-          triggerLabel={t('datatable.showColumns', { defaultValue: 'Sloupce' })}
-          title={t('datatable.columns', { defaultValue: 'Sloupce' })}
-          resetLabel={t('datatable.reset', { defaultValue: 'Reset' })}
-          ariaLabel={t('datatable.showColumns', { defaultValue: 'Zobrazit sloupce' })}
-          items={columns.map((col) => {
-            const labelText =
-              typeof col.columnDef.header === 'string'
-                ? col.columnDef.header
-                : (col.id ?? '');
-            return {
-              id: col.id!,
-              label: labelText,
-              checked: col.getIsVisible(),
-              disabled: col.columnDef.enableHiding === false,
-            };
-          })}
-          onToggle={(id, value) => {
-            const col = columns.find((c) => c.id === id);
-            col?.toggleVisibility(value);
-          }}
-          onReset={() => table.resetColumnVisibility()}
-          variant="popover"
-        />
-      )}
-      {/* Paging */}
-      <div className="ml-2 text-xs text-foreground/70" aria-live="polite">
-        {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
-      </div>
-      {/* Search */}
-      <div className="min-w-[240px] md:min-w-[320px] lg:min-w-[420px] flex-1">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))] border-b border-[rgb(var(--sb-border))]">
+      {/* ===== MOBILE (xs–sm): jen Search + Reset ===== */}
+      <div className="w-full flex items-center gap-2 md:hidden">
         <SearchInput
           size="md"
           value={search}
@@ -93,20 +53,115 @@ function DataTableV2Toolbar({
           clearable
           ariaLabel={t("datatable.search", { defaultValue: "Hledat" })}
           placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
+          className="flex-1"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={<X size={16} />}
+          ariaLabel={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+          title={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+          onClick={onReset}
         />
       </div>
-      {/* Density */}
-      <DensitySelect
-        value={density}
-        onChange={(d) => setDensity(d)}
-        label={t("datatable.density")}
-        optionCompact={t("datatable.density_compact")}
-        optionCozy={t("datatable.density_cozy")}
-        optionComfortable={t("datatable.density_comfortable")}
-        className="ml-auto"
-      />
-      {/* Reset */}
-      <Button variant="ghost" size="sm" leftIcon={<X size={16} />} onClick={onReset} />
+
+      {/* ===== TABLET/DESKTOP (md+): plnější toolbar ===== */}
+      <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:w-full">
+        {/* Page size */}
+        <div className="inline-flex items-center gap-2">
+          <span className="text-sm">
+            {t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
+          </span>
+          <Select
+            size="md"
+            variant="outline"
+            value={String(pageSize)}
+            onChange={(v) => setPageSize(Number(v))}
+            ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
+            options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
+          />
+        </div>
+
+        {/* Column visibility */}
+        {columns.length > 0 && (
+          <ColumnVisibilityMenu
+            triggerLabel={t('datatable.showColumns', { defaultValue: 'Sloupce' })}
+            title={t('datatable.columns', { defaultValue: 'Sloupce' })}
+            resetLabel={t('datatable.reset', { defaultValue: 'Reset' })}
+            ariaLabel={t('datatable.showColumns', { defaultValue: 'Zobrazit sloupce' })}
+            items={columns.map((col) => {
+              const id = String(col.id ?? '');
+              const startCase = id
+                ? id.replace(/[_-]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
+                : '';
+              const metaLabel = (col.columnDef.meta as any)?.stbMobile?.label as string | undefined;
+              const header = col.columnDef.header;
+              const labelText =
+                (typeof metaLabel === 'string' && metaLabel.trim())
+                  ? metaLabel
+                  : (typeof header === 'string'
+                      ? header
+                      : t(`columns.${id}`, { defaultValue: startCase }));
+
+              return {
+                id: col.id!,
+                label: labelText,
+                checked: col.getIsVisible?.() ?? true,
+                disabled: col.columnDef.enableHiding === false,
+              };
+            })}
+            onToggle={(id, value) => {
+              const col = columns.find((c) => c.id === id);
+              if (col) col.toggleVisibility(!!value);
+            }}
+            onReset={() => table.resetColumnVisibility()}
+            variant="popover"
+          />
+        )}
+
+        {/* Paging indicator */}
+        <div className="text-xs text-foreground/70" aria-live="polite">
+          {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
+        </div>
+
+        {/* Search (md+) */}
+        <div className="min-w-[320px] lg:min-w-[420px] md:flex-1">
+          <SearchInput
+            size="md"
+            value={search}
+            onChange={setSearch}
+            preset="v1"
+            leftIcon="search"
+            clearable
+            ariaLabel={t("datatable.search", { defaultValue: "Hledat" })}
+            placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
+          />
+        </div>
+
+        {/* Reset (vpravo) */}
+        <div className="ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<X size={16} />}
+            ariaLabel={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+            title={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+            onClick={onReset}
+          />
+        </div>
+
+        {/* Density — až na desktopu (lg+) */}
+        <div className="hidden lg:block">
+          <DensitySelect
+            value={density}
+            onChange={(d) => setDensity(d)}
+            label={t("datatable.density")}
+            optionCompact={t("datatable.density_compact")}
+            optionCozy={t("datatable.density_cozy")}
+            optionComfortable={t("datatable.density_comfortable")}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -190,10 +245,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             role="table"
             id={tableId}
             className={cn(
-             "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
+              "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
             )}
-         >
-            <thead>
+          >
+            <thead className="lg:sticky lg:top-0 lg:z-10 lg:bg-[rgb(var(--sb-surface))] lg:backdrop-blur-[2px]">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
                   {hg.headers.map((header) => {
@@ -215,7 +270,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         className={cn(
                           "px-3 py-2 font-medium",
                           densityClasses.th,
-                          "text-foreground/80 select-none break-words",
+                          "px-3 py-2 font-medium bg-[rgb(var(--sb-surface))] lg:bg-clip-padding",
                           canSort && cn("cursor-pointer hover:text-foreground rounded", sbFocusRing),
                           // sticky na md, static na lg
                           stickyHeaderClasses(stickySide),

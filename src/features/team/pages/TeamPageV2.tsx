@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/ui/stavbau-ui/emptystate";
 import { Mail, Shield, User as UserIcon, UserPlus, Pencil, Trash2, X } from "@/components/icons";
 import { EMAIL_INPUT_PATTERN, EMAIL_REGEX } from "@/lib/utils/patterns";
 import { useFab, Plus } from "@/components/layout";
+import { cn } from '@/lib/utils/cn';
+import { sbContainer } from "@/components/ui/stavbau-ui/tokens";
 
 /**
  * TeamPageV2 — plná integrace DataTableV2 (toolbar, paging, sorting, row actions)
@@ -363,304 +365,314 @@ export default function TeamPageV2() {
   }, [setFab]);
 
   // --- Columns for DataTableV2 ---
-const columns = React.useMemo(() => [
-     {
-       id: "avatar",
-       header: "",
-       accessor: (_m: MemberDto) => "", // headless; cell níže
-       cell: () => (
-         <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-           <UserIcon size={16} />
-         </div>
-       ),
-       enableSorting: false,
-     meta: {
-       stbMobile: {
-         priority: 99,
-         mobileHidden: true, // na kartě nechceme tříštit header
-       }
-     },
-     },
-     {
-       id: "email",
-       header: t("columns.email"),
-       accessor: (m: MemberDto) => m.email,
-       cell: (m: MemberDto) => (
-         <span className="inline-flex items-center gap-1">
-           <Mail size={14} /> {m.email}
-         </span>
-       ),
-     meta: {
-       stbMobile: {
-         isSubtitle: true,
-         priority: 1,
-         label: t("columns.email"),
-       }
-     },
-     },
-     {
-       id: "role",
-       header: t("columns.role"),
-       accessor: (m: MemberDto) => m.role,
-       cell: (m: MemberDto) =>
-         editingId === m.id ? (
-           <select
-             className="rounded-lg border border-gray-300 px-2 py-1"
-             value={draftRole}
-             onChange={(e) => setDraftRole(e.target.value)}
-             disabled={updating}
-             onClick={(e) => e.stopPropagation()}
-             autoFocus
-             onKeyDown={(e) => {
-               if (e.key === "Enter") {
-                 e.preventDefault();
-                 e.stopPropagation();
-                 void submitEditRole();
-               }
-               if (e.key === "Escape") {
-                 e.preventDefault();
-                 e.stopPropagation();
-                 cancelEditRole();
-               }
-             }}
-           >
-             {VISIBLE_ROLES.map((r) => (
-               <option key={r} value={r}>
-                 {roleLabel(r)}
-               </option>
-             ))}
-           </select>
-         ) : (
-           <span className="inline-flex items-center gap-1">
-             <Shield size={14} /> {roleLabel(m.role)}
-           </span>
-         ),
-     meta: {
-       stbMobile: {
-         priority: 2,
-         label: t("columns.role"),
-         // volitelně formatter, kdybys chtěl bez ikonky na kartě:
-         // formatter: (_value, row) => roleLabel((row as MemberDto).role),
-       }
-     },
-     },
-     {
-       id: "name",
-       header: t("columns.name"),
-       accessor: (m: MemberDto) => [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
-     meta: {
-       stbMobile: {        
-         isTitle: true,
-         priority: 0,
-         label: t("columns.name"),
-       }
-     },
-     },
-     {
-       id: "phone",
-       header: t("columns.phone"),
-       accessor: (m: MemberDto) => m.phone || "—",
-     meta: {
-       stbMobile: {
-         priority: 3,
-         label: t("columns.phone"),
-         // Příklad vlastního zkrácení na kartě:
-         // formatter: (value) => String(value ?? "—"),
-       }
-     },
-     },
-   ], [t, editingId, draftRole, updateError, updating]);
+  const columns = React.useMemo(() => [
+    {
+      id: "avatar",
+      header: "",
+      accessor: (_m: MemberDto) => "", // headless; cell níže
+      cell: () => (
+        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+          <UserIcon size={16} />
+        </div>
+      ),
+      enableSorting: false,
+      meta: {
+        stbMobile: {
+          priority: 99,
+          mobileHidden: true, // na kartě nechceme tříštit header
+        }
+      },
+    },
+    {
+      id: "email",
+      header: t("columns.email"),
+      accessor: (m: MemberDto) => m.email,
+      cell: (m: MemberDto) => (
+        <span className="inline-flex items-center gap-1 xl:max-w-[320px] xl:truncate">
+          <Mail size={14} />
+          <span className="truncate">{m.email}</span>
+        </span>
+      ),
+      meta: {
+        stbMobile: {
+          isSubtitle: true,
+          priority: 1,
+          label: t("columns.email"),
+        }
+      },
+    },
+    {
+      id: "role",
+      header: t("columns.role"),
+      accessor: (m: MemberDto) => m.role,
+      cell: (m: MemberDto) =>
+        editingId === m.id ? (
+          <select
+            className="rounded-lg border border-gray-300 px-2 py-1"
+            value={draftRole}
+            onChange={(e) => setDraftRole(e.target.value)}
+            disabled={updating}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                void submitEditRole();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelEditRole();
+              }
+            }}
+          >
+            {VISIBLE_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <Shield size={14} /> {roleLabel(m.role)}
+          </span>
+        ),
+      meta: {
+        stbMobile: {
+          priority: 2,
+          label: t("columns.role"),
+          // volitelně formatter, kdybys chtěl bez ikonky na kartě:
+          // formatter: (_value, row) => roleLabel((row as MemberDto).role),
+        }
+      },
+    },
+    {
+      id: "name",
+      header: t("columns.name"),
+      accessor: (m: MemberDto) => [m.firstName, m.lastName].filter(Boolean).join(" ") || "—",
+      cell: (m: MemberDto) => (
+        <span className="block xl:max-w-[240px] xl:truncate">
+          {[m.firstName, m.lastName].filter(Boolean).join(" ") || "—"}
+        </span>
+      ),
+      meta: {
+        stbMobile: {
+          isTitle: true,
+          priority: 0,
+          label: t("columns.name"),
+        }
+      },
+    },
+    {
+      id: "phone",
+      header: t("columns.phone"),
+      accessor: (m: MemberDto) => m.phone || "—",
+      meta: {
+        stbMobile: {
+          priority: 3,
+          label: t("columns.phone"),
+          // Příklad vlastního zkrácení na kartě:
+          // formatter: (value) => String(value ?? "—"),
+        }
+      },
+    },
+  ], [t, editingId, draftRole, updateError, updating]);
 
   return (
     <div className="p-4">
-      <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
-        <h1 className="text-xl font-semibold">{t("title")}</h1>
-        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto min-w-0">
-          <ScopeGuard anyOf={["team:write", "team:add"]}>
-            <Button
-              type="button"
-              onClick={() => setShowAdd((s) => !s)}
-              disabled={loading}
-              ariaLabel={t("actions.newUser", { defaultValue: "Nový uživatel" }) as string}
-              leftIcon={<UserPlus size={16} />}
-              className="shrink-0 whitespace-nowrap"
-            >
-              <span>{t("actions.newUser", { defaultValue: "Nový uživatel" })}</span>
-            </Button>
-          </ScopeGuard>
+      <div className={cn(sbContainer)}>
+        <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
+          <div className="hidden md:flex items-center gap-2 md:gap-3 w-full md:w-auto min-w-0">
+
+            <ScopeGuard anyOf={["team:write", "team:add"]}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAdd((s) => !s)}
+                disabled={loading}
+                ariaLabel={t("actions.newUser", { defaultValue: "Nový uživatel" }) as string}
+                leftIcon={<UserPlus size={16} />}
+                className="shrink-0 whitespace-nowrap"
+              >
+                <span>{t("actions.newUser", { defaultValue: "Nový uživatel" })}</span>
+              </Button>
+            </ScopeGuard>
+          </div>
         </div>
-      </div>
 
-      {/* Inline add panel */}
-      <ScopeGuard anyOf={["team:write", "team:add"]}>
-        {showAdd && (
-          <form onSubmit={onAddSubmit} className="mb-4 rounded-xl border border-gray-200 p-3 space-y-3">
-            {addError && (
-              <div role="alert" className="text-red-600">{addError}</div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">{t("form.email", { defaultValue: "E-mail" })}</label>
-                <input
-                  type="email"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  value={addEmail}
-                  pattern={EMAIL_INPUT_PATTERN}
-                  onChange={(e) => setAddEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  required
-                />
-                {fieldErrors.email && <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">{t("form.firstName", { defaultValue: "Jméno" })}</label>
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  value={addFirstName}
-                  onChange={(e) => setAddFirstName(e.target.value)}
-                  placeholder={t("placeholders.firstName", { defaultValue: "Jan" }) as string}
-                />
-                {fieldErrors.firstName && <div className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</div>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">{t("form.lastName", { defaultValue: "Příjmení" })}</label>
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  value={addLastName}
-                  onChange={(e) => setAddLastName(e.target.value)}
-                  placeholder={t("placeholders.lastName", { defaultValue: "Novák" }) as string}
-                />
-                {fieldErrors.lastName && <div className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</div>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">{t("form.role", { defaultValue: "Role" })}</label>
-                <select
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  value={addRole}
-                  onChange={(e) => setAddRole(e.target.value)}
-                >
-                  {VISIBLE_ROLES.map((r) => (
-                    <option key={r} value={r}>{roleLabel(r)}</option>
-                  ))}
-                </select>
-                {fieldErrors.role && <div className="text-xs text-red-600 mt-1">{fieldErrors.role}</div>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">{t("form.phone", { defaultValue: "Telefon" })}</label>
-                <input
-                  type="tel"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  value={addPhone}
-                  onChange={(e) => setAddPhone(e.target.value)}
-                  placeholder="420 123 456 789"
-                />
-                {fieldErrors.phone && <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div>}
-              </div>
-              <div className="flex items-end gap-2">
-                <Button type="submit" isLoading={adding}>{t("actions.add", { defaultValue: "Přidat" })}</Button>
-                <Button type="button" variant="outline" onClick={() => { setShowAdd(false); setAddError(null); setFieldErrors({}); }}>
-                  {t("actions.cancel", { defaultValue: "Zrušit" })}
-                </Button>
-              </div>
-            </div>
-          </form>
-        )}
-      </ScopeGuard>
-
-      {loading && <div>{t("loading", { defaultValue: "Načítám…" })}</div>}
-      {!loading && error && (
-        <div role="alert" className="text-red-600">
-          {t("error")} {process.env.NODE_ENV !== "production" ? `(${error})` : null}
-        </div>
-      )}
-
-      {/* DataTableV2 — toolbar paging sorting actions */}
-      <DataTableV2<MemberDto>
-        i18nNamespaces={translationNamespaces as unknown as string[]}
-        variant="surface"
-        className="mt-2"
-        data={filtered}
-        columns={columns}
-        keyField={(m) => m.id}
-        loading={loading}
-        // Toolbar (PR4/4.1)
-        search={search}
-        onSearchChange={setSearch}
-        defaultDensity="cozy"
-        pageSizeOptions={[5, 10, 20]}
-        showToolbar={true} // toolbar řeší stránka, aby layout odpovídal původnímu designu
-        // Pager (PR3) — klientský režim (enableClientPaging default true)
-        showPager
-        // Row actions (PR5)
-        rowActions={(m) => (
-          <>
-            <ScopeGuard anyOf={["team:write", "team:update_role"]}>
-              {editingId === m.id ? (
-                <>
-                  <Button size="sm" onClick={(e) => { e.stopPropagation(); void submitEditRole(); }} isLoading={updating}>
-                    {t("actions.save", { defaultValue: "Uložit" })}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); cancelEditRole(); }} disabled={updating}>
+        {/* Inline add panel */}
+        <ScopeGuard anyOf={["team:write", "team:add"]}>
+          {showAdd && (
+            <form onSubmit={onAddSubmit} className="mb-4 rounded-xl border border-gray-200 p-3 space-y-3">
+              {addError && (
+                <div role="alert" className="text-red-600">{addError}</div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">{t("form.email", { defaultValue: "E-mail" })}</label>
+                  <input
+                    type="email"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={addEmail}
+                    pattern={EMAIL_INPUT_PATTERN}
+                    onChange={(e) => setAddEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    required
+                  />
+                  {fieldErrors.email && <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div>}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">{t("form.firstName", { defaultValue: "Jméno" })}</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={addFirstName}
+                    onChange={(e) => setAddFirstName(e.target.value)}
+                    placeholder={t("placeholders.firstName", { defaultValue: "Jan" }) as string}
+                  />
+                  {fieldErrors.firstName && <div className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</div>}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">{t("form.lastName", { defaultValue: "Příjmení" })}</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={addLastName}
+                    onChange={(e) => setAddLastName(e.target.value)}
+                    placeholder={t("placeholders.lastName", { defaultValue: "Novák" }) as string}
+                  />
+                  {fieldErrors.lastName && <div className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</div>}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">{t("form.role", { defaultValue: "Role" })}</label>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={addRole}
+                    onChange={(e) => setAddRole(e.target.value)}
+                  >
+                    {VISIBLE_ROLES.map((r) => (
+                      <option key={r} value={r}>{roleLabel(r)}</option>
+                    ))}
+                  </select>
+                  {fieldErrors.role && <div className="text-xs text-red-600 mt-1">{fieldErrors.role}</div>}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">{t("form.phone", { defaultValue: "Telefon" })}</label>
+                  <input
+                    type="tel"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={addPhone}
+                    onChange={(e) => setAddPhone(e.target.value)}
+                    placeholder="420 123 456 789"
+                  />
+                  {fieldErrors.phone && <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div>}
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button type="submit" isLoading={adding}>{t("actions.add", { defaultValue: "Přidat" })}</Button>
+                  <Button type="button" variant="outline" onClick={() => { setShowAdd(false); setAddError(null); setFieldErrors({}); }}>
                     {t("actions.cancel", { defaultValue: "Zrušit" })}
                   </Button>
-                </>
-              ) : canEditMemberRole(m) ? (
+                </div>
+              </div>
+            </form>
+          )}
+        </ScopeGuard>
+
+        {loading && <div>{t("loading", { defaultValue: "Načítám…" })}</div>}
+        {!loading && error && (
+          <div role="alert" className="text-red-600">
+            {t("error")} {process.env.NODE_ENV !== "production" ? `(${error})` : null}
+          </div>
+        )}
+
+        {/* DataTableV2 — toolbar paging sorting actions */}
+        <DataTableV2<MemberDto>
+          i18nNamespaces={translationNamespaces as unknown as string[]}
+          variant="surface"
+          className="mt-2"
+          data={filtered}
+          columns={columns}
+          keyField={(m) => m.id}
+          loading={loading}
+          // Toolbar (PR4/4.1)
+          search={search}
+          onSearchChange={setSearch}
+          defaultDensity="cozy"
+          pageSizeOptions={[5, 10, 20]}
+          showToolbar={true} // toolbar řeší stránka, aby layout odpovídal původnímu designu
+          // Pager (PR3) — klientský režim (enableClientPaging default true)
+          showPager
+          // Row actions (PR5)
+          rowActions={(m) => (
+            <>
+              <ScopeGuard anyOf={["team:write", "team:update_role"]}>
+                {editingId === m.id ? (
+                  <>
+                    <Button size="sm" onClick={(e) => { e.stopPropagation(); void submitEditRole(); }} isLoading={updating}>
+                      {t("actions.save", { defaultValue: "Uložit" })}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); cancelEditRole(); }} disabled={updating}>
+                      {t("actions.cancel", { defaultValue: "Zrušit" })}
+                    </Button>
+                  </>
+                ) : canEditMemberRole(m) ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    ariaLabel={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
+                    leftIcon={<Pencil size={16} />}
+                    onClick={(e) => { e.stopPropagation(); beginEditRole(m); }}
+                    title={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
+                  />
+                ) : null}
+              </ScopeGuard>
+
+              <ScopeGuard anyOf={["team:write", "team:update"]}>
                 <Button
                   size="sm"
                   variant="outline"
-                  ariaLabel={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
-                  leftIcon={<Pencil size={16} />}
-                  onClick={(e) => { e.stopPropagation(); beginEditRole(m); }}
-                  title={t("actions.editRole", { defaultValue: "Upravit roli" }) as string}
+                  ariaLabel={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
+                  leftIcon={<UserIcon size={16} />}
+                  onClick={(e) => { e.stopPropagation(); setSelectedMember(m); setEditProfileOpen(true); }}
+                  title={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
                 />
-              ) : null}
-            </ScopeGuard>
+              </ScopeGuard>
 
-            <ScopeGuard anyOf={["team:write", "team:update"]}>
-              <Button
-                size="sm"
-                variant="outline"
-                ariaLabel={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
-                leftIcon={<UserIcon size={16} />}
-                onClick={(e) => { e.stopPropagation(); setSelectedMember(m); setEditProfileOpen(true); }}
-                title={t("actions.editProfile", { defaultValue: "Upravit profil" }) as string}
-              />
-            </ScopeGuard>
-
-            <ScopeGuard anyOf={["team:write", "team:remove"]}>
-              <Button
-                size="sm"
-                variant="danger"
-                ariaLabel={t("actions.delete", { defaultValue: "Odebrat" }) as string}
-                leftIcon={<Trash2 size={16} />}
-                onClick={(e) => { e.stopPropagation(); void handleDelete(m); }}
-                isLoading={deletingId === m.id}
-                title={t("actions.delete", { defaultValue: "Odebrat" }) as string}
-              />
-            </ScopeGuard>
-            {deletingId === m.id && deleteError && (
-              <div className="text-xs text-red-600">{deleteError}</div>
-            )}
-          </>
-        )}
-        // Empty state
-        emptyContent={emptyNode}
-      />
-
-      {/* Modal pro úpravu profilu člena */}
-      {companyId && (
-        <MemberEditModal
-          open={editProfileOpen}
-          companyId={companyId}
-          member={selectedMember}
-          onClose={() => setEditProfileOpen(false)}
-          onSaved={(updated) => {
-            setItems((prev) => prev.map((it) => (it.id === updated.id ? { ...it, ...updated } : it)));
-          }}
+              <ScopeGuard anyOf={["team:write", "team:remove"]}>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  ariaLabel={t("actions.delete", { defaultValue: "Odebrat" }) as string}
+                  leftIcon={<Trash2 size={16} />}
+                  onClick={(e) => { e.stopPropagation(); void handleDelete(m); }}
+                  isLoading={deletingId === m.id}
+                  title={t("actions.delete", { defaultValue: "Odebrat" }) as string}
+                />
+              </ScopeGuard>
+              {deletingId === m.id && deleteError && (
+                <div className="text-xs text-red-600">{deleteError}</div>
+              )}
+            </>
+          )}
+          // Empty state
+          emptyContent={emptyNode}
         />
-      )}
+
+        {/* Modal pro úpravu profilu člena */}
+        {companyId && (
+          <MemberEditModal
+            open={editProfileOpen}
+            companyId={companyId}
+            member={selectedMember}
+            onClose={() => setEditProfileOpen(false)}
+            onSaved={(updated) => {
+              setItems((prev) => prev.map((it) => (it.id === updated.id ? { ...it, ...updated } : it)));
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
