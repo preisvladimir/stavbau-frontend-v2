@@ -76,6 +76,13 @@ export type DataTableV2Props<T extends RowData> = {
 
   /** Volitelná třída na wrapperu tabulky */
   className?: string;
+
+  /**
+   * i18n namespaces, které mají používat mobilní karty (DataRowCard)
+   * Příklad: ['team', 'common'] nebo ['invoices', 'common']
+   * Pokud není uvedeno, použije se ['common'].
+   */
+  i18nNamespaces?: string[];  
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
@@ -181,11 +188,25 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     return k ? String(k) : `row-${idx}`;
   }, [props.keyField]);
 
-  const densityClasses = {
-    compact: { th: 'px-2 py-1 text-xs', td: 'px-2 py-1 text-xs' },
-    cozy: { th: 'px-3 py-2 text-xs', td: 'px-3 py-2 text-sm' },
-    comfortable: { th: 'px-4 py-3 text-sm', td: 'px-4 py-3 text-base' },
-  }[density];
+// Mobile-first, od lg výš lehce zahušťujeme (víc řádků na obrazovce)
+const densityMap = {
+  compact: {
+    th: 'px-2 py-1 text-xs',
+    td: 'px-2 py-1 text-xs',
+  },
+  cozy: {
+    // mobil = příjemně čitelné, na lg zmenšíme výšku řádku
+    th: 'px-3 py-2 text-xs lg:py-1.5 xl:py-2',
+    td: 'px-3 py-2 text-sm lg:py-1.5 xl:py-2',
+  },
+  comfortable: {
+    // desktop (lg+) není „nafouklý“ – jen o fous vyšší než cozy
+    th: 'px-4 py-3 text-sm md:py-3 lg:py-2.5 xl:py-1.5',
+    td: 'px-4 py-3 text-base md:py-3 lg:py-2.5 xl:py-1.5',
+  },
+} as const;
+
+const densityClasses = densityMap[density];
 
   // exposed helpers (1-based page)
   const api = {

@@ -3,7 +3,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LogOut } from "@/components/icons";
 import { Button } from "@/components/ui/stavbau-ui";
 // pokud máš barrel export, nech `@/components/layout`; jinak použij explicitní cestu níže:
-import { TopbarActions } from "@/components/layout";
+//import { TopbarActions } from "@/components/layout";
 
 export default function Topbar() {
   const { logout, user } = useAuth();
@@ -14,8 +14,8 @@ export default function Topbar() {
         {/* Levá část (můžeš doplnit breadcrumb / název stránky / vyhledávání) */}
         <div className="flex-1 min-w-0" />
 
-        {/* Pravá část: stránkové akce (desktop) napojené na FabContext */}
-        <TopbarActions />
+        {/* Pravá část: stránkové akce (desktop) napojené na FabContext <TopbarActions /> */}
+        
 
         {/* Profil + odhlášení */}
         <div className="flex items-center gap-2">
