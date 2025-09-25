@@ -76,6 +76,13 @@ export type DataTableV2Props<T extends RowData> = {
 
   /** Volitelná třída na wrapperu tabulky */
   className?: string;
+
+  /**
+   * i18n namespaces, které mají používat mobilní karty (DataRowCard)
+   * Příklad: ['team', 'common'] nebo ['invoices', 'common']
+   * Pokud není uvedeno, použije se ['common'].
+   */
+  i18nNamespaces?: string[];  
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {

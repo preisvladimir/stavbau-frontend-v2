@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
 import { X } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
-import { sbCardBase, sbDivider, sbDividerBottom, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
+import { sbCardBase, sbDividerBottom, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 function DataTableV2Toolbar({
   table,
@@ -112,8 +112,11 @@ function DataTableV2Toolbar({
 }
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
-  const { t } = useTranslation('common');
-  const tt = (k: string, o?: any) => String(t(k, o));
+  // běžné texty tabulky (toolbar, pager…) – common
+  const { t: tCommon } = useTranslation('common');
+  const tt = (k: string, o?: any) => String(tCommon(k, o));
+  // překladač pro karty: podle props.i18nNamespaces nebo ['common']
+  const { t: tCard } = useTranslation(props.i18nNamespaces ?? ['common']);
   const tableId = useId();
   const {
     table, flexRender, getRowKey, api,
@@ -163,7 +166,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </div>
           ))
         ) : isEmpty ? (
-          props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />
+          props.emptyContent ?? <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />
         ) : (
           rows.map((row, idx) => (
             <DataRowCard
@@ -173,6 +176,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               // {actionsRenderer?.(row.original)}
               actionsRenderer={hasRowActions ? (props as any).rowActions : undefined}
               onRowClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
+              t={tCard}
             />
           ))
         )}
@@ -230,10 +234,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         }}
                         title={
                           sorted === 'asc'
-                            ? t('datatable.sort.desc')
+                            ? tt('datatable.sort.desc')
                             : sorted === 'desc'
-                              ? t('datatable.sort.none')
-                              : t('datatable.sort.asc')
+                              ? tt('datatable.sort.none')
+                              : tt('datatable.sort.asc')
                         }
                       >
                         <div className="inline-flex items-center gap-1">
@@ -260,7 +264,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                       )}
                       data-testid="dtv2-actions-header"
                     >
-                      {t('datatable.actions', { defaultValue: 'Akce' })}
+                      {tt('datatable.actions', { defaultValue: 'Akce' })}
                     </th>
                   )}
                 </tr>
@@ -307,7 +311,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               ) : isEmpty ? (
                 <tr>
                   <td colSpan={table.getAllColumns().length + (hasRowActions ? 1 : 0)} className={cn(densityClasses.td, 'py-6')}>
-                    {props.emptyContent ?? <EmptyState title={t('datatable.empty.title')} description={t('datatable.empty.desc')} />}
+                    {props.emptyContent ?? <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />}
                   </td>
                 </tr>
               ) : (

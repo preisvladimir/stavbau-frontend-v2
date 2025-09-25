@@ -23,7 +23,8 @@ import { useFab, Plus } from "@/components/layout";
 export default function TeamPageV2() {
   const { setFab } = useFab();
   const { user } = useAuthContext();
-  const { t } = useTranslation("team");
+  const translationNamespaces = React.useMemo(() => ['team', 'common'] as const, []);
+  const { t } = useTranslation(translationNamespaces);
 
   const [items, setItems] = React.useState<MemberDto[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -577,6 +578,7 @@ const columns = React.useMemo(() => [
 
       {/* DataTableV2 — toolbar paging sorting actions */}
       <DataTableV2<MemberDto>
+        i18nNamespaces={translationNamespaces as unknown as string[]}
         variant="surface"
         className="mt-2"
         data={filtered}

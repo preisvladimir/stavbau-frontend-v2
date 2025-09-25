@@ -1,5 +1,4 @@
 import { useId, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { Row } from '@tanstack/react-table';
 import { flexRender } from '@tanstack/react-table';
 import { normalizeMobileMeta } from './mobileMeta';
@@ -16,17 +15,19 @@ export function DataRowCard<TData>({
     row,
     actionsRenderer,
     onRowClick,
+    t,
 }: {
     row: Row<TData>;
     /** volitelný renderer akcí pro mobil (kebab/ikonky) */
     actionsRenderer?: (row: TData) => ReactNode;
     /** volitelný click handler na celou kartu */
     onRowClick?: () => void;
+    /** překladová funkce pro labely na kartě (přednostně vůči i18n fallbacku) */
+    t?: (key: string, opts?: any) => string;
 }) {
     const [expanded, setExpanded] = useState(false);
     const titleId = useId();
     const detailsId = useId();
-    const { t } = useTranslation(['team', 'common']); // použije aktuální namespace stránky (např. "team")
 
     // Bezpečné odvození krátkého textového štítku pro kartu
     const getCardLabel = (col: any): string | ReactNode => {
@@ -40,8 +41,8 @@ export function DataRowCard<TData>({
             const startCase = idRaw
                 .replace(/[_-]+/g, ' ')
                 .replace(/\b\w/g, (m) => m.toUpperCase());
-            const translated = t(`columns.${idRaw}`, { defaultValue: startCase });
-            return translated;
+            // pokud máme prop t (z DataTableV2), použijeme ho; jinak jen startCase
+            return t ? t(`columns.${idRaw}`, { defaultValue: startCase }) : startCase;
         }
         return '';
     };
