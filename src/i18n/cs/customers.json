@@ -1,14 +1,28 @@
-{
-  "list": {
-    "title": "Zákazníci",
-    "search": { "placeholder": "Hledat zákazníka…" },
-    "columns": {
-      "name": "Název",
-      "ico": "IČO",
-      "dic": "DIČ",
-      "email": "E-mail",
-      "updatedAt": "Aktualizováno"
-    },
-    "empty": "Žádní zákazníci"
+ {
+   "list": {
+     "title": "Zákazníci",
+     "search": { "placeholder": "Hledat zákazníka…" },
+     "columns": { "name": "Název", "ico": "IČO", "dic": "DIČ", "email": "E-mail", "updatedAt": "Aktualizováno" },
+     "empty": "Žádní zákazníci"
+   },
+  "form": {
+    "name": "Název",
+    "ico": "IČO",
+    "dic": "DIČ",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "address": "Adresa",
+    "addressLine1": "Ulice a č.p.",
+    "addressLine2": "Doplňující adresa",
+    "city": "Město",
+    "zip": "PSČ",
+    "country": "Země",
+    "notes": "Poznámka"
+  },
+  "actions": {
+    "save": "Uložit",
+    "create": "Vytvořit",
+    "edit": "Upravit",
+    "delete": "Smazat"
   }
-}
+ }

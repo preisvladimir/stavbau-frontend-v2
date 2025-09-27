@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
               {
                 path: "team",
                 element: (
-                  <ScopeGuard required={["team:read","team:write"]}>
+                  <ScopeGuard required={["team:read", "team:write"]}>
                     <TeamPage />
                   </ScopeGuard>
                 ),
@@ -50,19 +50,27 @@ export const router = createBrowserRouter([
               {
                 path: "customers",
                 element: (
-                  <ScopeGuard required={["invoices:read","invoices:write"]}>
+                  <ScopeGuard required={["invoices:read", "invoices:write"]}>
                     <CustomersListPage />
                   </ScopeGuard>
                 ),
-              }, 
+              },
               {
                 path: "customers/:id",
                 element: (
-                  <ScopeGuard required={["invoices:read","invoices:write"]}>
+                  <ScopeGuard required={["invoices:read", "invoices:write"]}>
                     <CustomersListPage />
                   </ScopeGuard>
                 ),
-              },                           
+              },
+              {
+                path: "customers/new",
+                element: (
+                  <ScopeGuard required={["invoices:create", "invoices:write"]}>
+                    <CustomersListPage />
+                  </ScopeGuard>
+                ),
+              },
             ],
           },
         ],

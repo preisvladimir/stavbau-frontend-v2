@@ -173,3 +173,20 @@ export type CustomerDto = {
   notes?: string | null;
   updatedAt: string; // ISO
 };
+
+
+export type CreateCustomerRequest = {
+  name: string;
+  ico?: string | null;
+  dic?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  zip?: string | null;
+  country?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateCustomerRequest = Partial<CreateCustomerRequest>;

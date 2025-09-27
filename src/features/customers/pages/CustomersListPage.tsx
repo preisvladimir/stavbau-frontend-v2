@@ -11,11 +11,14 @@ import { Loading } from '@/components/ui/stavbau-ui/loading';
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { RBAC_AREAS } from '@/lib/rbac/areas';
 import { CustomerDetailDrawer } from '../components/CustomerDetailDrawer';
+import { CustomerFormDrawer } from '../components/CustomerFormDrawer';
 
 export default function CustomersListPage() {
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
     const { id: routeId } = useParams();
+    const isCreate = routeId === "new";
+    const isEdit = !!routeId && routeId !== "new";
     const [state, setState] = React.useState<{
         data?: PageResponse<CustomerSummaryDto>;
         loading: boolean;
@@ -67,6 +70,14 @@ export default function CustomersListPage() {
                         defaultValue={q}
                         onChange={(e) => onSearch(e.target.value)}
                     />
+                    <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.CREATE]}>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => navigate('/app/customers/new')}
+                        >
+                            + Nový
+                        </button>
+                    </ScopeGuard>
                 </div>
                 {items.length === 0 ? (
                     <EmptyState
@@ -97,10 +108,17 @@ export default function CustomersListPage() {
                                 →
                             </button>
                         </div>
-                        {routeId && (
+
+                        {isEdit && (
                             <CustomerDetailDrawer
                                 id={routeId}
                                 onClose={() => navigate('/app/customers', { replace: true })}
+                            />
+                        )}
+                        {(isCreate || isEdit) && (
+                            <CustomerFormDrawer
+                                id={isEdit ? routeId : undefined}
+                                onClose={() => navigate(isEdit ? `/app/customers/${routeId}` : '/app/customers', { replace: true })}
                             />
                         )}
                     </>
