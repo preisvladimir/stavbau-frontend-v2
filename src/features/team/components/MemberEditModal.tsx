@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import type { MemberDto } from "@/lib/api/types";
-import { TeamService } from "@/features/team/api/team.service";
+import type { MemberDto } from "@/features/team/api/types";
+import { TeamService } from "@/features/team/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { Modal, Button } from "@/components/ui/stavbau-ui";
 

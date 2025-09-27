@@ -5,41 +5,7 @@ import { StepIco } from "./steps/StepIco";
 import { StepCompany } from "./steps/StepCompany";
 import { StepOwner } from "./steps/StepOwner";
 import { StepSuccess } from "./steps/StepSuccess";
-
-type Address = { street: string; city: string; zip: string; country: string };
-
-export type CompanyState = {
-  ico: string;
-  dic?: string | null;
-  name: string;
-  address: Address;
-  legalFormCode?: string | null;
-  legalFormName?: string | null;
-};
-
-export type OwnerState = {
-  email: string;
-  password: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  phone?: string | null;
-};
-
-export type ConsentsState = { termsAccepted: boolean; marketing?: boolean | null };
-
-export type RegistrationState = {
-  step: 0 | 1 | 2 | 3;
-  maxReachedStep: 0 | 1 | 2 | 3;
-  company: CompanyState;
-  owner: OwnerState;
-  consents: ConsentsState;
-  result?: {
-    companyId: string;
-    ownerUserId: string;
-    ownerRole: "OWNER";
-    status: "CREATED" | "EXISTS" | "PENDING_VERIFICATION";
-  };
-};
+import type { RegistrationState } from "../api/types";
 
 const EMPTY_STATE: RegistrationState = {
   step: 0,

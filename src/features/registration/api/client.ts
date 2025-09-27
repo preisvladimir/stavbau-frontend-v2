@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { CompanyLookupPreviewDto, CompanyRegistrationRequest, CompanyRegistrationResponse } from "@/lib/api/types";
+import type { CompanyLookupPreviewDto, CompanyRegistrationRequest, CompanyRegistrationResponse } from "./types";
 
 export class RegistrationService {
   /** Normalized FE-ready preview from BE */

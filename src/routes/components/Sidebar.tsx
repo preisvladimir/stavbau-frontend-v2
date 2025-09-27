@@ -12,6 +12,7 @@ export default function Sidebar() {
 
   const canReadProjects = hasScope(scopes, "projects:read", "anyOf");
   const canReadTeam = hasScope(scopes, "team:read", "anyOf");
+   const canReadCustomers= hasScope(scopes, "customers:read", "anyOf");
 
   // Base vzhled odkazů
   const linkBase =
@@ -62,6 +63,13 @@ export default function Sidebar() {
               {t("nav.team", { defaultValue: "Tým" })}
             </NavLink>
           )}
+
+          {canReadCustomers && (
+            <NavLink to="/app/customers" className={getNavClass}>
+              {t("nav.customers", { defaultValue: "Zákazníci" })}
+            </NavLink>
+          )}
+
         </nav>
       </div>
     </aside>

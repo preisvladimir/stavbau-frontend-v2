@@ -7,9 +7,11 @@ import { isAxiosError } from "axios";
 
 import { useRegistration } from "../RegistrationWizard";
 import { step3OwnerSchema, type Step3Owner } from "../../validation/schemas";
-import { RegistrationService } from "../../services/RegistrationService";
+import { RegistrationService } from "../../api/client";
+import type {CompanyRegistrationRequest } from "../../api/types";
+import type { ProblemDetail } from "@/lib/api/types";
+
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import type { ProblemDetail, CompanyRegistrationRequest } from "@/lib/api/types";
 import { Button } from "@/components/ui/stavbau-ui";
 
 export const StepOwner: React.FC = () => {

@@ -1,0 +1,47 @@
+{
+  "list": {
+    "title": "Zákazníci",
+    "search": {
+      "placeholder": "Hledat zákazníka…"
+    },
+    "columns": {
+      "name": "Název",
+      "ico": "IČO",
+      "dic": "DIČ",
+      "email": "E-mail",
+      "updatedAt": "Aktualizováno"
+    },
+    "empty": "Žádní zákazníci"
+  },
+  "form": {
+    "type": "Typ",
+    "types": {
+      "organization": "Organizace",
+      "person": "Osoba"
+    },
+    "name": "Název",
+    "ico": "IČO",
+    "dic": "DIČ",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "address": "Adresa",
+    "street": "Ulice",
+    "houseNumber": "Číslo domu",
+    "orientationNumber": "Číslo domu",
+    "city": "Město",
+    "zip": "PSČ",
+    "postalCode": "PSČ",
+    "country": "Země",
+    "countryCode": "Kód země",
+    "defaultPaymentTermsDays": "Splatnost (dny)",
+    "notes": "Poznámka"
+  },
+  "actions": {
+    "save": "Uložit",
+    "create": "Vytvořit",
+    "edit": "Upravit",
+    "delete": "Smazat",
+    "confirmDeleteTitle": "Smazat zákazníka?",
+    "confirmDeleteDesc": "Tuto akci nelze vrátit zpět."
+  }
+}

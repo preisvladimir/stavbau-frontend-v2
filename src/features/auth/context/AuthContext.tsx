@@ -9,7 +9,7 @@ import React, {
   type PropsWithChildren,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { MeResponse, LoginResponse } from "@/lib/api/types";
+import type { MeResponse, LoginResponse } from "@/types/common/user";
 import { AuthService } from "../services/AuthService";
 import { tokenManager } from "@/lib/api/tokenManager";
 
