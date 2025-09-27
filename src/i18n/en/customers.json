@@ -1,0 +1,14 @@
+{
+  "list": {
+    "title": "Zákazníci",
+    "search": { "placeholder": "Hledat zákazníka…" },
+    "columns": {
+      "name": "Název",
+      "ico": "IČO",
+      "dic": "DIČ",
+      "email": "E-mail",
+      "updatedAt": "Aktualizováno"
+    },
+    "empty": "Žádní zákazníci"
+  }
+}
