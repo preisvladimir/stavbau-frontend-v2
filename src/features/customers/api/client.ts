@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { PageResponse } from "@/lib/api/types";
+import type { PageResponse } from "@/types/PageResponse";
 import type { ListCustomersParams, CustomerDto, UpdateCustomerRequest, CustomerSummaryDto, CreateCustomerRequest } from "./types";
 //import { mapAndThrow } from "@/lib/api/problem";
 
@@ -10,7 +10,6 @@ export async function listCustomers(params: ListCustomersParams) {
 
 export async function getCustomer(id: string) {
   const res = await api.get<CustomerDto>(`/customers/${id}`);
-  console.log(res.data);
   return res.data;
 }
 
