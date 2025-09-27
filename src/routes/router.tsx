@@ -63,14 +63,6 @@ export const router = createBrowserRouter([
                   </ScopeGuard>
                 ),
               },
-              {
-                path: "customers/new",
-                element: (
-                  <ScopeGuard required={["invoices:create", "invoices:write"]}>
-                    <CustomersListPage />
-                  </ScopeGuard>
-                ),
-              },
             ],
           },
         ],

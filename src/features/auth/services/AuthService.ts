@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "@/lib/api/types";
+import type { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "@/types/common/user";
 
 export const AuthService = {
   async login(payload: LoginRequest): Promise<LoginResponse> {

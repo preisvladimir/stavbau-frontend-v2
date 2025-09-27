@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRegistration } from "../RegistrationWizard";
 import { step1IcoSchema, type Step1Ico } from "../../validation/schemas";
-import { RegistrationService } from "../../services/RegistrationService";
+import { RegistrationService } from "../../api/client";
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import { type ProblemDetail } from "@/lib/api/types";
+import { type ProblemDetail } from "@/types/ProblemDetails";
 import { isAxiosError } from "axios";
 import { Button } from "@/components/ui/stavbau-ui";
 

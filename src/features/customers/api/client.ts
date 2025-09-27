@@ -1,12 +1,6 @@
 import { api } from "@/lib/api/client";
-import type {
-  CustomerSummaryDto,
-  CreateCustomerRequest,
-  UpdateCustomerRequest,
-  PageResponse,
-  ListCustomersParams,
-  CustomerDto,
-} from "@/lib/api/types";
+import type { PageResponse } from "@/lib/api/types";
+import type { ListCustomersParams, CustomerDto, UpdateCustomerRequest, CustomerSummaryDto, CreateCustomerRequest } from "./types";
 //import { mapAndThrow } from "@/lib/api/problem";
 
 export async function listCustomers(params: ListCustomersParams) {
@@ -16,9 +10,9 @@ export async function listCustomers(params: ListCustomersParams) {
 
 export async function getCustomer(id: string) {
   const res = await api.get<CustomerDto>(`/customers/${id}`);
+  console.log(res.data);
   return res.data;
 }
-
 
 export async function createCustomer(body: CreateCustomerRequest) {
   const res = await api.post<CustomerDto>('/customers', body);
@@ -28,4 +22,8 @@ export async function createCustomer(body: CreateCustomerRequest) {
 export async function updateCustomer(id: string, body: UpdateCustomerRequest) {
   const res = await api.patch<CustomerDto>(`/customers/${id}`, body);
   return res.data;
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+  await api.delete(`/customers/${id}`);
 }

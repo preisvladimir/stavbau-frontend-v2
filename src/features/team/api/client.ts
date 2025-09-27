@@ -5,7 +5,7 @@ import type {
   UpdateMemberRequest,
   UpdateMemberRoleRequest,
   MemberDto,
-} from "@/lib/api/types";
+} from "../api/types";
 import { mapAndThrow } from "@/lib/api/problem";
 import axios from "axios";
 
@@ -117,3 +117,4 @@ export const TeamService = {
     }
   },
 } as const;
+

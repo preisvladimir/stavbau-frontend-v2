@@ -1,7 +1,7 @@
 // src/features/customers/components/CustomersTable.tsx
 import React from 'react';
 import { useTranslation } from "react-i18next";
-import type { CustomerSummaryDto }  from "@/lib/api/types";
+import type { CustomerSummaryDto } from "../api/types";
 import { DataTableV2 } from "@/components/ui/stavbau-ui/datatable/datatable-v2";
 import { Mail, Building2, IdCard } from "@/components/icons";
 
@@ -13,8 +13,8 @@ type Props = {
 };
 
 export function CustomersTable({ data, isLoading, onRowClick }: Props) {
-    const translationNamespaces = React.useMemo(() => ['customers', 'common'] as const, []);
-    const { t } = useTranslation(translationNamespaces);
+  const translationNamespaces = React.useMemo(() => ['customers', 'common'] as const, []);
+  const { t } = useTranslation(translationNamespaces);
 
   // --- Columns for DataTableV2 (vzor TeamPageV2) ---
   const columns = React.useMemo(
@@ -121,10 +121,10 @@ export function CustomersTable({ data, isLoading, onRowClick }: Props) {
   );
 
   return (
-        <DataTableV2<CustomerSummaryDto>
-          i18nNamespaces={translationNamespaces as unknown as string[]}
-          variant="surface"
-          className="mt-2"
+    <DataTableV2<CustomerSummaryDto>
+      i18nNamespaces={translationNamespaces as unknown as string[]}
+      variant="surface"
+      className="mt-2"
       columns={columns}
       data={data}
       keyField={(m) => m.id}

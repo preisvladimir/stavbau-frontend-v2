@@ -2,12 +2,13 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomerForm, type CustomerFormValues } from "./CustomerForm";
-import { createCustomer, getCustomer, updateCustomer } from '../services/customer.service';
-import type { CustomerDto } from "@/lib/api/types";
+import { createCustomer, getCustomer, updateCustomer } from '../api/client';
+import type { CustomerDto }  from "../api/types";
 import { Loading } from "@/components/ui/stavbau-ui/loading";
 import { ErrorState } from "@/components/ui/stavbau-ui/errorstate";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { RBAC_AREAS } from '@/lib/rbac/areas';
+import { dtoToFormDefaults, formToCreateBody, formToUpdateBody } from "../mappers";
 
 export const CustomerFormDrawer: React.FC<{
     id?: string; // pokud je, jde o edit
@@ -34,35 +35,14 @@ export const CustomerFormDrawer: React.FC<{
         return () => { ignore = true; };
     }, [id, isEdit]);
 
-    // ---- mapování CustomerDto -> CustomerFormValues (null -> undefined) ----
-    const toFormDefaults = React.useCallback(
-        (d?: CustomerDto): Partial<CustomerFormValues> | undefined => {
-            if (!d) return undefined;
-            return {
-                name: d.name ?? "",
-                ico: d.ico ?? undefined,
-                dic: d.dic ?? undefined,
-                email: d.email ?? undefined,
-                phone: d.phone ?? undefined,
-                addressLine1: d.addressLine1 ?? undefined,
-                addressLine2: d.addressLine2 ?? undefined,
-                city: d.city ?? undefined,
-                zip: d.zip ?? undefined,
-                country: d.country ?? undefined,
-                notes: d.notes ?? undefined,
-            };
-        },
-        []
-    );
-
 
     const onSubmit = async (values: CustomerFormValues) => {
         setSubmitting(true);
         try {
             if (isEdit) {
-                await updateCustomer(id!, values);
+                await updateCustomer(id!, formToUpdateBody(values));
             } else {
-                const created = await createCustomer(values);
+                const created = await createCustomer(formToCreateBody(values));
                 navigate(`/app/customers/${created.id}`, { replace: true });
             }
             onClose();
@@ -88,11 +68,7 @@ export const CustomerFormDrawer: React.FC<{
                     <Loading />
                 ) : (
                     <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.UPDATE, RBAC_AREAS.CUSTOMERS.CREATE]}>
-                        <CustomerForm
-                            defaultValues={toFormDefaults(data)}
-                            onSubmit={onSubmit}
-                            submitting={submitting}
-                        />
+                        <CustomerForm defaultValues={dtoToFormDefaults(data)} onSubmit={onSubmit} submitting={submitting} />
                     </ScopeGuard>
                 )}
             </aside>
