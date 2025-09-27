@@ -20,10 +20,7 @@ export function DetailDrawer({
   ...rest
 }: DetailDrawerProps) {
   return (
-    <StbDrawer open={open} onClose={onClose} title={title} {...rest}
-      footer={rest.footer}
-    >
-      {/* headerRight lze dodat pomocí vlastního children headeru, případně udělat variantu s slotem */}
+    <StbDrawer open={open} onClose={onClose} title={title} headerRight={headerRight} {...rest}>
       {children}
     </StbDrawer>
   );

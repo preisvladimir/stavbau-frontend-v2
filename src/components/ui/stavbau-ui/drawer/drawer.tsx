@@ -15,6 +15,7 @@ export type StbDrawerProps = {
   children: React.ReactNode;
   className?: string;
   footer?: React.ReactNode; // akční bar dole
+  headerRight?: React.ReactNode; // extra tlačítka v headeru (např. Upravit, Smazat)
 };
 
 export function StbDrawer({
@@ -26,6 +27,7 @@ export function StbDrawer({
   children,
   className,
   footer,
+  headerRight,
 }: StbDrawerProps) {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -83,9 +85,12 @@ export function StbDrawer({
         {/* header */}
         <div className="flex items-center justify-between gap-3 p-4 border-b border-black/5">
           <div className="text-base font-semibold">{title}</div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            {headerRight}
+            <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+         </div>
         </div>
 
         {/* content */}

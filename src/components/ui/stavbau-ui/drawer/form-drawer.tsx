@@ -14,6 +14,7 @@ type FormDrawerProps = Omit<StbDrawerProps, "open" | "onClose" | "children" | "f
   secondaryLabel?: string;
   onPrimaryClick?: () => void; // volitelné – někdy submit trigger zvenčí
   onSecondaryClick?: () => void;
+  showFooter?: boolean; // možnost skrýt akční bar a nechat tlačítka ve formuláři
 };
 
 export function FormDrawer({
@@ -26,6 +27,7 @@ export function FormDrawer({
   onSecondaryClick,
   primaryLabel,
   secondaryLabel = "Zrušit",
+  showFooter = true,
   ...rest
 }: FormDrawerProps) {
   return (
@@ -34,10 +36,11 @@ export function FormDrawer({
       onClose={onClose}
       title={title ?? (mode === "create" ? "Nový záznam" : "Upravit záznam")}
       footer={
-        <>
-          <button className="btn btn-ghost" onClick={onSecondaryClick ?? onClose}>{secondaryLabel}</button>
-          <button className="btn btn-primary" onClick={onPrimaryClick}>{primaryLabel ?? "Uložit"}</button>
-        </>
+        !showFooter ? undefined :
+          <>
+            <button className="btn btn-ghost" onClick={onSecondaryClick ?? onClose}>{secondaryLabel}</button>
+            <button className="btn btn-primary" onClick={onPrimaryClick}>{primaryLabel ?? "Uložit"}</button>
+          </>
       }
       {...rest}
     >
