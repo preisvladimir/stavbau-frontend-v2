@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 import { useBodyScrollLock } from "./useBodyScrollLock";
 import { useTrapFocus } from "./useTrapFocus";
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 type DrawerSide = "right" | "bottom";
 
@@ -45,6 +46,17 @@ export function StbDrawer({
   const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
   const effectiveSide: DrawerSide = isMobile ? "bottom" : side;
 
+  // panel dimensions: right = full height; bottom = max-height + inner scroll
+  const panelStyle =
+    effectiveSide === "right"
+      ? { width, height: "100dvh" } // full viewport height (dynamic viewport units)
+      : {
+        // limit bottom-sheet height so content can scroll inside
+        height: "min(85dvh, calc(100dvh - 16px))",
+        maxHeight: "calc(100dvh - 16px)",
+      };
+
+
   return (
     <div
       aria-hidden={!open}
@@ -58,7 +70,7 @@ export function StbDrawer({
         className={cn(
           "absolute inset-0 bg-black/30 transition-opacity",
           open ? "opacity-100" : "opacity-0"
-      )}
+        )}
         onClick={onClose}
         aria-hidden
       />
@@ -68,7 +80,7 @@ export function StbDrawer({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "absolute bg-white dark:bg-neutral-900 shadow-xl flex flex-col outline-none",
+          "absolute bg-white dark:bg-neutral-900 shadow-xl flex flex-col outline-none overflow-hidden",
           effectiveSide === "right"
             ? "top-0 right-0 h-full"
             : "left-0 right-0 bottom-0 rounded-t-2xl"
@@ -80,21 +92,31 @@ export function StbDrawer({
           "transition-transform duration-200",
           className
         )}
-        style={effectiveSide === "right" ? { width } : { minHeight: "70vh" }}
+        style={panelStyle}
       >
         {/* header */}
         <div className="flex items-center justify-between gap-3 p-4 border-b border-black/5">
           <div className="text-base font-semibold">{title}</div>
           <div className="flex items-center gap-2">
             {headerRight}
-            <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+            <Button
+              variant="ghost"
+              size="sm"
+              ariaLabel="Zavřít"
+              onClick={onClose}
+            >
               ✕
-            </button>
-         </div>
+            </Button>
+          </div>
         </div>
 
-        {/* content */}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        {/* content (scrollable) */}
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain p-4"
+          style={{ WebkitOverflowScrolling: "touch" }} // iOS smooth scroll
+        >
+          {children}
+        </div>
 
         {/* footer (safe area) */}
         {footer ? (

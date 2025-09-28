@@ -4,6 +4,7 @@ import { UiPortal } from "../portal";
 import { useBodyScrollLock } from "../drawer/useBodyScrollLock";
 import { useTrapFocus } from "../drawer/useTrapFocus";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 type Props = {
   open: boolean;
@@ -88,16 +89,16 @@ export const ConfirmModal: React.FC<Props> = ({
             className="mt-4 flex justify-end gap-2 px-5 pb-4"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
           >
-            <button className="btn btn-ghost" onClick={onCancel} disabled={confirming}>
+            <Button variant="ghost" onClick={onCancel} disabled={confirming}>
               {cancelLabel}
-            </button>
-            <button
-              className={cn("btn", danger ? "btn-error" : "btn-primary")}
+            </Button>
+            <Button
+              variant={danger ? "danger" : "primary"}
               onClick={onConfirm}
-              disabled={confirming}
+              isLoading={!!confirming}
             >
-              {confirming ? "Provádím…" : confirmLabel}
-            </button>
+              {confirmLabel}
+            </Button>
           </div>
         </div>
       </div>

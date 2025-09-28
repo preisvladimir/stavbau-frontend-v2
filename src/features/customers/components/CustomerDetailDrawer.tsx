@@ -9,6 +9,7 @@ import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { RBAC_AREAS } from '@/lib/rbac/areas';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 type Props = {
   id: string;
@@ -78,14 +79,14 @@ export function CustomerDetailDrawer({ id, onClose, onDeleted, onEdit }: Props) 
         headerRight={
           <>
             <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.UPDATE]}>
-              <button className="btn btn-secondary btn-sm" onClick={() => onEdit?.()}>
+              <Button variant="outline" size="sm" onClick={() => onEdit?.()}>
                 Upravit
-              </button>
+              </Button>
             </ScopeGuard>
             <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.DELETE]}>
-              <button className="btn btn-error btn-sm" onClick={() => setShowConfirm(true)}>
+              <Button variant="danger" size="sm" onClick={() => setShowConfirm(true)}>
                 Smazat
-              </button>
+              </Button>
             </ScopeGuard>
           </>
         }

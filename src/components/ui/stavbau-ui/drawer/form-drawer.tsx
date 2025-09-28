@@ -1,6 +1,7 @@
 // src/components/ui/stavbau-ui/drawer/form-drawer.tsx
 import * as React from "react";
 import { StbDrawer, type StbDrawerProps } from "./drawer";
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 type Mode = "create" | "edit";
 
@@ -15,6 +16,8 @@ type FormDrawerProps = Omit<StbDrawerProps, "open" | "onClose" | "children" | "f
   onPrimaryClick?: () => void; // volitelné – někdy submit trigger zvenčí
   onSecondaryClick?: () => void;
   showFooter?: boolean; // možnost skrýt akční bar a nechat tlačítka ve formuláři
+  primaryLoading?: boolean;
+  disablePrimary?: boolean;
 };
 
 export function FormDrawer({
@@ -28,6 +31,8 @@ export function FormDrawer({
   primaryLabel,
   secondaryLabel = "Zrušit",
   showFooter = true,
+  primaryLoading,
+  disablePrimary,
   ...rest
 }: FormDrawerProps) {
   return (
@@ -38,8 +43,18 @@ export function FormDrawer({
       footer={
         !showFooter ? undefined :
           <>
-            <button className="btn btn-ghost" onClick={onSecondaryClick ?? onClose}>{secondaryLabel}</button>
-            <button className="btn btn-primary" onClick={onPrimaryClick}>{primaryLabel ?? "Uložit"}</button>
+            <Button variant="ghost" size="md" onClick={onSecondaryClick ?? onClose}>
+              {secondaryLabel}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={onPrimaryClick}
+              isLoading={primaryLoading}
+              disabled={disablePrimary}
+            >
+              {primaryLabel ?? "Uložit"}
+            </Button>
           </>
       }
       {...rest}
