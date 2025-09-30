@@ -189,10 +189,12 @@ export default function TeamPage() {
           </div>
         </div>
 
-        {/* Loading & Error state */}
-        {loading && (
-          <div className="mb-2">{t('loading', { defaultValue: 'Načítám…' })}</div>
-        )}
+        {/* Status (bez layout shiftu): 
+          - Loading oznamujeme jen SR (DataTableV2 řeší overlay uvnitř).
+          - Error ukazujeme vizuálně (má smysl posunout obsah). */}
+        <span className="sr-only" role="status" aria-live="polite">
+          {loading ? t('loading', { defaultValue: 'Načítám…' }) : ''}
+        </span>
         {!loading && error && (
           <div
             role="alert"

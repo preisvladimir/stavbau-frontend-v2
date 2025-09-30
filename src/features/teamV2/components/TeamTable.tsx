@@ -96,6 +96,8 @@ export function TeamTable({
       columns={columns as any}
       keyField={(m) => m.id}
       loading={loading}
+      searchDebounceMs={250}  // volitelné
+      loadingMode="auto"
       onRowClick={onRowClick}
       search={search}
       onSearchChange={onSearchChange}
