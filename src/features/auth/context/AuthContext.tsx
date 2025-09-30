@@ -16,7 +16,8 @@ import { tokenManager } from "@/lib/api/tokenManager";
 export type AuthState = {
   isAuthenticated: boolean;
   user: MeResponse | null;
-
+  /** Odvozené z user?.companyId (single-tenant). Nikdy neukládej stranou. */
+  readonly companyId: string | null;
   accessToken: string | null;
   refreshToken: string | null;
   expiresAt: string | null;
@@ -237,10 +238,11 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // jen při mountu
-
+  const companyId = user?.companyId ?? null;
   const value: AuthState = {
     isAuthenticated,
     user,
+    companyId,
     accessToken,
     refreshToken,
     expiresAt,

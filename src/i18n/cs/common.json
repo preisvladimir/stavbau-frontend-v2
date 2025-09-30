@@ -38,5 +38,23 @@
     "prev": "Předchozí",
     "next": "Další",
     "pageStatus": "Stránka {{page}} / {{pageCount}} • Záznamů: {{total}}"
+  },
+  "companyrole": {
+    "OWNER": "Vlastník",
+    "COMPANY_ADMIN": "Správce firmy",
+    "ACCOUNTANT": "Účetní",
+    "PURCHASING": "Nákupčí",
+    "MANAGER": "Manažer",
+    "DOC_CONTROLLER": "Správce dokumentů",
+    "FLEET_MANAGER": "Správce flotily",
+    "HR_MANAGER": "HR manažer",
+    "AUDITOR_READONLY": "Auditor (jen čtení)",
+    "INTEGRATION": "Integrace",
+    "MEMBER": "Člen",
+    "VIEWER": "Pozorovatel",
+    "SUPERADMIN": "Superadmin"
+  },
+  "label": {
+    "none": "--— žádná —--"
   }
 }

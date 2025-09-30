@@ -18,6 +18,8 @@ const buttonVariants = cva(
           "sb-btn sb-btn--outline border border-[rgb(var(--sb-border))] bg-white text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
         danger:
           "sb-btn sb-btn--danger bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
+        destructive:
+          "sb-btn sb-btn--danger bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",          
         ghost:
           "sb-btn bg-transparent text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.2)] focus-visible:ring-gray-300",
       },

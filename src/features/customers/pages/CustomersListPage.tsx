@@ -1,7 +1,7 @@
 // src/features/customers/pages/CustomersListPage.tsx
 import React from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { useDebounce } from '@/lib/utils/useDebounce';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 import { listCustomers } from '../api/client';
 import type { CustomerSummaryDto, PageResponse }  from "../api/types";
 import { CustomersTable } from '../components/CustomersTable';

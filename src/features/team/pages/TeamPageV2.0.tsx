@@ -1,5 +1,4 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
@@ -17,7 +16,6 @@ import { EMAIL_INPUT_PATTERN, EMAIL_REGEX } from "@/lib/utils/patterns";
 import { useFab, Plus } from "@/components/layout";
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from "@/components/ui/stavbau-ui/tokens";
-import { TeamMemberDetailDrawer } from "@/features/team/components/TeamMemberDetailDrawer";
 
 /**
  * TeamPageV2 — plná integrace DataTableV2 (toolbar, paging, sorting, row actions)
@@ -30,13 +28,6 @@ export default function TeamPageV2() {
   const { user } = useAuthContext();
   const translationNamespaces = React.useMemo(() => ['team', 'common'] as const, []);
   const { t } = useTranslation(translationNamespaces);
-
-
-  const navigate = useNavigate();
-  const { id: routeId } = useParams();
-  const isCreate = routeId === "new";
-  const isEdit = !!routeId && routeId !== "new"; // detail režim
-  const [editOpen, setEditOpen] = React.useState(false); // pro budoucí FormDrawer (zatím nevyužito)  
 
   const [items, setItems] = React.useState<MemberDto[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -489,9 +480,6 @@ export default function TeamPageV2() {
     },
   ], [t, editingId, draftRole, updateError, updating]);
 
-  // Příklad onRowClick u tabulky:
-  // onRowClick={(id) => navigate(`/app/team/${id}`)}
-
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
@@ -609,7 +597,6 @@ export default function TeamPageV2() {
           columns={columns}
           keyField={(m) => m.id}
           loading={loading}
-          onRowClick={(m) => navigate(`/app/team/${m.id}`)}
           // Toolbar (PR4/4.1)
           search={search}
           onSearchChange={setSearch}
@@ -673,29 +660,6 @@ export default function TeamPageV2() {
           // Empty state
           emptyContent={emptyNode}
         />
-
-        {/* --- Detail drawer (prezentační, bez vlastní logiky mazání) --- */}
-        {isEdit && routeId ? (
-          <TeamMemberDetailDrawer
-            open
-            // vyber člena z již načtených items
-            member={
-              items.find((m) => m.id === routeId)!
-            }
-            onClose={() => navigate("/app/team", { replace: true })}
-            onEdit={(m) => {
-              // teď jen připrav stav pro další krok (FormDrawer),
-              // zatím zůstává UI bez změny
-              setEditOpen(true);
-              // můžeš zde rovnou navigovat na /app/team/:id?edit=1, pokud používáš search paramy
-            }}
-            onDelete={(m) => {
-              // DŮLEŽITÉ: voláme tvoji původní masivní logiku mazání
-              // (kontrola OWNER, ApiError větve, update items, atd.)
-              void handleDelete(m);
-            }}
-          />
-        ) : null}
 
         {/* Modal pro úpravu profilu člena */}
         {companyId && (
