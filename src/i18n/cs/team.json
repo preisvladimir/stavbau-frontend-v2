@@ -9,29 +9,23 @@
     "name": "Jméno",
     "phone": "Telefon"
   },
+  "editModal": {
+    "title": "Upravit profil člena"
+  },
   "list": {
     "title": "Tým",
-    "searchPlaceholder": "Hledat podle jména nebo e-mailu…",
+    "searchPlaceholder": "Hledat podle jména nebo e‑mailu…",
     "loading": "Načítám členy…",
     "emptyTitle": "Zatím žádní členové",
     "emptyDesc": "Přidejte první členy týmu a nastavte jim role.",
     "forbidden": "K zobrazení týmu nemáte oprávnění.",
     "columns": {
       "name": "Jméno",
-      "email": "E-mail",
+      "email": "E‑mail",
       "companyRole": "Firemní role",
       "phone": "Telefon",
       "updatedAt": "Aktualizováno",
       "actions": "Akce"
-    },
-    "actions": {
-      "add": "Přidat člena",
-      "open": "Otevřít"
-    },
-    "paging": {
-      "prev": "Předchozí",
-      "next": "Další",
-      "total": "Celkem: {{total}}"
     }
   },
   "detail": {
@@ -45,12 +39,6 @@
     "actions": {
       "edit": "Upravit",
       "delete": "Smazat"
-    },
-    "deleteConfirm": {
-      "title": "Smazat člena?",
-      "desc": "Tato akce je nevratná.",
-      "confirm": "Smazat",
-      "cancel": "Zrušit"
     },
     "roleAccess": {
       "title": "Role & přístupy",
@@ -98,8 +86,8 @@
       "edit": "Upravit člena"
     },
     "email": {
-      "label": "E-mail",
-      "error": "Zadejte platný e-mail"
+      "label": "E‑mail",
+      "error": "Zadejte platný e‑mail"
     },
     "firstName": {
       "label": "Jméno",
@@ -107,7 +95,7 @@
     },
     "lastName": {
       "label": "Příjmení",
-      "error": "Zadejte příjmení"
+      "error": "Zadejte jméno"
     },
     "role": {
       "label": "Firemní role",
@@ -118,7 +106,7 @@
       "none": "— žádná —"
     },
     "sendInvite": {
-      "label": "Odeslat pozvánku e-mailem"
+      "label": "Odeslat pozvánku e‑mailem"
     },
     "actions": {
       "submit": "Uložit",
@@ -131,8 +119,7 @@
   },
   "validation": {
     "required": "Toto pole je povinné.",
-    "email": "Zadejte platný e-mail.",
-    "email.invalid": "Zadejte platný e-mail."
+    "email": "Zadejte platný e-mail."
   },
   "errors": {
     "emailExists": "Uživatel s tímto e-mailem je již členem.",
@@ -175,8 +162,71 @@
   "badges": {
     "ACTIVE": "Aktivní",
     "INVITED": "Pozván",
-    "DISABLED": "Deaktivován",
-    "CREATED": "Vytvořen",
-    "REMOVED": "Odebrán"
+    "DISABLED": "Deaktivován"
+  },
+  "v2": {
+    "list": {
+      "title": "Tým",
+      "searchPlaceholder": "Hledat podle jména nebo e‑mailu…",
+      "loading": "Načítám členy…",
+      "emptyTitle": "Zatím žádní členové",
+      "emptyDesc": "Přidejte první členy týmu a nastavte jim role.",
+      "forbidden": "K zobrazení týmu nemáte oprávnění.",
+      "columns": {
+        "name": "Jméno",
+        "email": "E‑mail",
+        "companyRole": "Firemní role",
+        "updatedAt": "Aktualizováno",
+        "actions": "Akce"
+      },
+      "actions": {
+        "add": "Přidat člena",
+        "open": "Otevřít"
+      },
+      "paging": {
+        "prev": "Předchozí",
+        "next": "Další",
+        "total": "Celkem: {{total}}"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "Nový člen",
+        "edit": "Upravit člena"
+      },
+      "email": {
+        "label": "E‑mail",
+        "error": "Zadejte platný e‑mail"
+      },
+      "companyRole": {
+        "label": "Firemní role",
+        "none": "— žádná —"
+      },
+      "sendInvite": {
+        "label": "Odeslat pozvánku e‑mailem"
+      },
+      "actions": {
+        "submit": "Uložit",
+        "cancel": "Zrušit"
+      }
+    },
+    "detail": {
+      "title": "Detail člena",
+      "loading": "Načítám detail…",
+      "companyRole": "Firemní role",
+      "lastLoginAt": "Poslední přihlášení",
+      "createdAt": "Vytvořeno",
+      "updatedAt": "Upraveno",
+      "actions": {
+        "edit": "Upravit",
+        "delete": "Smazat"
+      },
+      "deleteConfirm": {
+        "title": "Smazat člena?",
+        "desc": "Tato akce je nevratná.",
+        "confirm": "Smazat",
+        "cancel": "Zrušit"
+      }
+    }
   }
 }
