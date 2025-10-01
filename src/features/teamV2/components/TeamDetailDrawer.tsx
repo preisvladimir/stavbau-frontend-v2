@@ -89,17 +89,37 @@ export function TeamDetailDrawer({
 
   const roleLabel = (r?: string | null) => (r ? t(`roles.${r}`, { defaultValue: r }) : '—');
 
-  const statusBadge = (status?: string | null) => {
-    if (!status) return null;
-    const label = t(`badges.${status}`, { defaultValue: status });
-    const className =
-      status === 'ACTIVE'
-        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-        : status === 'INVITED'
-          ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-          : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
-    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${className}`}>{label}</span>;
-  };
+const statusBadge = (raw?: string | null) => {
+  if (!raw) return null;
+  const key = String(raw).toUpperCase();
+
+  // 1) text: preferuj badges.*, fallback na status.*
+  const label =
+    t(`badges.${key}`, {
+      defaultValue: t(`status.${key}`, { defaultValue: key }) as string,
+    });
+
+  // 2) barvy dle stavu (rozšiřitelná mapa)
+  const tone =
+    key === 'ACTIVE' ? 'emerald' :
+    key === 'INVITED' ? 'amber' :
+    key === 'CREATED' ? 'sky' :
+    key === 'DISABLED' ? 'gray' :
+    key === 'REMOVED' ? 'gray' :
+    'gray';
+
+  const className =
+    tone === 'emerald' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' :
+    tone === 'amber'   ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' :
+    tone === 'sky'     ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' :
+                         'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${className}`}>
+      {label}
+    </span>
+  );
+};
 
   // Skeleton pro načítání
   const Skeleton = ({ className = '' }: { className?: string }) => (
