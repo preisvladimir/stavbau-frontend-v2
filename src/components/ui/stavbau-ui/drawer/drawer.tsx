@@ -1,4 +1,3 @@
-// src/components/ui/stavbau-ui/drawer/drawer.tsx
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 import { useBodyScrollLock } from "./useBodyScrollLock";
@@ -15,8 +14,8 @@ export type StbDrawerProps = {
   width?: number;    // px pro desktop variantu
   children: React.ReactNode;
   className?: string;
-  footer?: React.ReactNode; // akční bar dole
-  headerRight?: React.ReactNode; // extra tlačítka v headeru (např. Upravit, Smazat)
+  footer?: React.ReactNode;     // akční bar dole
+  headerRight?: React.ReactNode; // tlačítka v headeru
 };
 
 export function StbDrawer({
@@ -32,9 +31,11 @@ export function StbDrawer({
 }: StbDrawerProps) {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
 
+  // 🔒 scroll + focus trap
   useBodyScrollLock(open);
   useTrapFocus(panelRef, open);
 
+  // ⌨️ ESC to close
   React.useEffect(() => {
     if (!open) return;
     const onEsc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -42,24 +43,65 @@ export function StbDrawer({
     return () => window.removeEventListener("keydown", onEsc);
   }, [open, onClose]);
 
-  // mobil = bottom-sheet, desktop = right panel
-  const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+  // 📱 mobil = bottom-sheet, desktop = right panel
+  const isMobile =
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 768px)").matches;
   const effectiveSide: DrawerSide = isMobile ? "bottom" : side;
 
-  // panel dimensions: right = full height; bottom = max-height + inner scroll
   const panelStyle =
     effectiveSide === "right"
-      ? { width, height: "100dvh" } // full viewport height (dynamic viewport units)
+      ? { width, height: "100dvh" }
       : {
-        // limit bottom-sheet height so content can scroll inside
-        height: "min(85dvh, calc(100dvh - 16px))",
-        maxHeight: "calc(100dvh - 16px)",
-      };
+          height: "min(85dvh, calc(100dvh - 16px))",
+          maxHeight: "calc(100dvh - 16px)",
+        };
 
+  // 🎯 Správa fokusu: uložit trigger při otevření, vrátit při zavření
+  const triggerRef = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (open) {
+      // uložit aktivní element jako trigger
+      triggerRef.current = (document.activeElement as HTMLElement) ?? null;
+
+      // po otevření zaměř panel (pokud nic v něm fokus nemá)
+      requestAnimationFrame(() => {
+        const panel = panelRef.current;
+        if (!panel) return;
+        const active = document.activeElement as HTMLElement | null;
+        if (!active || !panel.contains(active)) {
+          panel.focus();
+        }
+      });
+    } else {
+      // při zavření: pokud fokus zůstal uvnitř panelu → blur + vrátit na trigger
+      const panel = panelRef.current;
+      const active = document.activeElement as HTMLElement | null;
+      if (panel && active && panel.contains(active)) {
+        active.blur();
+      }
+      triggerRef.current?.focus?.();
+      triggerRef.current = null;
+    }
+  }, [open]);
+
+  // (volitelné) zneaktivnit app-root mimo dialog – inert/aria-hidden na sourozence
+  // React.useEffect(() => {
+  //   const appRoot = document.getElementById("app-root");
+  //   if (!appRoot) return;
+  //   if (open) {
+  //     appRoot.setAttribute("inert", "");
+  //     appRoot.setAttribute("aria-hidden", "true");
+  //   } else {
+  //     appRoot.removeAttribute("inert");
+  //     appRoot.removeAttribute("aria-hidden");
+  //   }
+  // }, [open]);
 
   return (
     <div
-      aria-hidden={!open}
+      // ❌ NEPOUŽÍVAT aria-hidden na wrapperu dialogu
       className={cn(
         "fixed inset-0 z-[1000] transition-[visibility] duration-200",
         open ? "visible" : "invisible"
@@ -72,23 +114,23 @@ export function StbDrawer({
           open ? "opacity-100" : "opacity-0"
         )}
         onClick={onClose}
-        aria-hidden
+        aria-hidden="true"
       />
+
       {/* panel */}
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1} 
         className={cn(
           "absolute bg-white dark:bg-neutral-900 shadow-xl flex flex-col outline-none overflow-hidden",
           effectiveSide === "right"
             ? "top-0 right-0 h-full"
-            : "left-0 right-0 bottom-0 rounded-t-2xl"
-          ,
-          // animace
+            : "left-0 right-0 bottom-0 rounded-t-2xl",
           effectiveSide === "right"
-            ? (open ? "translate-x-0" : "translate-x-full")
-            : (open ? "translate-y-0" : "translate-y-full"),
+            ? open ? "translate-x-0" : "translate-x-full"
+            : open ? "translate-y-0" : "translate-y-full",
           "transition-transform duration-200",
           className
         )}
@@ -113,7 +155,7 @@ export function StbDrawer({
         {/* content (scrollable) */}
         <div
           className="flex-1 overflow-y-auto overscroll-contain p-4"
-          style={{ WebkitOverflowScrolling: "touch" }} // iOS smooth scroll
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           {children}
         </div>

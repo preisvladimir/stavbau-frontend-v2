@@ -79,11 +79,11 @@ export default function TeamPage() {
     return () => ac.abort();
   }, [companyId, page, size, search]);
 
-  const moduleBase = '/app/teamv2/';
+  const moduleBase = '/app/team/';
   const openNew = () => navigate(`${moduleBase}new`);
   const openDetail = (id: UUID) => navigate(`${moduleBase}${id}`);
   const openEdit = (id: UUID) => navigate({ pathname: `${moduleBase}${id}`, search: '?edit=1' });
-  const closeOverlays = () => navigate('/app/teamv2');
+  const closeOverlays = () => navigate('/app/team');
 
   const refreshList = React.useCallback(async () => {
     const res = await listMemberSummaries(companyId, { page, size, q: search });

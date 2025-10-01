@@ -48,7 +48,7 @@ export const router = createBrowserRouter([
                 ),
               },
               {
-                path: "teamv2/:id",
+                path: "team/:id",
                 element: (
                   <ScopeGuard required={["team:read", "team:write"]}>
                     <TeamPageV2 />
