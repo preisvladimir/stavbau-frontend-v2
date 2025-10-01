@@ -28,6 +28,7 @@ export const MobileFab: React.FC = () => {
   return (
     <div className="md:hidden fixed z-40 right-4 bottom-20">
       <Button
+        variant="fab"
         onClick={fab.onClick}
         ariaLabel={fab.label}
         className="!h-14 !w-14 rounded-full shadow-lg"

@@ -82,5 +82,70 @@
     "ACTIVE": "Active",
     "INVITED": "Invited",
     "DISABLED": "Disabled"
+  },
+  "v2": {
+    "list": {
+      "title": "Team",
+      "searchPlaceholder": "Search by name or email…",
+      "loading": "Loading members…",
+      "emptyTitle": "No members yet",
+      "emptyDesc": "Add your first team members and assign roles.",
+      "forbidden": "You do not have permission to view the team.",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "companyRole": "Company role",
+        "updatedAt": "Updated",
+        "actions": "Actions"
+      },
+      "actions": {
+        "add": "Add member",
+        "open": "Open"
+      },
+      "paging": {
+        "prev": "Prev",
+        "next": "Next",
+        "total": "Total: {{total}}"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "New member",
+        "edit": "Edit member"
+      },
+      "email": {
+        "label": "Email",
+        "error": "Enter a valid email"
+      },
+      "companyRole": {
+        "label": "Company role",
+        "none": "— none —"
+      },
+      "sendInvite": {
+        "label": "Send invitation email"
+      },
+      "actions": {
+        "submit": "Save",
+        "cancel": "Cancel"
+      }
+    },
+    "detail": {
+      "title": "Member detail",
+      "loading": "Loading detail…",
+      "companyRole": "Company role",
+      "lastLoginAt": "Last login",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "deleteConfirm": {
+        "title": "Delete member?",
+        "desc": "This action cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    }
   }
 }

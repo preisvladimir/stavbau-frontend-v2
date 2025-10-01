@@ -7,8 +7,9 @@ import { ErrorState } from '@/components/ui/stavbau-ui/errorstate';
 import { Loading } from '@/components/ui/stavbau-ui/loading';
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { RBAC_AREAS } from '@/lib/rbac/areas';
-import DeleteConfirm from './DeleteConfirm';
-//import { dtoToFormDefaults } from '../mappers'; // pokud potřebuješ i do formuláře
+import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
+import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 type Props = {
   id: string;
@@ -32,7 +33,7 @@ export function CustomerDetailDrawer({ id, onClose, onDeleted, onEdit }: Props) 
         const title = e?.response?.data?.title ?? 'Error';
         !ignore && setState({ loading: false, error: { title, detail } });
       });
-      
+
     return () => { ignore = true; };
   }, [id]);
 
@@ -71,53 +72,61 @@ export function CustomerDetailDrawer({ id, onClose, onDeleted, onEdit }: Props) 
 
   return (
     <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.READ]}>
-      <div className="fixed inset-0 z-40 flex justify-end">
-        <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-        <aside className="relative z-10 h-full w-full max-w-xl bg-white dark:bg-neutral-900 shadow-xl p-6 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Detail zákazníka</h2>
-            <div className="flex items-center gap-2">
-              <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.DELETE]}>
-                <button className="btn btn-error btn-sm" onClick={() => setShowConfirm(true)}>
-                  Smazat
-                </button>
-              </ScopeGuard>
-              <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.UPDATE]}>
-                <button className="btn btn-secondary btn-sm" onClick={() => onEdit?.()}>
-                  Upravit
-                </button>
-              </ScopeGuard>
-              <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+      <DetailDrawer
+        open
+        onClose={onClose}
+        title="Detail zákazníka"
+        headerRight={
+          <>
+            <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.UPDATE]}>
+              <Button variant="outline" size="sm" onClick={() => onEdit?.()}>
+                Upravit
+              </Button>
+            </ScopeGuard>
+            <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.DELETE]}>
+              <Button variant="danger" size="sm" onClick={() => setShowConfirm(true)}>
+                Smazat
+              </Button>
+            </ScopeGuard>
+          </>
+        }
+      >
+        {state.loading && <Loading />}
+        {state.error && <ErrorState title={state.error.title} description={state.error.detail} />}
+        {state.data && (
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-base font-medium">{state.data.name}</h3>
+              <p className="text-sm text-[rgb(var(--sb-muted))]">{state.data.email ?? '—'}</p>
             </div>
-          </div>
-          {state.loading && <Loading />}
-          {state.error && <ErrorState title={state.error.title} description={state.error.detail} />}
-          {state.data && (
-            <section className="space-y-4">
-              <div>
-                <h3 className="text-base font-medium">{state.data.name}</h3>
-                <p className="text-sm text-muted-foreground">{state.data.email ?? '—'}</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="font-medium">Typ:</span> {state.data.type}</div>
+              <div><span className="font-medium">Telefon:</span> {state.data.phone ?? '—'}</div>
+              <div><span className="font-medium">IČO:</span> {state.data.ico ?? '—'}</div>
+              <div><span className="font-medium">DIČ:</span> {state.data.dic ?? '—'}</div>
+              <div className="col-span-2">
+                <span className="font-medium">Adresa:</span> {address ?? '—'}
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="font-medium">IČO:</span> {state.data.ico ?? '—'}</div>
-                <div><span className="font-medium">DIČ:</span> {state.data.dic ?? '—'}</div>
-                <div className="col-span-2"><span className="font-medium">Telefon:</span> {state.data.phone ?? '—'}</div>
-                <div className="col-span-2"><span className="font-medium">Adresa:</span> {address ?? '—'}</div>
-                <div className="col-span-2"><span className="font-medium">Poznámka:</span> {state.data.notes ?? '—'}</div>
+              <div className="col-span-2"><span className="font-medium">Poznámka:</span> {state.data.notes ?? '—'}</div>
+            </div>
+            {state.data.updatedAt ? (
+              <div className="text-xs text-[rgb(var(--sb-muted))]">
+                Aktu­alizováno: {new Date(state.data.updatedAt).toLocaleString()}
               </div>
-            </section>
-          )}
-        </aside>
-        {showConfirm && (
-          <DeleteConfirm
-            title="Smazat zákazníka?"
-            description="Akce je nevratná. Zákazník bude odstraněn."
-            confirming={deleting}
-            onCancel={() => setShowConfirm(false)}
-            onConfirm={handleDelete}
-          />
+            ) : null}
+          </section>
         )}
-      </div>
+      </DetailDrawer>
+      <ConfirmModal
+        open={showConfirm}
+        title="Smazat zákazníka?"
+        description="Akce je nevratná. Zákazník bude odstraněn."
+        confirmLabel="Smazat"
+        danger
+        confirming={deleting}
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={handleDelete}
+      />
     </ScopeGuard>
   );
 }

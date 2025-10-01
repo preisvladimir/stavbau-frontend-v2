@@ -1,7 +1,7 @@
 // src/features/customers/pages/CustomersListPage.tsx
 import React from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { useDebounce } from '@/lib/utils/useDebounce';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 import { listCustomers } from '../api/client';
 import type { CustomerSummaryDto, PageResponse }  from "../api/types";
 import { CustomersTable } from '../components/CustomersTable';
@@ -12,6 +12,7 @@ import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import { RBAC_AREAS } from '@/lib/rbac/areas';
 import { CustomerDetailDrawer } from '../components/CustomerDetailDrawer';
 import { CustomerFormDrawer } from '../components/CustomerFormDrawer';
+import { Button } from "@/components/ui/stavbau-ui/button";
 
 export default function CustomersListPage() {
   const [sp, setSp] = useSearchParams();
@@ -85,9 +86,7 @@ export default function CustomersListPage() {
             onChange={(e) => onSearch(e.target.value)}
           />
           <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.WRITE, RBAC_AREAS.CUSTOMERS.CREATE]}>
-            <button className="btn btn-primary" onClick={() => navigate('/app/customers/new')}>
-              + Nový
-            </button>
+            <Button onClick={() => navigate('/app/customers/new')}>+ Nový</Button>
           </ScopeGuard>
         </div>
 

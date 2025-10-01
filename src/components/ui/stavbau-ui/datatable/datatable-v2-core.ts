@@ -54,6 +54,19 @@ export type DataTableV2Props<T extends RowData> = {
   onSearchChange?: (q: string) => void;
   defaultSearch?: string;                    // uncontrolled init
 
+  /**
+ * Debounce (v ms) pro změny vyhledávání. Default: 250 ms.
+ * Debounce probíhá v DataTableV2 a do onSearchChange se posílá až „ustálená“ hodnota.
+ */
+  searchDebounceMs?: number;
+  /**
+   * Způsob zobrazení načítání:
+   * - 'auto' (default): skeleton při initial load, overlay při dalších loadech
+   * - 'overlay': vždy overlay
+   * - 'skeleton': vždy skeleton
+   */
+  loadingMode?: 'auto' | 'overlay' | 'skeleton';
+
   columnVisibility?: VisibilityState;        // controlled { [columnId]: boolean }
   onColumnVisibilityChange?: (v: VisibilityState) => void;
   defaultColumnVisibility?: VisibilityState; // uncontrolled init
@@ -64,14 +77,14 @@ export type DataTableV2Props<T extends RowData> = {
 
   showToolbar?: boolean;                     // default true  
 
-    /** Toolbar: page size options for selector (PR 4.1) */
+  /** Toolbar: page size options for selector (PR 4.1) */
   onReset?: () => void;
   pageSizeOptions?: number[]; // výběr velikosti stránky (default [5,10,20])
 
   // Row actions (PR 5)
   rowActions?: (row: T) => React.ReactNode;
 
-    /** Vizuální varianta vzhledu tabulky */
+  /** Vizuální varianta vzhledu tabulky */
   variant?: 'surface' | 'plain'; // default: 'plain'
 
   /** Volitelná třída na wrapperu tabulky */
@@ -82,7 +95,7 @@ export type DataTableV2Props<T extends RowData> = {
    * Příklad: ['team', 'common'] nebo ['invoices', 'common']
    * Pokud není uvedeno, použije se ['common'].
    */
-  i18nNamespaces?: string[];  
+  i18nNamespaces?: string[];
 };
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
@@ -188,25 +201,25 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     return k ? String(k) : `row-${idx}`;
   }, [props.keyField]);
 
-// Mobile-first, od lg výš lehce zahušťujeme (víc řádků na obrazovce)
-const densityMap = {
-  compact: {
-    th: 'px-2 py-1 text-xs',
-    td: 'px-2 py-1 text-xs',
-  },
-  cozy: {
-    // mobil = příjemně čitelné, na lg zmenšíme výšku řádku
-    th: 'px-3 py-2 text-xs lg:py-1.5 xl:py-2',
-    td: 'px-3 py-2 text-sm lg:py-1.5 xl:py-2',
-  },
-  comfortable: {
-    // desktop (lg+) není „nafouklý“ – jen o fous vyšší než cozy
-    th: 'px-4 py-3 text-sm md:py-3 lg:py-2.5 xl:py-1.5',
-    td: 'px-4 py-3 text-base md:py-3 lg:py-2.5 xl:py-1.5',
-  },
-} as const;
+  // Mobile-first, od lg výš lehce zahušťujeme (víc řádků na obrazovce)
+  const densityMap = {
+    compact: {
+      th: 'px-2 py-1 text-xs',
+      td: 'px-2 py-1 text-xs',
+    },
+    cozy: {
+      // mobil = příjemně čitelné, na lg zmenšíme výšku řádku
+      th: 'px-3 py-2 text-xs lg:py-1.5 xl:py-2',
+      td: 'px-3 py-2 text-sm lg:py-1.5 xl:py-2',
+    },
+    comfortable: {
+      // desktop (lg+) není „nafouklý“ – jen o fous vyšší než cozy
+      th: 'px-4 py-3 text-sm md:py-3 lg:py-2.5 xl:py-1.5',
+      td: 'px-4 py-3 text-base md:py-3 lg:py-2.5 xl:py-1.5',
+    },
+  } as const;
 
-const densityClasses = densityMap[density];
+  const densityClasses = densityMap[density];
 
   // exposed helpers (1-based page)
   const api = {
@@ -222,7 +235,7 @@ const densityClasses = densityMap[density];
     canPrevPage: table.getCanPreviousPage(),
   };
 
-    // ← NEW helper: úplný reset toolbar stavů
+  // ← NEW helper: úplný reset toolbar stavů
   const resetAll = () => {
     table.resetSorting();
     table.resetColumnVisibility();

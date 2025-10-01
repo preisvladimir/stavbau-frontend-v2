@@ -1,5 +1,5 @@
 import { type AddressDto } from '@/types/common/address';
-export type { PageResponse } from "@/lib/api/types";
+export type { PageResponse } from "@/types/PageResponse";
 
 export type ListCustomersParams = {
   q?: string;

@@ -6,5 +6,6 @@ export type ProblemDetail = {
   detail?: string;
   code?: string; // např. 'company.exists', 'user.email.exists', 'validation.error'
   path?: string;
-  [k: string]: unknown;
+  instance?: string;
+  [key: string]: unknown;
 };

@@ -12,6 +12,52 @@
   "editModal": {
     "title": "Upravit profil člena"
   },
+  "list": {
+    "title": "Tým",
+    "searchPlaceholder": "Hledat podle jména nebo e‑mailu…",
+    "loading": "Načítám členy…",
+    "emptyTitle": "Zatím žádní členové",
+    "emptyDesc": "Přidejte první členy týmu a nastavte jim role.",
+    "forbidden": "K zobrazení týmu nemáte oprávnění.",
+    "columns": {
+      "name": "Jméno",
+      "email": "E‑mail",
+      "companyRole": "Firemní role",
+      "phone": "Telefon",
+      "updatedAt": "Aktualizováno",
+      "actions": "Akce"
+    }
+  },
+  "detail": {
+    "title": "Detail člena",
+    "loading": "Načítám detail…",
+    "companyRole": "Firemní role",
+    "lastLoginAt": "Poslední přihlášení",
+    "phone": "Telefon",
+    "createdAt": "Vytvořeno",
+    "updatedAt": "Upraveno",
+    "actions": {
+      "edit": "Upravit",
+      "delete": "Smazat"
+    },
+    "roleAccess": {
+      "title": "Role & přístupy",
+      "projectsHint": "Projektové role budou doplněny později."
+    },
+    "contact": {
+      "title": "Kontakt"
+    },
+    "activity": {
+      "title": "Aktivita"
+    },
+    "address": {
+      "title": "Adresy",
+      "permanent": "Trvalá",
+      "shipping": "Doručovací"
+    },
+    "copy": "Kopírovat",
+    "copyEmail": "Kopírovat e-mail"
+  },
   "actions": {
     "addMember": "Přidat člena",
     "updateRole": "Změnit roli",
@@ -35,11 +81,37 @@
     }
   },
   "form": {
-    "email": "E-mail",
-    "firstName": "Jméno",
-    "lastName": "Příjmení",
-    "phone": "Telefon",
-    "role": "Role"
+    "title": {
+      "create": "Nový člen",
+      "edit": "Upravit člena"
+    },
+    "email": {
+      "label": "E‑mail",
+      "error": "Zadejte platný e‑mail"
+    },
+    "firstName": {
+      "label": "Jméno",
+      "error": "Zadejte jméno"
+    },
+    "lastName": {
+      "label": "Příjmení",
+      "error": "Zadejte jméno"
+    },
+    "role": {
+      "label": "Firemní role",
+      "none": "— žádná —"
+    },
+    "companyRole": {
+      "label": "Firemní role",
+      "none": "— žádná —"
+    },
+    "sendInvite": {
+      "label": "Odeslat pozvánku e‑mailem"
+    },
+    "actions": {
+      "submit": "Uložit",
+      "cancel": "Zrušit"
+    }
   },
   "placeholders": {
     "firstName": "Jan",
@@ -91,5 +163,70 @@
     "ACTIVE": "Aktivní",
     "INVITED": "Pozván",
     "DISABLED": "Deaktivován"
+  },
+  "v2": {
+    "list": {
+      "title": "Tým",
+      "searchPlaceholder": "Hledat podle jména nebo e‑mailu…",
+      "loading": "Načítám členy…",
+      "emptyTitle": "Zatím žádní členové",
+      "emptyDesc": "Přidejte první členy týmu a nastavte jim role.",
+      "forbidden": "K zobrazení týmu nemáte oprávnění.",
+      "columns": {
+        "name": "Jméno",
+        "email": "E‑mail",
+        "companyRole": "Firemní role",
+        "updatedAt": "Aktualizováno",
+        "actions": "Akce"
+      },
+      "actions": {
+        "add": "Přidat člena",
+        "open": "Otevřít"
+      },
+      "paging": {
+        "prev": "Předchozí",
+        "next": "Další",
+        "total": "Celkem: {{total}}"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "Nový člen",
+        "edit": "Upravit člena"
+      },
+      "email": {
+        "label": "E‑mail",
+        "error": "Zadejte platný e‑mail"
+      },
+      "companyRole": {
+        "label": "Firemní role",
+        "none": "— žádná —"
+      },
+      "sendInvite": {
+        "label": "Odeslat pozvánku e‑mailem"
+      },
+      "actions": {
+        "submit": "Uložit",
+        "cancel": "Zrušit"
+      }
+    },
+    "detail": {
+      "title": "Detail člena",
+      "loading": "Načítám detail…",
+      "companyRole": "Firemní role",
+      "lastLoginAt": "Poslední přihlášení",
+      "createdAt": "Vytvořeno",
+      "updatedAt": "Upraveno",
+      "actions": {
+        "edit": "Upravit",
+        "delete": "Smazat"
+      },
+      "deleteConfirm": {
+        "title": "Smazat člena?",
+        "desc": "Tato akce je nevratná.",
+        "confirm": "Smazat",
+        "cancel": "Zrušit"
+      }
+    }
   }
 }

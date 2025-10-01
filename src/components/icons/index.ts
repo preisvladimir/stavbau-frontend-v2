@@ -18,3 +18,6 @@ export { Pencil, User, Trash2, UserPlus } from "lucide-react";
 
 // Density
 export { Rows2, Rows3, StretchVertical } from "lucide-react";
+
+// Profil
+export { Phone, Clock, Copy } from "lucide-react";

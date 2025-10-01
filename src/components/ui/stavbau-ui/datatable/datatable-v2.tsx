@@ -16,14 +16,14 @@ import { sbCardBase, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
 
 function DataTableV2Toolbar({
   table,
-  search, setSearch,
+  searchValue, onSearchChange,
   density, setDensity,
   t,
   page, pageCount, pageSize, setPageSize, pageSizeOptions,
   onReset,
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
-  search: string; setSearch: (s: string) => void;
+  searchValue: string; onSearchChange: (s: string) => void;
   density: TableDensity; setDensity: (d: TableDensity) => void;
   t: (key: string, opts?: any) => string;
   page: number; pageCount: number; pageSize: number; setPageSize: (n: number) => void;
@@ -40,8 +40,8 @@ function DataTableV2Toolbar({
       <div className="w-full flex items-center gap-2 md:hidden">
         <SearchInput
           size="md"
-          value={search}
-          onChange={setSearch}
+          value={searchValue}
+          onChange={onSearchChange}
           preset="v1"
           leftIcon="search"
           clearable
@@ -94,8 +94,8 @@ function DataTableV2Toolbar({
                 (typeof metaLabel === 'string' && metaLabel.trim())
                   ? metaLabel
                   : (typeof header === 'string'
-                      ? header
-                      : t(`columns.${id}`, { defaultValue: startCase }));
+                    ? header
+                    : t(`columns.${id}`, { defaultValue: startCase }));
 
               return {
                 id: col.id!,
@@ -122,8 +122,8 @@ function DataTableV2Toolbar({
         <div className="min-w-[320px] lg:min-w-[420px] md:flex-1">
           <SearchInput
             size="md"
-            value={search}
-            onChange={setSearch}
+            value={searchValue}
+            onChange={onSearchChange}
             preset="v1"
             leftIcon="search"
             clearable
@@ -182,14 +182,42 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
 
   const rows = table.getRowModel().rows;
 
+  // Debounce vyhledávání – centralizovaně zde
+  const searchDebounceMs = props.searchDebounceMs ?? 250;
+  const [searchLocal, setSearchLocal] = React.useState(search);
+  React.useEffect(() => setSearchLocal(search), [search]);
+  React.useEffect(() => {
+    const h = window.setTimeout(() => {
+      if (searchLocal !== search) setSearch(searchLocal);
+    }, searchDebounceMs);
+    return () => window.clearTimeout(h);
+  }, [searchLocal, search, searchDebounceMs, setSearch]);
+
+  // Loading režimy: skeleton (initial) vs overlay (následně) — anti-flicker
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
+  React.useEffect(() => { if (!props.loading) setHasLoadedOnce(true); }, [props.loading]);
+  const [delayedLoading, setDelayedLoading] = React.useState(false);
+  React.useEffect(() => {
+    let t: number | undefined;
+    if (props.loading) {
+      t = window.setTimeout(() => setDelayedLoading(true), 150);
+    } else {
+      setDelayedLoading(false);
+    }
+    return () => { if (t) window.clearTimeout(t); };
+  }, [props.loading]);
+  const mode = props.loadingMode ?? 'auto';
+  const showSkeleton = (mode === 'skeleton') || (mode === 'auto' && delayedLoading && !hasLoadedOnce);
+  const showOverlay = (mode === 'overlay') || (mode === 'auto' && delayedLoading && hasLoadedOnce);
+
   return (
     <div className={cn("w-full", wrapperClass, props.className)}>
       {/* Toolbar */}
       {props.showToolbar !== false && (
         <DataTableV2Toolbar
           table={table}
-          search={search}
-          setSearch={setSearch}
+          searchValue={searchLocal}
+          onSearchChange={setSearchLocal}
           density={density}
           setDensity={setDensity}
           t={tt}
@@ -204,7 +232,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
 
       {/* ===== MOBILE <md: KARTY ===== */}
       <div className="md:hidden px-3 py-3 space-y-3" role="list" aria-label={tt('datatable.mobileListLabel', { defaultValue: 'Seznam záznamů' })}>
-        {props.loading ? (
+        {showSkeleton ? (
           // jednoduchý skeleton pro 3 karty
           Array.from({ length: 3 }).map((_, i) => (
             <div key={`sk-card-${i}`} className="rounded-2xl border p-3 shadow-sm animate-pulse">
@@ -321,7 +349,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </thead>
 
             <tbody>
-              {props.loading ? (
+              {showSkeleton ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={`sk-${i}`} className="motion-safe:animate-pulse">
                     {table.getAllColumns().map((c) => {
@@ -421,6 +449,19 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               )}
             </tbody>
           </table>
+
+      {/* Overlay načítání – zachová stará data, zamezí klikům; bez probliknutí */}
+      {showOverlay && (
+        <div
+          aria-live="polite"
+          className="absolute inset-0 z-10 grid place-items-center bg-[rgb(var(--sb-surface))]/60 backdrop-blur-[1px]"
+        >
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+            <span>{tt('datatable.loading', { defaultValue: 'Načítám…' })}</span>
+          </div>
+        </div>
+      )}          
         </div>
       </div>
 
