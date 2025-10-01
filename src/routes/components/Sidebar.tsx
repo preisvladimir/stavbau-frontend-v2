@@ -64,12 +64,6 @@ export default function Sidebar() {
             </NavLink>
           )}
 
-          {canReadTeam && (
-            <NavLink to="/app/teamv2" className={getNavClass}>
-              {t("nav.team", { defaultValue: "Tým" })}
-            </NavLink>
-          )}
-
           {canReadCustomers && (
             <NavLink to="/app/customers" className={getNavClass}>
               {t("nav.customers", { defaultValue: "Zákazníci" })}

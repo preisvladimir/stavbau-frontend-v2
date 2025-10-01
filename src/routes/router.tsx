@@ -10,7 +10,6 @@ import ProjectsListPage from "@/pages/projects/ProjectsListPage";
 import ProjectNewPage from "@/pages/projects/ProjectNewPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
-import TeamPage from "@/features/team/pages/TeamPageV2";
 import TeamPageV2 from "@/features/teamV2/pages/TeamPage";
 import CustomersListPage from "@/features/customers/pages/CustomersListPage";
 
@@ -42,14 +41,6 @@ export const router = createBrowserRouter([
               { path: "projects/new", element: <ProjectNewPage /> },
               {
                 path: "team",
-                element: (
-                  <ScopeGuard required={["team:read", "team:write"]}>
-                    <TeamPage />
-                  </ScopeGuard>
-                ),
-              },
-              {
-                path: "teamv2",
                 element: (
                   <ScopeGuard required={["team:read", "team:write"]}>
                     <TeamPageV2 />
