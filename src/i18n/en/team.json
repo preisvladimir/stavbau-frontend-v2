@@ -4,26 +4,87 @@
   "empty": "No members yet.",
   "error": "Failed to load team members.",
   "columns": {
-    "email": "Email",
+    "email": "E-mail",
     "role": "Role",
     "name": "Name",
     "phone": "Phone"
   },
-  "editModal": {
-    "title": "Edit member profile"
+  "list": {
+    "title": "Team",
+    "searchPlaceholder": "Search by name or e-mail…",
+    "loading": "Loading members…",
+    "emptyTitle": "No members yet",
+    "emptyDesc": "Add the first team members and assign them roles.",
+    "forbidden": "You do not have permission to view the team.",
+    "columns": {
+      "name": "Name",
+      "email": "E-mail",
+      "companyRole": "Company role",
+      "phone": "Phone",
+      "updatedAt": "Updated",
+      "actions": "Actions"
+    },
+    "actions": {
+      "add": "Add member",
+      "open": "Open"
+    },
+    "paging": {
+      "prev": "Previous",
+      "next": "Next",
+      "total": "Total: {{total}}"
+    }
+  },
+  "detail": {
+    "title": "Member detail",
+    "loading": "Loading detail…",
+    "companyRole": "Company role",
+    "lastLoginAt": "Last login",
+    "phone": "Phone",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "deleteConfirm": {
+      "title": "Delete member?",
+      "desc": "This action is irreversible.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "roleAccess": {
+      "title": "Roles & access",
+      "projectsHint": "Project roles will be added later."
+    },
+    "contact": {
+      "title": "Contact"
+    },
+    "activity": {
+      "title": "Activity"
+    },
+    "address": {
+      "title": "Addresses",
+      "permanent": "Permanent",
+      "shipping": "Shipping"
+    },
+    "copy": "Copy",
+    "copyEmail": "Copy e-mail"
   },
   "actions": {
     "addMember": "Add member",
-    "updateRole": "Update role",
+    "updateRole": "Change role",
     "removeMember": "Remove member",
     "confirmRemoveTitle": "Remove member?",
-    "confirmRemoveText": "Are you sure you want to remove {{email}}?",
+    "confirmRemoveText": "Are you sure you want to remove member {{email}}?",
     "submit": "Save",
     "cancel": "Cancel",
+    "newUser": "New user",
+    "saving": "Saving…",
+    "add": "Add",
     "locked": "Locked",
     "editProfile": "Edit profile",
     "close": "Close",
-    "delete": "Remove",
+    "delete": "Delete",
     "removing": "Removing…"
   },
   "confirm": {
@@ -32,29 +93,62 @@
     }
   },
   "form": {
-    "email": "Email",
-    "role": "Role",
-    "status": "Status"
+    "title": {
+      "create": "New member",
+      "edit": "Edit member"
+    },
+    "email": {
+      "label": "E-mail",
+      "error": "Please enter a valid e-mail"
+    },
+    "firstName": {
+      "label": "First name",
+      "error": "Please enter first name"
+    },
+    "lastName": {
+      "label": "Last name",
+      "error": "Please enter last name"
+    },
+    "role": {
+      "label": "Company role",
+      "none": "— none —"
+    },
+    "companyRole": {
+      "label": "Company role",
+      "none": "— none —"
+    },
+    "sendInvite": {
+      "label": "Send invitation by e-mail"
+    },
+    "actions": {
+      "submit": "Save",
+      "cancel": "Cancel"
+    }
+  },
+  "placeholders": {
+    "firstName": "John",
+    "lastName": "Doe"
   },
   "validation": {
     "required": "This field is required.",
-    "email": "Please enter a valid email."
+    "email": "Please enter a valid e-mail.",
+    "email.invalid": "Please enter a valid e-mail."
   },
   "errors": {
-    "emailExists": "A user with this email is already a member.",
-    "invalidRole": "The provided role is invalid.",
-    "userNotFound": "No user found with this email.",
-    "cannotRemoveOwner": "Owner (OWNER) cannot be removed.",
+    "emailExists": "A user with this e-mail is already a member.",
+    "invalidRole": "The given role is invalid.",
+    "userNotFound": "User with this e-mail does not exist.",
+    "cannotRemoveOwner": "An OWNER cannot be removed.",
     "generic": "Operation failed. Please try again.",
-    "forbiddenAdd": "You don't have permission to add members (requires scope team:write).",
+    "forbiddenAdd": "You do not have permission to add members (requires scope team:write).",
     "conflictMember": "The user already exists in the company or is assigned to another company.",
-    "validation": "Please check the highlighted fields.",
+    "validation": "Please check highlighted fields.",
+    "lastOwner": "The last OWNER cannot be removed.",
     "notAssignable": "The SUPERADMIN role cannot be assigned in this interface.",
     "onlySuperadminOwner": "Only a superadmin can assign the OWNER role.",
-    "lastOwner": "You cannot remove the last owner.",
-    "forbiddenUpdateProfile": "You don't have permission to edit member profiles.",
+    "forbiddenUpdateProfile": "You do not have permission to edit this profile.",
     "memberNotFound": "Member not found.",
-    "forbiddenDelete": "You don't have permission to remove this member, or they are the last owner."
+    "forbiddenDelete": "You do not have permission to remove the member or this is the last OWNER."
   },
   "roles": {
     "OWNER": "Owner",
@@ -81,71 +175,8 @@
   "badges": {
     "ACTIVE": "Active",
     "INVITED": "Invited",
-    "DISABLED": "Disabled"
-  },
-  "v2": {
-    "list": {
-      "title": "Team",
-      "searchPlaceholder": "Search by name or email…",
-      "loading": "Loading members…",
-      "emptyTitle": "No members yet",
-      "emptyDesc": "Add your first team members and assign roles.",
-      "forbidden": "You do not have permission to view the team.",
-      "columns": {
-        "name": "Name",
-        "email": "Email",
-        "companyRole": "Company role",
-        "updatedAt": "Updated",
-        "actions": "Actions"
-      },
-      "actions": {
-        "add": "Add member",
-        "open": "Open"
-      },
-      "paging": {
-        "prev": "Prev",
-        "next": "Next",
-        "total": "Total: {{total}}"
-      }
-    },
-    "form": {
-      "title": {
-        "create": "New member",
-        "edit": "Edit member"
-      },
-      "email": {
-        "label": "Email",
-        "error": "Enter a valid email"
-      },
-      "companyRole": {
-        "label": "Company role",
-        "none": "— none —"
-      },
-      "sendInvite": {
-        "label": "Send invitation email"
-      },
-      "actions": {
-        "submit": "Save",
-        "cancel": "Cancel"
-      }
-    },
-    "detail": {
-      "title": "Member detail",
-      "loading": "Loading detail…",
-      "companyRole": "Company role",
-      "lastLoginAt": "Last login",
-      "createdAt": "Created",
-      "updatedAt": "Updated",
-      "actions": {
-        "edit": "Edit",
-        "delete": "Delete"
-      },
-      "deleteConfirm": {
-        "title": "Delete member?",
-        "desc": "This action cannot be undone.",
-        "confirm": "Delete",
-        "cancel": "Cancel"
-      }
-    }
+    "DISABLED": "Disabled",
+    "CREATED": "Created",
+    "REMOVED": "Removed"
   }
 }
