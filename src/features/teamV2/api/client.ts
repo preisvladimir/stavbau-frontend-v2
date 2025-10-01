@@ -1,5 +1,6 @@
 import { api } from '@/lib/api/client';
 import type {
+  MembersStatsDto ,
   MemberSummaryDto,
   MemberDto,
   CreateMemberRequest,
@@ -38,6 +39,7 @@ function compact<T extends Record<string, any>>(obj: T): Partial<T> {
 export const endpoint = (companyId: string) => `/tenants/${encodeURIComponent(companyId)}/members`;
 export const memberUrl = (companyId: string, memberId: string) => `${endpoint(companyId)}/${encodeURIComponent(memberId)}`;
 export const memberProfileUrl = (companyId: string, memberId: string) => `${memberUrl(companyId, memberId)}/profile`;
+export const membersStatsUrl = (companyId: string) => `${endpoint(companyId)}/stats`;
 
 function normalizeOne(m: any): MemberDto {
   // FE-tolerantní mapování, drží konzistenci s MemberDto tvarem (v2)
@@ -247,3 +249,24 @@ export async function updateMemberRole(
     mapAndThrow(e);
   }
 }
+
+// GET /api/v1/tenants/{companyId}/members/stats
+export async function getMembersStats(
+  companyId: string,
+  opts?: { signal?: AbortSignal }
+): Promise<MembersStatsDto> {
+  try {
+    const { data } = await api.get<MembersStatsDto>(
+      membersStatsUrl(companyId),
+      { signal: opts?.signal }
+    );
+     console.log(data);
+    // bezpečný fallback – 0, pokud BE nepošle owners
+    const owners = Number((data as any)?.owners ?? 0);
+    return { ...data, owners }; // <- žádné TS2783, explicitně přepíšeme/doplníme
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
+}
+

@@ -39,7 +39,24 @@
     "actions": {
       "edit": "Upravit",
       "delete": "Smazat"
-    }
+    },
+    "roleAccess": {
+      "title": "Role & přístupy",
+      "projectsHint": "Projektové role budou doplněny později."
+    },
+    "contact": {
+      "title": "Kontakt"
+    },
+    "activity": {
+      "title": "Aktivita"
+    },
+    "address": {
+      "title": "Adresy",
+      "permanent": "Trvalá",
+      "shipping": "Doručovací"
+    },
+    "copy": "Kopírovat",
+    "copyEmail": "Kopírovat e-mail"
   },
   "actions": {
     "addMember": "Přidat člena",
@@ -75,15 +92,15 @@
     "firstName": {
       "label": "Jméno",
       "error": "Zadejte jméno"
-    },    
+    },
     "lastName": {
       "label": "Příjmení",
       "error": "Zadejte jméno"
-    },      
+    },
     "role": {
       "label": "Firemní role",
       "none": "— žádná —"
-    },    
+    },
     "companyRole": {
       "label": "Firemní role",
       "none": "— žádná —"

@@ -13,9 +13,22 @@ export type TeamFormProps = {
   submitting?: boolean;
   onSubmit: (values: AnyTeamFormValues) => void; // ← sjednocené
   onCancel: () => void;
+  /** Zamkne výběr company role (např. poslední OWNER) */
+  lockCompanyRole?: boolean;
+  /** i18n klíč proč je zamčeno (default: errors.lastOwner) */
+  lockReasonKey?: string;
 };
 
-export function TeamForm({ mode, i18nNamespaces, defaultValues, submitting, onSubmit, onCancel }: TeamFormProps) {
+export function TeamForm({
+  mode,
+  i18nNamespaces,
+  defaultValues,
+  submitting,
+  onSubmit,
+  onCancel,
+  lockCompanyRole = false,
+  lockReasonKey = 'errors.lastOwner',
+}: TeamFormProps) {
   const { t } = useTranslation(i18nNamespaces ?? ['team', 'common']);
   const roleLabel = (r: CompanyRoleName | string) => t(`common:companyrole.${r}`, { defaultValue: r });
 
@@ -88,13 +101,35 @@ export function TeamForm({ mode, i18nNamespaces, defaultValues, submitting, onSu
       {/* Company role */}
       <label className="flex flex-col gap-1">
         <span className="text-sm">{t('form.companyRole.label')}</span>
-        <select className="rounded-md border px-3 py-2" {...register('companyRole')}>
+        <select
+          className="rounded-md border px-3 py-2"
+          {...register('companyRole')}
+          // ✨ ZAMKNOUT, pokud je poslední OWNER
+          disabled={lockCompanyRole}
+          aria-disabled={lockCompanyRole || undefined}
+          title={lockCompanyRole ? (t(lockReasonKey) as string) : undefined}
+        >
           <option value="">{t('form.companyRole.none')}</option>
           {VISIBLE_ROLES.map((r) => (
-            <option key={r} value={r}>{roleLabel(r)}</option>
+            <option key={r} value={r}>
+              {roleLabel(r)}
+            </option>
           ))}
         </select>
-        {errors.companyRole && <span className="text-xs text-red-600">{t(errors.companyRole.message as string)}</span>}
+
+        {/* validační chyba ze schématu */}
+        {errors.companyRole && (
+          <span className="text-xs text-red-600">
+            {t(errors.companyRole.message as string)}
+          </span>
+        )}
+
+        {/* ✨ info proč je pole zamčené (pokud není validační chyba) */}
+        {lockCompanyRole && !errors.companyRole && (
+          <span className="text-xs text-amber-700">
+            {t(lockReasonKey, { defaultValue: 'Nelze odebrat posledního vlastníka.' })}
+          </span>
+        )}
       </label>
 
       {/* Password – jen v create módu */}
@@ -133,7 +168,7 @@ export function TeamForm({ mode, i18nNamespaces, defaultValues, submitting, onSu
         <Button type="button" variant="outline" onClick={onCancel}>
           {t('form.actions.cancel')}
         </Button>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" variant="primary" disabled={submitting}>
           {t('form.actions.submit')}
         </Button>
       </div>

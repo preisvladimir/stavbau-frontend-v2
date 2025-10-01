@@ -46,6 +46,9 @@ export interface MemberDto {
 // --- Requests ---
 export type CreateMemberRequest = {
   email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
   companyRole?: CompanyRoleName | null;
   role?: CompanyRoleName | null;
   initialProjectRoles?: ProjectRoleAssignmentDto[] | null;
@@ -68,3 +71,12 @@ export type UpdateMemberProfileRequest = {
 export interface UpdateMemberRoleRequest {
   role: CompanyRoleName;
 }
+
+// --- Members stats DTO (BE: GET /tenants/{companyId}/members/stats) ---
+export type MembersStatsDto = {
+  owners: number;
+  active?: number;
+  invited?: number;
+  disabled?: number;
+  total?: number;
+};

@@ -4,42 +4,50 @@ import { cn } from "@/lib/utils/cn";
 import { Loader2 } from "@/components/icons";
 
 const buttonVariants = cva(
-  // Základ: layout, typografie, a11y focus
   "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors select-none " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 " +
     "disabled:opacity-60 disabled:cursor-not-allowed active:translate-y-[1px]",
   {
     variants: {
       variant: {
-        // Zachováváme stávající BEM třídy + přidáváme Tailwind fallback pro případ, že BEM není k dispozici
+        // neutrální výchozí – „surface“ styl
+        default:
+          "border border-[rgb(var(--sb-border))] bg-white text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
+        // brand primary (už ne černá)
         primary:
-          "sb-btn sb-btn--primary bg-black text-white hover:bg-gray-900 focus-visible:ring-black",
+          "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600",
         outline:
-          "sb-btn sb-btn--outline border border-[rgb(var(--sb-border))] bg-white text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
-        danger:
-          "sb-btn sb-btn--danger bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
-        destructive:
-          "sb-btn sb-btn--danger bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",          
+          "border border-[rgb(var(--sb-border))] bg-transparent text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
         ghost:
-          "sb-btn bg-transparent text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.2)] focus-visible:ring-gray-300",
+          "bg-transparent text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.2)] focus-visible:ring-gray-300",
+        danger:
+          "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
+        // jemný destructive (subtle danger)
+        destructive:
+          "text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 focus-visible:ring-rose-300",
+        // volitelná FAB varianta
+        fab:
+          "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600 shadow-lg",
       },
       size: {
-        sm: "h-9 px-3 text-sm",
-        md: "h-11 px-4 text-sm",
-        lg: "h-12 px-5 text-base",
+        xs: '!h-12 !px-5 !text-base leading-none',
+        sm: '!h-8  !px-3 !text-sm   leading-none',
+        md: '!h-10 !px-4 !text-sm   leading-none',
+        lg: '!h-12 !px-6 !text-base leading-none',
       },
       fullWidth: {
         true: "w-full",
         false: "",
       },
     },
-    defaultVariants: { variant: "primary", size: "md", fullWidth: false },
+    // ⬅️ klíčová změna: default = neutrální, ne primary (black)
+    defaultVariants: { variant: "default", size: "md", fullWidth: false },
   }
 );
 
 export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color">,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   /** Zobrazí spinner, deaktivuje ovládání a přidá a11y atributy */

@@ -167,6 +167,11 @@ export default function TeamPage() {
     return () => setFab(null);
   }, [setFab, t]);
 
+  const editingMember = React.useMemo(
+    () => (isEdit ? items.find(i => i.id === params.id) : undefined),
+    [isEdit, items, params.id]
+  );
+
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
@@ -176,7 +181,7 @@ export default function TeamPage() {
             <ScopeGuard anyOf={[TEAM_SCOPES.WRITE, TEAM_SCOPES.ADD]}>
               <Button
                 type="button"
-                variant="outline"
+                variant="primary"
                 onClick={() => openNew()}
                 disabled={loading}
                 ariaLabel={t('actions.newUser', { defaultValue: 'Nový uživatel' }) as string}
@@ -238,7 +243,7 @@ export default function TeamPage() {
               <ScopeGuard anyOf={[TEAM_SCOPES.WRITE, TEAM_SCOPES.REMOVE]}>
                 <Button
                   size="sm"
-                  variant="danger"
+                  variant="destructive"
                   aria-label={t('detail.actions.delete') as string}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -296,6 +301,9 @@ export default function TeamPage() {
             companyRole: items.find((i) => i.id === params.id)?.companyRole ?? null,
             sendInvite: false,
           }}
+          currentCompanyRole={editingMember?.role ?? null}
+          lockCompanyRole={false} // volitelný hard-lock z listu; primárně budeme používat stats v Draweru
+          lockReasonKey="errors.lastOwner"
         />
       </div>
     </div>
