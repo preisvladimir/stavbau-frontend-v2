@@ -11,12 +11,14 @@ export type TeamFormProps = {
   i18nNamespaces?: string[];
   defaultValues?: Partial<AnyTeamFormValues>;
   submitting?: boolean;
-  onSubmit: (values: AnyTeamFormValues) => void; // ← sjednocené
+  onSubmit: (values: AnyTeamFormValues) => Promise<void> | void;
   onCancel: () => void;
   /** Zamkne výběr company role (např. poslední OWNER) */
   lockCompanyRole?: boolean;
   /** i18n klíč proč je zamčeno (default: errors.lastOwner) */
   lockReasonKey?: string;
+  /** Po úspěšném submitu vyresetovat formulář (default: true pro create, false pro edit) */
+  resetAfterSubmit?: boolean;
 };
 
 export function TeamForm({
@@ -28,74 +30,110 @@ export function TeamForm({
   onCancel,
   lockCompanyRole = false,
   lockReasonKey = 'errors.lastOwner',
+  resetAfterSubmit,
 }: TeamFormProps) {
   const { t } = useTranslation(i18nNamespaces ?? ['team', 'common']);
-  const roleLabel = (r: CompanyRoleName | string) => t(`common:companyrole.${r}`, { defaultValue: r });
+  const roleLabel = (r: CompanyRoleName | string) => t(`roles.${r}`, { defaultValue: String(r) });
 
   const schema = mode === 'create' ? CreateMemberSchema : UpdateMemberSchema;
+  const shouldReset = resetAfterSubmit ?? (mode === 'create');
 
-  const { register, handleSubmit, formState: { errors }, reset } =
-    useForm<AnyTeamFormValues>({
-      resolver: zodResolver(schema) as unknown as Resolver<AnyTeamFormValues>,
-      defaultValues: {
-        email: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        companyRole: null,
-        role: 'VIEWER',
-        sendInvite: true,
-        marketing: false,
-        termsAccepted: false,
-        password: '',
-        ...(defaultValues as Partial<AnyTeamFormValues>),
-      },
-    });
+  // jednotné výchozí hodnoty – použijeme je i při resetu po submitu
+  const defaultValuesResolved = React.useMemo<AnyTeamFormValues>(() => ({
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    role: 'VIEWER',
+    sendInvite: true,
+    marketing: false,
+    ...(defaultValues as Partial<AnyTeamFormValues>),
+  }), [defaultValues]);
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<AnyTeamFormValues>({
+    resolver: zodResolver(schema) as unknown as Resolver<AnyTeamFormValues>,
+    defaultValues: defaultValuesResolved,
+  });
+
+  // přenastavení zvenčí (změna defaultValues)
   React.useEffect(() => {
-    reset({
-      email: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      companyRole: null,
-      role: 'VIEWER',
-      sendInvite: true,
-      marketing: false,
-      termsAccepted: false,
-      password: '',
-      ...(defaultValues as Partial<AnyTeamFormValues>),
-    });
-  }, [defaultValues, reset]);
+    reset(defaultValuesResolved);
+  }, [defaultValuesResolved, reset]);
+
+  const onSubmitInternal = React.useCallback(async (vals: AnyTeamFormValues) => {
+    await onSubmit(vals);
+    if (shouldReset) {
+      reset(defaultValuesResolved);
+    }
+  }, [onSubmit, shouldReset, reset, defaultValuesResolved]);
+
+  const disabled = submitting || isSubmitting;
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmitInternal)} noValidate>
       {/* Email */}
       <label className="flex flex-col gap-1">
         <span className="text-sm">{t('form.email.label')}</span>
-        <input className="rounded-md border px-3 py-2" type="email" {...register('email')} />
-        {errors.email && <span className="text-xs text-red-600">{t(errors.email.message as string, { defaultValue: t('form.email.error') as string })}</span>}
+        <input
+          className="rounded-md border px-3 py-2"
+          type="email"
+          autoComplete="email"
+          disabled={disabled}
+          {...register('email')}
+        />
+        {errors.email && (
+          <span className="text-xs text-red-600">
+            {t(errors.email.message as string, { defaultValue: t('form.email.error') as string })}
+          </span>
+        )}
       </label>
 
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-sm">{t('form.firstName.label')}</span>
-          <input className="rounded-md border px-3 py-2" {...register('firstName')} />
-          {errors.firstName && <span className="text-xs text-red-600">{t(errors.firstName.message as string)}</span>}
+          <input
+            className="rounded-md border px-3 py-2"
+            autoComplete="given-name"
+            disabled={disabled}
+            {...register('firstName')}
+          />
+          {errors.firstName && (
+            <span className="text-xs text-red-600">{t(errors.firstName.message as string)}</span>
+          )}
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm">{t('form.lastName.label')}</span>
-          <input className="rounded-md border px-3 py-2" {...register('lastName')} />
-          {errors.lastName && <span className="text-xs text-red-600">{t(errors.lastName.message as string)}</span>}
+          <input
+            className="rounded-md border px-3 py-2"
+            autoComplete="family-name"
+            disabled={disabled}
+            {...register('lastName')}
+          />
+          {errors.lastName && (
+            <span className="text-xs text-red-600">{t(errors.lastName.message as string)}</span>
+          )}
         </label>
       </div>
 
       {/* Phone */}
       <label className="flex flex-col gap-1">
         <span className="text-sm">{t('form.phone', { defaultValue: 'Telefon' })}</span>
-        <input className="rounded-md border px-3 py-2" type="tel" {...register('phone')} />
-        {errors.phone && <span className="text-xs text-red-600">{t(errors.phone.message as string)}</span>}
+        <input
+          className="rounded-md border px-3 py-2"
+          type="tel"
+          autoComplete="tel"
+          disabled={disabled}
+          {...register('phone')}
+        />
+        {errors.phone && (
+          <span className="text-xs text-red-600">{t(errors.phone.message as string)}</span>
+        )}
       </label>
 
       {/* Company role */}
@@ -103,11 +141,12 @@ export function TeamForm({
         <span className="text-sm">{t('form.companyRole.label')}</span>
         <select
           className="rounded-md border px-3 py-2"
-          {...register('companyRole')}
-          // ✨ ZAMKNOUT, pokud je poslední OWNER
-          disabled={lockCompanyRole}
+          disabled={lockCompanyRole || disabled}
           aria-disabled={lockCompanyRole || undefined}
           title={lockCompanyRole ? (t(lockReasonKey) as string) : undefined}
+          {...register('companyRole', {
+            setValueAs: (v) => (v === '' ? null : v),
+          })}
         >
           <option value="">{t('form.companyRole.none')}</option>
           {VISIBLE_ROLES.map((r) => (
@@ -116,15 +155,9 @@ export function TeamForm({
             </option>
           ))}
         </select>
-
-        {/* validační chyba ze schématu */}
         {errors.companyRole && (
-          <span className="text-xs text-red-600">
-            {t(errors.companyRole.message as string)}
-          </span>
+          <span className="text-xs text-red-600">{t(errors.companyRole.message as string)}</span>
         )}
-
-        {/* ✨ info proč je pole zamčené (pokud není validační chyba) */}
         {lockCompanyRole && !errors.companyRole && (
           <span className="text-xs text-amber-700">
             {t(lockReasonKey, { defaultValue: 'Nelze odebrat posledního vlastníka.' })}
@@ -132,43 +165,36 @@ export function TeamForm({
         )}
       </label>
 
-      {/* Password – jen v create módu */}
-      {mode === 'create' && (
-        <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.password', { defaultValue: 'Heslo' })}</span>
-          <input className="rounded-md border px-3 py-2" type="password" autoComplete="new-password" {...register('password')} />
-          {errors.password && <span className="text-xs text-red-600">{t(errors.password.message as string)}</span>}
-        </label>
-      )}
-
       {/* Send invite */}
       <label className="inline-flex items-center gap-2 text-sm">
-        <input type="checkbox" {...register('sendInvite')} />
+        <input type="checkbox" disabled={disabled} {...register('sendInvite')} />
         <span>{t('form.sendInvite.label')}</span>
       </label>
 
-      {/* Terms + Marketing – jen v create módu */}
+      {/* Terms + Marketing – jen v create módu (volitelné) */}
       {mode === 'create' && (
         <>
           <label className="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('termsAccepted')} />
-            <span>{t('validation.terms.accept', { defaultValue: 'Souhlasím s podmínkami' })}</span>
+            <input type="checkbox" disabled={disabled} {...register('termsAccepted')} />
+            <span>
+              {t('validation.terms.accept', { defaultValue: 'Souhlasím s podmínkami' })}
+            </span>
           </label>
           {errors.termsAccepted && (
             <div className="text-xs text-red-600">{t(errors.termsAccepted.message as string)}</div>
           )}
           <label className="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('marketing')} />
+            <input type="checkbox" disabled={disabled} {...register('marketing')} />
             <span>{t('form.marketing', { defaultValue: 'Souhlasím se zasíláním novinek' })}</span>
           </label>
         </>
       )}
 
       <div className="mt-2 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>
           {t('form.actions.cancel')}
         </Button>
-        <Button type="submit" variant="primary" disabled={submitting}>
+        <Button type="submit" variant="primary" disabled={disabled}>
           {t('form.actions.submit')}
         </Button>
       </div>

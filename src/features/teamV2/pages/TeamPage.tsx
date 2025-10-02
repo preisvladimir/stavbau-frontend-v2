@@ -31,7 +31,7 @@ import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 
 export default function TeamPage() {
   const { setFab } = useFab();
-  const i18nNamespaces = React.useMemo(() => ['team', 'common'] as const, []);
+  const i18nNamespaces = React.useMemo<string[]>(() => ['team', 'common'], []);
   const { t } = useTranslation(i18nNamespaces);
   const companyId = useRequiredCompanyId();
 
@@ -65,8 +65,8 @@ export default function TeamPage() {
           return an.localeCompare(bn);
         });
         setItems(sorted);
-        setPage(res.page);
-        setSize(res.size);
+        setPage(res.page ?? page);
+        setSize(res.size ?? size);
       })
       .catch((e) => {
         if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError') return;
@@ -101,7 +101,7 @@ export default function TeamPage() {
   const handleEdit = async (values: AnyTeamFormValues, id: UUID) => {
     const current = items.find((i) => i.id === id);
     const newRole = (values.companyRole ?? values.role) as CompanyRoleName | undefined;
-    const prevRole = current?.companyRole ?? null;
+    const prevRole = current?.companyRole ?? current?.role ?? null; // ← fallback na role
 
     // 1) Role – jen když se opravdu změnila
     if (newRole && newRole !== prevRole) {
@@ -194,9 +194,7 @@ export default function TeamPage() {
           </div>
         </div>
 
-        {/* Status (bez layout shiftu): 
-          - Loading oznamujeme jen SR (DataTableV2 řeší overlay uvnitř).
-          - Error ukazujeme vizuálně (má smysl posunout obsah). */}
+        {/* Status (bez layout shiftu) */}
         <span className="sr-only" role="status" aria-live="polite">
           {loading ? t('loading', { defaultValue: 'Načítám…' }) : ''}
         </span>
@@ -213,7 +211,7 @@ export default function TeamPage() {
         <TeamTable
           data={items}
           loading={loading}
-          i18nNamespaces={i18nNamespaces as unknown as string[]}
+          i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           // toolbar (search řízená stránkou, DataTableV2 ji propouští dál)
@@ -262,7 +260,7 @@ export default function TeamPage() {
         {/* Create */}
         <TeamFormDrawer
           mode="create"
-          i18nNamespaces={i18nNamespaces as unknown as string[]}
+          i18nNamespaces={i18nNamespaces}
           open={isNew}
           companyId={companyId}
           titleKey="form.title.create"
@@ -272,7 +270,7 @@ export default function TeamPage() {
 
         {/* Detail – natahuje si data sama (prefill pro rychlé vykreslení) */}
         <TeamDetailDrawer
-          i18nNamespaces={i18nNamespaces as unknown as string[]}
+          i18nNamespaces={i18nNamespaces}
           open={isDetail && !isEdit}
           companyId={companyId}
           memberId={isDetail ? (params.id as UUID) : null}
@@ -285,7 +283,7 @@ export default function TeamPage() {
         {/* Edit – form si natahuje detail sám, ale dáváme i rychlý prefill ze summary */}
         <TeamFormDrawer
           mode="edit"
-          i18nNamespaces={i18nNamespaces as unknown as string[]}
+          i18nNamespaces={i18nNamespaces}
           open={!!isEdit}
           companyId={companyId}
           memberId={isEdit ? (params.id as UUID) : null}
@@ -302,7 +300,7 @@ export default function TeamPage() {
             sendInvite: false,
           }}
           currentCompanyRole={editingMember?.role ?? null}
-          lockCompanyRole={false} // volitelný hard-lock z listu; primárně budeme používat stats v Draweru
+          lockCompanyRole={false} // primárně používáme stats v Draweru
           lockReasonKey="errors.lastOwner"
         />
       </div>

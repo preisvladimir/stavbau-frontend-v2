@@ -1,15 +1,15 @@
 import { api } from '@/lib/api/client';
 import type {
-  MembersStatsDto ,
+  MembersStatsDto,
   MemberSummaryDto,
   MemberDto,
   CreateMemberRequest,
-  UpdateMemberProfileRequest,
-  UpdateMemberRequest,
+  UpdateMemberRequest, // ponecháno kvůli deprecated updateMember
   UpdateMemberRoleRequest,
+  UpdateMemberProfileRequest, // ✅ nově používáme u updateMemberProfile
   UUID,
+  PageResponse
 } from './types';
-import type {PageResponse} from '@/types/PageResponse';
 import { type CompanyRoleName, ROLE_WHITELIST } from '@/types/common/rbac';
 import { mapAndThrow } from '@/lib/api/problem';
 
@@ -17,15 +17,15 @@ import { mapAndThrow } from '@/lib/api/problem';
 // Helpers (security, DX)
 // ------------------------------------------------------
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-const toInt = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) | 0 : fallback);
+const toInt = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? (Number(v) | 0) : fallback);
 const sanitizeQ = (q?: string) => (q ?? '').trim().slice(0, 200);
+
 // Strongly-typed shallow compact (keeps keyof T)
 function compact<T extends Record<string, any>>(obj: T): Partial<T> {
   const out = {} as Partial<T>;
   (Object.keys(obj) as (keyof T)[]).forEach((k) => {
     const v = obj[k];
     if (v !== null && v !== undefined) {
-      // preserve original type of the property
       (out as any)[k] = v;
     }
   });
@@ -43,27 +43,30 @@ export const membersStatsUrl = (companyId: string) => `${endpoint(companyId)}/st
 
 function normalizeOne(m: any): MemberDto {
   // FE-tolerantní mapování, drží konzistenci s MemberDto tvarem (v2)
+  const role = (m?.companyRole ?? m?.role) as CompanyRoleName;
   return {
-    id: String(m.id ?? m.memberId ?? m.userId ?? m.email),
-    email: m.email,
-    role: m.role as CompanyRoleName,
-    firstName: m.firstName ?? null,
-    lastName: m.lastName ?? null,
-    phone: m.phone ?? null,
-    status: m.status,
-    createdAt: m.createdAt,
-    updatedAt: m.updatedAt,
+    id: String(m?.id ?? m?.memberId ?? m?.userId ?? m?.email),
+    email: m?.email,
+    role,
+    companyRole: m?.companyRole ?? null,
+    firstName: m?.firstName ?? null,
+    lastName: m?.lastName ?? null,
+    phone: m?.phone ?? null,
+    status: m?.status,
+    createdAt: m?.createdAt,
+    updatedAt: m?.updatedAt,
   } as MemberDto;
 }
 
 function normalizeSummary(m: any): MemberSummaryDto {
   return {
-    id: String(m.id ?? m.memberId ?? m.userId ?? m.email),
-    email: m.email,
-    firstName: m.firstName ?? null,
-    lastName: m.lastName ?? null,
-    role: m.companyRole ?? m.role ?? null,
-    phone: m.phone ?? null,
+    id: String(m?.id ?? m?.memberId ?? m?.userId ?? m?.email),
+    email: m?.email,
+    firstName: m?.firstName ?? null,
+    lastName: m?.lastName ?? null,
+    role: (m?.role ?? m?.companyRole ?? null) as CompanyRoleName | null,
+    companyRole: (m?.companyRole ?? m?.role ?? null) as CompanyRoleName | null,
+    phone: m?.phone ?? null,
   } as MemberSummaryDto;
 }
 
@@ -179,8 +182,12 @@ export async function getMember(companyId: UUID, memberId: UUID, opts?: { signal
 }
 
 /** POST /api/v1/tenants/{companyId}/members */
-export async function createMember(companyId: string, body: CreateMemberRequest): Promise<MemberDto> {
+export async function createMember(
+  companyId: string,
+  body: CreateMemberRequest
+) {
   try {
+    // ❗️NEPOSÍLÁME sendInvite – BE ho nemá v kontraktu
     const res = await api.post<any>(endpoint(companyId), body);
     return normalizeOne(res.data);
   } catch (e) {
@@ -193,10 +200,10 @@ export async function createMember(companyId: string, body: CreateMemberRequest)
 export async function updateMemberProfile(
   companyId: string,
   memberId: string,
-  body: UpdateMemberProfileRequest
+  body: UpdateMemberProfileRequest // ✅ správný typ pouze pro profilová pole
 ): Promise<MemberDto> {
   try {
-    const sanitized = compact(body);            // ← vyhodí null/undefined
+    const sanitized = compact<UpdateMemberProfileRequest>(body); // vyhodí null/undefined
     const res = await api.patch<any>(memberProfileUrl(companyId, memberId), sanitized);
     return normalizeOne(res.data);
   } catch (e) {
@@ -212,7 +219,6 @@ export async function updateMember(
   body: UpdateMemberRequest
 ): Promise<MemberDto> {
   try {
-    console.log(body);
     const res = await api.patch<any>(memberProfileUrl(companyId, memberId), body);
     return normalizeOne(res.data);
   } catch (e) {
@@ -260,13 +266,11 @@ export async function getMembersStats(
       membersStatsUrl(companyId),
       { signal: opts?.signal }
     );
-     console.log(data);
     // bezpečný fallback – 0, pokud BE nepošle owners
     const owners = Number((data as any)?.owners ?? 0);
-    return { ...data, owners }; // <- žádné TS2783, explicitně přepíšeme/doplníme
+    return { ...data, owners }; // explicitně přepíšeme/doplníme owners
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
 }
-

@@ -1,5 +1,22 @@
 import { z } from "zod";
 import { ZIP_CZ_REGEX, ISO2_REGEX } from "@/lib/utils/patterns";
+import { ROLE_WHITELIST, type CompanyRoleName } from "@/types/common/rbac";
+
+/** --- helpers --- */
+const emptyToUndef = <T extends string | null | undefined>(v: T) => {
+  if (v == null) return undefined;
+  if (typeof v !== "string") return v ?? undefined as any;
+  const s = v.trim();
+  return s.length ? (s as any) : undefined;
+};
+const roleValidator = z
+  .string()
+  .nullable()
+  .optional()
+  .refine(
+    (val) => val == null || ROLE_WHITELIST.includes(String(val)),
+    { message: "validation.role.invalid" }
+  );
 
 /** --- Shared primitives (adresy, atd.) --- */
 export const addressSchema = z.object({
@@ -9,49 +26,67 @@ export const addressSchema = z.object({
   country: z.string().regex(ISO2_REGEX, { message: "validation.country.invalid" }),
 });
 
-
-type CreateVals = z.infer<typeof CreateMemberSchema>;
-type UpdateVals = z.infer<typeof UpdateMemberSchema>;
-
 /** --- Základ člen/uživatel – společné pro create i update --- */
 const MemberBase = z.object({
-  firstName: z.string().trim().optional().or(z.literal("").transform(() => undefined)),
-  lastName: z.string().trim().optional().or(z.literal("").transform(() => undefined)),
-  phone: z.string().trim().optional().or(z.literal("").transform(() => undefined)),
-  email: z.string().email({ message: "validation.email.invalid" }),
-  role: z.string().nullable().optional(),
-  companyRole: z.string().nullable().optional(),
+  firstName: z.string().transform(emptyToUndef).optional(),
+  lastName: z.string().transform(emptyToUndef).optional(),
+  phone: z.string().transform(emptyToUndef).optional(),
+  email: z.email({ message: "validation.email.invalid" }),
+  // FE validace proti whitelistu; BE stejně rozhoduje, ale fail-fast UX je lepší
+  role: roleValidator,         // alias/legacy
+  companyRole: roleValidator,  // preferované pole
   sendInvite: z.boolean().optional(),
   marketing: z.boolean().optional(),
 });
 
-/** Superset pro RHF – sjednocuje rozdíly mezi create/update (heslo a terms jsou volitelné) */
-export type AnyTeamFormValues =
-  Omit<CreateVals, 'password' | 'termsAccepted'> & {
-    password?: string;
-    termsAccepted?: boolean;
-  };
+/** --- Create: BE nevyžaduje password/terms --- */
+export const CreateMemberSchema = MemberBase;
 
-/** --- Create: password + terms povinné (pokud BE vyžaduje) --- */
-export const CreateMemberSchema = MemberBase.extend({
-  password: z.string().min(8, { message: "validation.password.min8" }),
-  termsAccepted: z
-    .boolean()
-    .refine((v) => v === true, { message: "validation.terms.accept" }),
-});
-
-/** --- Update: password volitelné, terms se v editu neřeší --- */
+/** --- Update: password volitelné (pokud se někdy použije), terms se v editu neřeší --- */
 export const UpdateMemberSchema = MemberBase.extend({
   password: z
     .string()
-    .min(8, { message: "validation.password.min8" })
+    .min(8, { message: "registration:validation.password.min8" })
     .optional()
     .or(z.literal("").transform(() => undefined)),
   termsAccepted: z.boolean().optional(),
 });
 
-/** Back-compat alias (kdo importuje MemberSchema) */
+/** Back-compat alias (někde se importuje MemberSchema) */
 export const MemberSchema = CreateMemberSchema;
 
-/** Typ pro TeamForm – výchozí je create varianta */
+/** Typy pro RHF / formuláře */
 export type TeamFormValues = z.infer<typeof CreateMemberSchema>;
+type CreateVals = z.infer<typeof CreateMemberSchema>;
+type UpdateVals = z.infer<typeof UpdateMemberSchema>;
+
+/**
+ * Superset pro RHF – sjednocuje rozdíly mezi create/update
+ * (password a terms jsou volitelné, aby jednotný form fungoval v obou módech).
+ */
+export type AnyTeamFormValues =
+  Omit<CreateVals, "password" | "termsAccepted"> & {
+    password?: string;
+    termsAccepted?: boolean;
+  };
+
+/**
+ * Bonus (volitelné): kontextová verze schématu – umožní zamknout změnu role
+ * pomocí zodResolver(schema, { context: { lockCompanyRole: true, currentCompanyRole: 'OWNER' } })
+ */
+export const getTeamSchema = (ctx?: { lockCompanyRole?: boolean; currentCompanyRole?: CompanyRoleName | null }) =>
+  MemberBase.superRefine((vals, issue) => {
+    if (!ctx?.lockCompanyRole) return;
+
+    // Když je role zamčená (např. poslední OWNER), nedovolíme změnit na jinou
+    const requested = (vals.companyRole ?? vals.role) as CompanyRoleName | null | undefined;
+    const current = ctx.currentCompanyRole ?? null;
+    if (current === "OWNER" && requested && requested !== "OWNER") {
+      issue.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "errors.lastOwner",
+        path: ["companyRole"],
+      });
+    }
+  });
+

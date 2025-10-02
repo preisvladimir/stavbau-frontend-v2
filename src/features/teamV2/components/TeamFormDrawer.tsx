@@ -83,36 +83,42 @@ export function TeamFormDrawer({ i18nNamespaces, open, mode, companyId, memberId
     return () => ac.abort();
   }, [open, memberId, companyId]);
 
-
+React.useEffect(() => {
+  if (!open) {
+    setPrefill(undefined);   // reset lokálního prefillu
+  }
+}, [open]);
 
   return (
-    <FormDrawer
-      open={open}
-      onClose={onClose}
-      title={title}
-      mode={mode}
-      showFooter={false}
-      form={
-        <>
-          {/* (volitelné) lokální info/chyba nad formulářem */}
-          {localError && (
-            <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {localError}
-            </div>
-          )}
+<FormDrawer
+  open={open}
+  onClose={onClose}
+  title={title}
+  mode={mode}
+  showFooter={false}
+  form={
+    <>
+      {/* (volitelné) lokální info/chyba nad formulářem */}
+      {localError && (
+        <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {localError}
+        </div>
+      )}
 
-          <TeamForm
-            mode={mode}
-            i18nNamespaces={i18nNamespaces}
-            defaultValues={prefill ?? defaultValues}
-            submitting={submitting}
-            onSubmit={safeOnSubmit}
-            onCancel={onClose}
-            lockCompanyRole={isLastOwner}
-            lockReasonKey={lockReasonKey}
-          />
-        </>
-      }
-    />
+      <TeamForm
+        key={`${mode}-${memberId ?? 'new'}`}
+        mode={mode}
+        i18nNamespaces={i18nNamespaces}
+        defaultValues={prefill ?? defaultValues}
+        submitting={submitting}
+        onSubmit={safeOnSubmit}
+        onCancel={onClose}
+        lockCompanyRole={isLastOwner}
+        lockReasonKey={lockReasonKey}
+        resetAfterSubmit={mode === 'create'}
+      />
+    </>
+  }
+/>
   );
 }

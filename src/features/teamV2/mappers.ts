@@ -1,10 +1,12 @@
 import type {
   CreateMemberRequest,
   UpdateMemberRequest,
-  UpdateMemberProfileRequest,
   UpdateMemberRoleRequest,
-} from './api/types';
-import type { CompanyRoleName } from "@/types/common/rbac";
+  UpdateMemberProfileRequest,
+  CompanyRoleName, // můžeš importovat z types, nebo z "@/types/common/rbac" — dle tvé struktury
+} from './api/types'; // ← uprav cestu dle umístění souboru
+
+import type { AnyTeamFormValues } from './validation/schemas'; // ← uprav cestu dle umístění souboru
 
 // --- Name helper usable with both legacy and v2 DTOs ---
 export function memberDisplayName(m: any): string {
@@ -16,36 +18,47 @@ export function memberDisplayName(m: any): string {
   return composed || m?.email || '—';
 }
 
-// Create
-export function formToCreateBody(v: any): CreateMemberRequest {
+const emptyToNull = (v: unknown) => {
+  if (typeof v !== 'string') return v ?? null;
+  const s = v.trim();
+  return s.length ? s : null;
+};
+
+// CREATE: pošli přesně to, co bere BE
+export function formToCreateBody(values: AnyTeamFormValues): CreateMemberRequest {
+  const role = (values.companyRole ?? values.role ?? 'MEMBER') as CompanyRoleName;
   return {
-    email: v.email?.trim(),
-    role: v.companyRole ?? v.role ?? null,
-    initialProjectRoles: Array.isArray(v.projectRoles) ? v.projectRoles : undefined,
-    sendInvite: v.sendInvite ?? true,
+    email: values.email.trim(),
+    role,
+    firstName: emptyToNull(values.firstName) as string | null,
+    lastName:  emptyToNull(values.lastName)  as string | null,
+    phone:     emptyToNull(values.phone)     as string | null,
   };
 }
 
-// Profile-only update (NE role)
-export function formToUpdateProfileBody(v: any): UpdateMemberProfileRequest {
+// EDIT (profil) – pouze profilová pole (žádná role!)
+export function formToUpdateProfileBody(values: AnyTeamFormValues): UpdateMemberProfileRequest {
   return {
-    firstName: v.firstName?.trim() || undefined,
-    lastName: v.lastName?.trim() || undefined,
-    phone: v.phone?.trim() || undefined,
-    // email z principu neupravujeme; pokud by bylo třeba, doplníme zde
+    firstName: emptyToNull(values.firstName) as string | null,
+    lastName:  emptyToNull(values.lastName)  as string | null,
+    phone:     emptyToNull(values.phone)     as string | null,
   };
 }
 
-
-// Role-only update
+// Role-only update (vrátí null, pokud není co měnit)
 export function formToUpdateRoleBody(v: any): UpdateMemberRoleRequest | null {
-  const role = (v.companyRole ?? v.role ?? null) as CompanyRoleName | null;
+  const role = (v?.companyRole ?? v?.role ?? null) as CompanyRoleName | null;
   return role ? { role } : null;
 }
 
+/**
+ * Širší admin update (pokud ho někde používáš).
+ * Pro profil používej `formToUpdateProfileBody`,
+ * pro roli `formToUpdateRoleBody`.
+ */
 export function formToUpdateBody(v: any): UpdateMemberRequest {
   return {
-    companyRole: v.companyRole ?? null,
-    projectRolesReplace: Array.isArray(v.projectRoles) ? v.projectRoles : null,
+    companyRole: (v?.companyRole ?? null) as CompanyRoleName | null,
+    projectRolesReplace: Array.isArray(v?.projectRoles) ? v.projectRoles : null,
   };
 }
