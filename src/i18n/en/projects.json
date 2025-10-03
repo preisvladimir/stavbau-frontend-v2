@@ -1,0 +1,11 @@
+{
+  "title": "Projects",
+  "actions": { "newProject": "New project" },
+  "loading": "Loading…",
+  "error": "Failed to load.",
+  "list": {
+    "emptyTitle": "No projects yet",
+    "emptyDesc": "Create your first project.",
+    "actions": { "open": "Clear search", "new": "New project" }
+  }
+}

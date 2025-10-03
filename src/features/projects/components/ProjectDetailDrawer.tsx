@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/stavbau-ui/button';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
 import type { ProjectDto, UUID } from '../api/types';
 import { getProject } from '../api/client';
+import ScopeGuard from '@/features/auth/guards/ScopeGuard';
+import { PROJECT_SCOPES } from '@/features/projects/const/scopes';
 
 export type ProjectDetailDrawerProps = {
   open: boolean;
@@ -79,14 +81,14 @@ export function ProjectDetailDrawer({
       s === 'IN_PROGRESS'
         ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
         : s === 'PLANNED'
-        ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200'
-        : s === 'ON_HOLD'
-        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-        : s === 'DONE'
-        ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
-        : s === 'ARCHIVED'
-        ? 'bg-gray-50 text-gray-500 ring-1 ring-gray-200'
-        : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
+          ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200'
+          : s === 'ON_HOLD'
+            ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+            : s === 'DONE'
+              ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
+              : s === 'ARCHIVED'
+                ? 'bg-gray-50 text-gray-500 ring-1 ring-gray-200'
+                : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
     return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${className}`}>{label}</span>;
   };
 
@@ -111,35 +113,41 @@ export function ProjectDetailDrawer({
       title={t('detail.title', { defaultValue: 'Detail projektu' })}
       headerRight={
         <>
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              {t('detail.actions.edit', { defaultValue: 'Upravit' })}
-            </Button>
-          )}
-          {onArchive && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setConfirmMode('archive');
-                setConfirmOpen(true);
-              }}
-            >
-              {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                setConfirmMode('delete');
-                setConfirmOpen(true);
-              }}
-            >
-              {t('detail.actions.delete', { defaultValue: 'Smazat' })}
-            </Button>
-          )}
+          <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                {t('detail.actions.edit')}
+              </Button>
+            )}
+          </ScopeGuard>
+          <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+            {onArchive && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setConfirmMode('archive');
+                  setConfirmOpen(true);
+                }}
+              >
+                {t('detail.actions.archive')}
+              </Button>
+            )}
+          </ScopeGuard>
+          <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+            {onDelete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setConfirmMode('delete');
+                  setConfirmOpen(true);
+                }}
+              >
+                {t('detail.actions.delete')}
+              </Button>
+            )}
+          </ScopeGuard>
         </>
       }
     >
@@ -166,7 +174,7 @@ export function ProjectDetailDrawer({
             )}
           </div>
 
-          {/* Title + primary info */}
+          {/* Title primary info */}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-lg font-semibold">
@@ -251,33 +259,39 @@ export function ProjectDetailDrawer({
         {/* Footer actions (duplicitně pro pohodlí uživatele) */}
         {(onEdit || onArchive || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-            {onEdit && (
-              <Button variant="outline" onClick={onEdit}>
-                {t('detail.actions.edit', { defaultValue: 'Upravit' })}
-              </Button>
-            )}
-            {onArchive && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setConfirmMode('archive');
-                  setConfirmOpen(true);
-                }}
-              >
-                {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setConfirmMode('delete');
-                  setConfirmOpen(true);
-                }}
-              >
-                {t('detail.actions.delete', { defaultValue: 'Smazat' })}
-              </Button>
-            )}
+             <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+             {onEdit && (
+               <Button variant="outline" onClick={onEdit}>
+                 {t('detail.actions.edit')}
+               </Button>
+             )}
+           </ScopeGuard>
+           <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+             {onArchive && (
+               <Button
+                 variant="secondary"
+                 onClick={() => {
+                   setConfirmMode('archive');
+                   setConfirmOpen(true);
+                 }}
+               >
+                 {t('detail.actions.archive')}
+               </Button>
+             )}
+           </ScopeGuard>
+           <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+             {onDelete && (
+               <Button
+                 variant="destructive"
+                 onClick={() => {
+                   setConfirmMode('delete');
+                   setConfirmOpen(true);
+                 }}
+               >
+                 {t('detail.actions.delete')}
+               </Button>
+             )}
+           </ScopeGuard>
           </div>
         )}
       </div>

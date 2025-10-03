@@ -1,0 +1,11 @@
+{
+  "title": "Projekty",
+  "actions": { "newProject": "Nový projekt" },
+  "loading": "Načítám…",
+  "error": "Chyba načtení.",
+  "list": {
+    "emptyTitle": "Zatím žádné projekty",
+    "emptyDesc": "Přidejte první projekt.",
+    "actions": { "open": "Zrušit hledání", "new": "Nový projekt" }
+  }
+}

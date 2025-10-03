@@ -8,7 +8,7 @@ import cs_auth from "./cs/auth.json";
 import cs_registration from "./cs/registration.json";
 import cs_team from "./cs/team.json";
 import cs_customers from "./cs/customers.json";
-//import cs_projects from "./cs/projects.json";
+import cs_projects from "./cs/projects.json";
 
 import en_common from "./en/common.json";
 import en_errors from "./en/errors.json";
@@ -16,7 +16,7 @@ import en_auth from "./en/auth.json";
 import en_registration from "./en/registration.json";
 import en_team from "./en/team.json";
 import en_customers from "./cs/customers.json";
-//import en_projects from "./en/projects.json";
+import en_projects from "./en/projects.json";
 
 const resources = {
   cs: {
@@ -26,7 +26,7 @@ const resources = {
     registration: cs_registration,
     team: cs_team,
     customers: cs_customers,
-    //projects: cs_projects,
+    projects: cs_projects,
   },
   en: {
     common: en_common,
@@ -35,7 +35,7 @@ const resources = {
     registration: en_registration,
     team: en_team,
     customers: en_customers,
-    //projects: en_projects,
+    projects: en_projects,
   },
 } as const;
 

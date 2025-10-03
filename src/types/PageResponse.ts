@@ -4,6 +4,9 @@ export type PageResponse<T> = {
   page: number; // always present (client doplní fallback)
   size: number; // always present (client doplní fallback)
   total: number; // always present (client doplní fallback)
+  content: T[];
+  number: number;
+  totalElements: number;
 };
 
 

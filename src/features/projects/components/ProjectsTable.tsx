@@ -17,6 +17,8 @@ export type ProjectsTableProps = {
   onRowClick?: (p: ProjectSummaryDto) => void;
   rowActions?: (p: ProjectSummaryDto) => React.ReactNode;
   emptyContent?: React.ReactNode;
+ canCreate?: boolean;
+ onOpenCreate?: () => void;
 };
 
 export function ProjectsTable({
@@ -32,6 +34,8 @@ export function ProjectsTable({
   onRowClick,
   rowActions,
   emptyContent,
+ canCreate = false,
+ onOpenCreate 
 }: ProjectsTableProps) {
   const { t } = useTranslation(i18nNamespaces);
 
