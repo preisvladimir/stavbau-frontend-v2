@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/stavbau-ui/button";
 import { DensitySelect } from "@/components/ui/stavbau-ui/datatable/density-select";
 import { ColumnVisibilityMenu } from '@/components/ui/stavbau-ui/column-visibility';
 import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
-import { X } from "@/components/icons";
+import { X, ChevronLeft, ChevronRight } from "@/components/icons";
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
 import { sbCardBase, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
@@ -450,18 +450,18 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </tbody>
           </table>
 
-      {/* Overlay načítání – zachová stará data, zamezí klikům; bez probliknutí */}
-      {showOverlay && (
-        <div
-          aria-live="polite"
-          className="absolute inset-0 z-10 grid place-items-center bg-[rgb(var(--sb-surface))]/60 backdrop-blur-[1px]"
-        >
-          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
-            <span>{tt('datatable.loading', { defaultValue: 'Načítám…' })}</span>
-          </div>
-        </div>
-      )}          
+          {/* Overlay načítání – zachová stará data, zamezí klikům; bez probliknutí */}
+          {showOverlay && (
+            <div
+              aria-live="polite"
+              className="absolute inset-0 z-10 grid place-items-center bg-[rgb(var(--sb-surface))]/60 backdrop-blur-[1px]"
+            >
+              <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+                <span>{tt('datatable.loading', { defaultValue: 'Načítám…' })}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -469,36 +469,71 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
       {props.showPager !== false && api.pageCount > 1 && (
         <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
           <div aria-live="polite">
-            Stránka {api.page} / {api.pageCount} • Záznamů: {api.total}
+            {tt('datatable.pageIndicator', {
+              defaultValue: 'Stránka {{p}} / {{c}} • Záznamů: {{n}}',
+              p: api.page, c: api.pageCount, n: api.total
+            })}
           </div>
-          <div className="inline-flex items-center gap-2">
-            <button
-              type="button"
-              className={cn(
-                'px-3 py-1 rounded border',
-                api.canPrevPage ? 'hover:bg-muted' : 'opacity-50 cursor-not-allowed'
-              )}
+
+          {/* Navigace: mobil = jen šipky; md+ = šipky + čísla */}
+          <nav className="inline-flex items-center gap-1" aria-label={tt('datatable.pagination', { defaultValue: 'Stránkování' })}>
+            <Button
+              size="sm"
+              variant="outline"
+              leftIcon={<ChevronLeft className="h-4 w-4" />}
               onClick={() => api.prevPage()}
               disabled={!api.canPrevPage}
-              aria-label="Předchozí stránka"
+              ariaLabel={tt('datatable.prev', { defaultValue: 'Předchozí stránka' })}
               aria-controls={tableId}
-            >
-              Předchozí
-            </button>
-            <button
-              type="button"
-              className={cn(
-                'px-3 py-1 rounded border',
-                api.canNextPage ? 'hover:bg-muted' : 'opacity-50 cursor-not-allowed'
-              )}
+            />
+
+            {/* Číselné stránky jen na md+ (na mobilu šetříme místo) */}
+            <div className="hidden md:flex items-center gap-1">
+              {(() => {
+                const pages: (number | '…')[] = [];
+                const cur = api.page;
+                const max = api.pageCount;
+                const push = (v: number | '…') => pages.push(v);
+                if (max <= 7) {
+                  for (let i = 1; i <= max; i++) push(i);
+                } else {
+                  push(1);
+                  if (cur > 3) push('…');
+                  const start = Math.max(2, cur - 1);
+                  const end = Math.min(max - 1, cur + 1);
+                  for (let i = start; i <= end; i++) push(i);
+                  if (cur < max - 2) push('…');
+                  push(max);
+                }
+                return pages.map((p, idx) =>
+                  p === '…' ? (
+                    <span key={`dots-${idx}`} className="px-1 text-foreground/60 select-none">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant={p === cur ? 'outlinegreen' : 'outline'}
+                      onClick={() => api.gotoPage(p)}
+                      aria-current={p === cur ? 'page' : undefined}
+                      aria-label={tt('datatable.pageN', { defaultValue: 'Stránka {{n}}', n: p })}
+                    >
+                      {p}
+                    </Button>
+                  )
+                );
+              })()}
+            </div>
+
+            <Button
+              size="sm"
+              variant="outline"
+              rightIcon={<ChevronRight className="h-4 w-4" />}
               onClick={() => api.nextPage()}
               disabled={!api.canNextPage}
-              aria-label="Další stránka"
+              ariaLabel={tt('datatable.next', { defaultValue: 'Další stránka' })}
               aria-controls={tableId}
-            >
-              Další
-            </button>
-          </div>
+            />
+          </nav>
         </div>
       )}
     </div>

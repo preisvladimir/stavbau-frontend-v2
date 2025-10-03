@@ -11,7 +11,7 @@ export { Home, FolderKanban, LayoutDashboard, Folder, PlusCircle, Users, FileTex
 export { AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 // Misc
-export { Settings, Globe, Languages, Mail, Shield, Plus, Search, X, IdCard, Building2 } from "lucide-react";
+export { Settings, Globe, Languages, Mail, Shield, Plus, Search, X, IdCard, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Actions
 export { Pencil, User, Trash2, UserPlus } from "lucide-react";

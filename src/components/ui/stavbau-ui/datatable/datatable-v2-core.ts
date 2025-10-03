@@ -233,6 +233,12 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     prevPage: () => table.previousPage(),
     canNextPage: table.getCanNextPage(),
     canPrevPage: table.getCanPreviousPage(),
+    /** Přímý skok na stránku (1-based). Ořízne mimo rozsah 1..pageCount. */
+    gotoPage: (p: number) => {
+      const safe = Math.max(1, Math.min(p, pageCount));
+      table.setPageIndex(safe - 1); // TanStack používá 0-based index
+    },
+      
   };
 
   // ← NEW helper: úplný reset toolbar stavů

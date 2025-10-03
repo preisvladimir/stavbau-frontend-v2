@@ -679,3 +679,542 @@ RBAC FE: centralizovat mapování scopů → UI capabilities.
 - Merge PR do main a ověřit `npm ci && npm run dev`.
 - Nastavit branch protection na main.
 - Založit `feature/datatable-v2` a doručit PR 1 (TanStack wrapper) izolovaně od runtime.
+
+## ✅ HOTOVO – 23. 9. 2025
+- Test stack: doinstalován vitest@^3, jsdom@^25, vite-tsconfig-paths@^5.
+- tsconfig.types doplněn o "vitest/globals"; restart TS serveru.
+
+## ▶️ TODO
+- Spustit `npx vitest` (ověřit).
+- Poté PR 1 (DataTableV2 shell) + mini test.
+
+## ✅ HOTOVO – 22. 9. 2025
+- FE – DataTable v2 (PR 1 restart): Přidán bezpečný shell nad @tanstack/react-table.
+    - Bez i18n/MSW, bez dopadu na běh appky.
+    - Základní test (render/skeleton/rows).
+    - Node & CI sjednocení, lockfile regenerován, testy OK.
+
+## ▶️ TODO
+- PR 2 – Sorting (controlled/uncontrolled) + a11y (aria-sort).
+- PR 3 – Paging (server/client) + Pager.
+- PR 4 – Toolbar (search, visibility, density, i18n klíče).
+- PR 5 – Row actions slot + příklad integrace (TeamPage).
+
+## ✅ HOTOVO – 23. 9. 2025
+- DataTableV2 PR2: opraveno volání toggleSorting (shift předáván jako multi, ne desc).
+- Test `datatable-v2.sort.spec.tsx` prochází (aria-sort cyklus OK).
+
+## ▶️ TODO
+- PR 3 – Paging (server/client) + Pager komponenta + testy.
+
+## ✅ HOTOVO – 23. 9. 2025
+- FE – DataTableV2 (PR 3): Paging (client/server), pager UI, a11y.
+- Testy: client paging (2/strana, navigace), controlled režim (onPageChange + rerender).
+
+## ▶️ TODO
+- PR 4 – Toolbar: search, column visibility, density; připravit i18n klíče.
+
+## ✅ HOTOVO – 23. 9. 2025
+- FE – DataTableV2 (PR 4): Toolbar (search state, column visibility, density).
+- i18n: přidány klíče common.datatable.* (cs/en).
+- Testy: visibility toggle, density toggle.
+
+## ▶️ TODO
+- PR 4.1 – Toolbar pokračování: page size selector (5/10/20), reset filtrů, export CSV (volitelné).
+- PR 5 – Row actions slot + integrace v TeamPage.
+
+## ✅ HOTOVO – 23. 9. 2025
+- FE – DataTableV2 (PR 4.1): page size selector (5/10/20) + Reset filtrů.
+- Testy: page size (client/server), reset stavů.
+
+## ▶️ TODO
+- PR 5 – Row actions slot + integrace (TeamPage).
+- PR X – (volitelně) export CSV v Toolbaru.
+
+## ▶️ TODO
+- PR 5 – Row actions slot + integrace v TeamPage (guardy, a11y).
+
+## ✅ HOTOVO – 23. 9. 2025
+- FE: TeamPageV2 – plná integrace DataTableV2 (toolbar, client paging, row actions).
+
+## ▶️ TODO (další PR)
+- PR 6: per-row async stav (spinner/disable) sjednotit přes helper (useAsyncAction) + toast pattern.
+- PR 7: server-side režim (page, sort, filters) napojit na TeamService.list s query parametry.
+- PR 8: přepnout column visibility trigger z <details>/<summary> na <button> + popover (lepší a11y).
+
+## ✅ HOTOVO – DataTableV2 theme toggle
+- props: variant: 'surface' | 'plain' (default 'plain')
+- props: className: string
+- shell aplikuje variantu na wrapper (card/border/zebra pro 'surface')
+
+## ✅ HOTOVO – DataTableV2 Toolbar: SearchInput (preset v1)
+- Nahrazen plain <input> → <SearchInput /> z UI kitu
+- A11y: ariaLabel, placeholder (i18n-ready)
+- Vizuál: v1 preset = shoda s původním vzhledem
+
+## ✅ HOTOVO – UI Select (native)
+- Nová komponenta <Select /> v stavbau-ui (a11y-first, mobile-friendly).
+- API: value/defaultValue/onChange, options|children, size, variant, icons, error/helper.
+- Integrace: DataTableV2 Toolbar – „Počet na stránku“ používá <Select />.
+
+## ▶️ FUTURE
+- Volitelná „listbox“ varianta (custom popover) pro speciální případy.
+- Virt. dlouhých seznamů (do 1k+ položek) – až bude potřeba.
+- label/description props přímo v Select (interní <label>)
+
+## ✅ HOTOVO — DataTableV2 (23. 9. 2025)
+
+### Funkcionalita
+- **Základní shell**
+    - Plně typovaná generická komponenta `DataTableV2<T>`
+    - Podpora variant vzhledu: `plain` a `surface`
+    - Responsivní chování, konzistentní design se zbytkem `stavbau-ui`
+
+- **Toolbar**
+    - 🔍 **SearchInput** (náš vlastní) s i18n texty
+    - 👁 **ColumnVisibilityMenu** s podporou variant (`details`/`popover`)
+    - 🔢 **PageSize Select** – počet záznamů na stránku (napojený na náš `Select`)
+    - 📏 **DensitySelect** – výběr hustoty řádků (`compact`, `cozy`, `comfortable`)
+    - 🔄 **Reset filters** tlačítko (resetuje stav tabulky)
+    - 📊 Indikátor stránky `p / c`
+
+- **Hlavní tabulka**
+    - Sorting (cyklus none → asc → desc, shift-click = multi-sort)
+    - Paging (`page`, `pageSize`, `pageCount`, prev/next)
+    - Row click handler (`onRowClick`)
+    - Slot pro **rowActions** (např. ikony pro editaci/smazání)
+    - EmptyState (včetně i18n textů)
+    - Skeleton loading stavy
+
+- **UX / i18n**
+    - Všechny texty přes `react-i18next` (`common.json`)
+    - Přístupnost: aria atributy (`aria-sort`, `aria-label`, `aria-live`)
+    - Testy: unit testy pro shell, sorting, toolbar, actions
+
+---
+
+## 🛠️ FUTURE — DataTableV2
+
+- [ ] **Server-side režim** (props `manualSorting`, `manualPaging`, API integrace)
+- [ ] **Persistované preference uživatele** (uložení sloupců/density/pageSize do localStorage nebo BE)
+- [ ] **Exporty** (CSV, XLSX, PDF)
+- [ ] **Drag & drop reordering** sloupců
+- [ ] **Inline editace buněk** (RHF + validace)
+- [ ] **Filtrace per-column** (dropdowny, datumové range, multiselect)
+- [ ] **Virtualizace řádků** (pro velké datasety)
+- [ ] **Dark mode ladění** (ověřit kontrasty pro všechny varianty)
+
+## 🟨 TODO — DataTableV2 – Responsive (Hybrid)
+
+**Cíl:** Přidat responzivní vzhled DataTableV2 bez změny funkčnosti:
+- `<md` (mobil): stacked cards (Title, Subtitle, 3–5 detailů, akce).
+- `md–lg`: scrollable tabulka se sticky klíčovými sloupci.
+- `≥lg`: beze změny (plná tabulka).
+
+**Step Plan:**
+1) API pro “card fields” (bez UI změn)
+    - Sloupce: `priority`, `isTitle`, `isSubtitle`, `mobileHidden`, `formatter`.
+
+2) `<md` Stacked cards (MVP)
+    - `<DataRowCard />`: `rounded-2xl shadow-sm border p-3 space-y-2`.
+    - “Zobrazit více” pro zbytek sloupců; akce v kebabu/patičce.
+
+3) `md–lg` Scrollable table + sticky
+    - `overflow-x-auto`, `min-w-*`; sticky 1–2 klíčové sloupce (left), volitelně akce (right).
+
+4) Polishing & A11y
+    - Focus ringy, `aria-label` u ikon, `aria-expanded` u “Zobrazit více”, `line-clamp`.
+
+5) Dokumentace & usage guidelines
+    - README: značení `isTitle`, `priority`, `mobileHidden`, příklady.
+
+6) Kontrola konzistence (stavbau-ui)
+    - Radius, spacing, stíny, barvy; srovnat s dalšími list komponentami.
+
+**Akceptační kritéria:**
+- Mobil bez horizontálního scrollu; čitelné karty (nezalamují layout).
+- `md–lg` přirozený H-scroll + viditelné klíčové informace (sticky).
+- `≥lg` beze změny.
+- Přístupnost (tab stop pořadí, kontrast) a výkon (100+ řádků OK).
+
+**Test Plan:**
+- Zařízení: iPhone SE/13 Pro Max, Pixel 5/7, iPad mini, 1280/1440 px.
+- Interakce: akční menu, multi-select, empty/loading/error.
+- A11y: ARIA popisky, focus ringy.
+- Výkon: dlouhé seznamy (chunking/virtualizace pokud zapnuta).
+
+**Rollback:** `responsiveMode="off"` vrátí původní chování.
+
+**Poznámky:**
+- PR dělit do malých kroků (~200 LOC).
+- Po každém merge přidat checkpoint do této časové osy.
+
+## ✅ 2025-09-24 — DataTableV2 Responsive (komplet Step 1–6/6.1)
+
+Kompletně dokončena responzivní varianta DataTableV2 (Hybrid) + zapojení do TeamPageV2.
+
+### 🔹 Step 1/6 — API pro card fields
+- Přidána module augmentation `columnDef.meta.stbMobile` pro TanStack Table.
+- Typy: `isTitle`, `isSubtitle`, `priority`, `mobileHidden`, `formatter`.
+- Žádná změna UI (jen příprava).
+
+### 🔹 Step 2/6 — `<md` Stacked cards (MVP)
+- Nová komponenta `<DataRowCard />` pro mobilní layout.
+- Title + Subtitle + 3–5 detailů, akce vpravo.
+- “Zobrazit více” pro rozbalení dalších polí.
+
+### 🔹 Step 3/6 — `md–lg` scrollable + sticky
+- Tabulka na středních breakpointech scrollovatelná (`overflow-x-auto`).
+- Sticky vlevo = Title, sticky vpravo = Akce.
+- ≥lg: plná tabulka, beze změny.
+
+### 🔹 Step 4/6 — Polishing & A11y
+- Přidány `aria-labelledby`, `aria-controls`, focus ringy, role="list/listitem".
+- `motion-safe:animate-pulse` skeletony, `break-words` pro dlouhé texty.
+- Pager propojen s tabulkou (`aria-controls`).
+
+### 🔹 Step 5/6 — Dokumentace & usage guidelines
+- Vytvořen `README.md` pro DataTableV2.
+- Popsány breakpoints, metadata, props, příklady použití.
+- Sekce A11y + doporučení pro vývojáře.
+
+### 🔹 Step 6/6 — Kontrola konzistence (stavbau-ui)
+- Přidán `tokens.ts` pro designové utility (`sbCardBase`, `sbDivider`, `sbFocusRing`).
+- DataRowCard + DataTableV2 přepnuty na tyto utility.
+- Sjednocen radius, spacing, hover, focus a barvy s ostatními komponentami.
+
+### 🔹 Step 6/6.1 — TeamPage wired up
+- `TeamPageV2` aktualizována na využití `stbMobile`.
+- Mobilní karty: Title = jméno, Subtitle = e-mail, detaily = role + telefon.
+- Avatar na mobilu skryt (`mobileHidden: true`).
+- Desktop/střední breakpoints beze změny.
+
+---
+
+✅ DataTableV2 je nyní plně responzivní, konzistentní s `stavbau-ui` a nasazená v TeamPageV2.
+
+### ✅ 2025-09-25 — TeamPageV2 – i18nNamespaces wired
+- Do `TeamPageV2` doplněn prop `i18nNamespaces={['team','common']}` pro `DataTableV2`.
+- Překlady mobilních karet (labely + hodnoty) nyní používají správný namespace stránky.
+- Varianta připravená i pro další moduly (`invoices`, `files`, `deník`…), kde stačí předat odpovídající namespaces.
+
+### ✅ 2025-09-26 — DataTableV2 – Responsive & Enterprise UX
+- Dokončen plný **responsive hybrid režim**:
+    - `<md` → karty (stacked, s přeloženými labely a actions kapslí).
+    - `md–lg` → tabulka se stránkováním + filtrováním (bez hustoty).
+    - `lg+` → plná tabulka s hustotou, sticky headerem a enterprise vzhledem.
+- Přidány `i18nNamespaces` → překlady labelů a hodnot v kartách fungují modulárně (Team, Invoices, Files, …).
+- Toolbar: mobile-first přístup (search + reset na mobilech, ostatní jen od `md`).
+- Sticky header od `lg+`, blur background → lepší čitelnost při scrollu.
+- `densityClasses` refaktorované: mobile-first, od `lg` kompaktnější (více řádků na obrazovku).
+- Max-width container (`sbContainer`) pro `md+` → obsah vycentrovaný, na 1440/2560 nepůsobí roztahaně.
+- Mobile ergonomie:
+    - menší padding (`p-3` na `<sm`).
+    - labely menší (`text-xs`).
+    - akční tlačítka sjednocena do kapsle + min. tap target `36×36`.
+
+---
+
+### 🔮 FUTURE (možné vylepšení DataTableV2)
+- **Column pinning / freeze** (sticky první sloupec při horizontálním scrollu).
+- **Row expansion** (detail řádku rozkliknutelný přímo v tabulce).
+- **Inline edit** pro vybrané sloupce.
+- **Persistent user prefs** – uložit výběr sloupců, hustotu, velikost stránky do localStorage / profilu.
+- **Virtualizace** (pro tisíce záznamů → výkon).
+- **Skeleton loaders** – propracovanější placeholdery, které kopírují strukturu sloupců.
+- **A11y enhancements** – např. voiceover-friendly labely u action buttons (už částečně hotovo).
+- **Dark mode tuning** – jemné kontrasty u borderů, muted background.
+
+
+## [2025-09-26] Zavedení Customer (invoices)
+- ROZHODNUTO: Customer = samostatná doména v `invoices` (ne Member), dědí z BaseEntity, company-scoped.
+- RBAC: invoices:read|create|update|delete na CustomersController.
+- Faktury: FK `customer_id` + snapshot údajů odběratele v Invoice.
+- API: /api/v1/customers (list/search, create, get, patch, delete).
+
+TODO (MVP):
+- Vxx__invoices_customers.sql (+ FK v invoices).
+- Model/DTO/Mapper/Repo/Service/Web + testy.
+- Napojení snapshotu v InvoiceService, OpenAPI tag.
+
+FUTURE:
+- CRM-lite „partners“ (kontakt. osoby, tagy), onboarding klienta (linkedUserId + ProjectMember role=CLIENT).
+- ARES prefill zákazníků.
+
+## [2025-09-26] Customer skeleton (invoices)
+HOTOVO: Entity, Repo, DTO, Mapper, Service(+Impl), Controller s RBAC a PageResponse, bez UI.
+TODO: Specifikace pro fulltext (Specifications), validační i18n messages, integrační test create→invoice snapshot.
+FUTURE: Soft delete; CRM-lite (contacts, tags); ARES prefill; client portal (linkedUserId).
+
+## [2025-09-26] Customers & RBAC – stav po integraci
+
+### HOTOVO
+- **DB migrace (Invoices/Customers)**
+    - Tabulka `customers` (company-scoped), indexy (`company_id`, `ico`) a bezpečný **fulltext index** na `name`:
+        - primárně `GIN (gin_trgm_ops)` při dostupném **pg_trgm**,
+        - fallback `btree(lower(name))` bez rozšíření.
+    - `invoices` rozšířeno o `customer_id` (FK → `customers`, **ON DELETE SET NULL**) a **snapshot** pole `buyer_*` (name/ico/dic/email/address).
+    - Opraveno přidání FK (PostgreSQL neumí `ADD CONSTRAINT IF NOT EXISTS` → **DO $$** guard).
+- **Common**
+    - `BaseEntity` již používaná; doplněn **`CompanyScoped` (interface)** s `getCompanyId()/setCompanyId()`.
+    - Přidán univerzální **`PageResponse<T>`** (Page wrapper pro REST).
+- **Invoices / Customers – BE skeleton**
+    - `Customer` **extends `BaseEntity` implements `CompanyScoped`**.
+    - Repository (`CustomerRepository`), DTO (`CustomerDto`, `CustomerSummaryDto`, `Create*/Update*`), MapStruct `CustomerMapper`.
+    - Service + Impl (`CustomerService*`) s **tenancy guardem** a základním fulltextem.
+    - Controller `CustomersController`:
+        - endpointy **/api/v1/customers**: list, get, create(201), patch, delete(204),
+        - **RBAC**: zatím `INVOICES_*` (+ meta `INVOICES_WRITE`),
+        - **OpenAPI**: `@Operation`, `@ApiResponses`, **tag `Customers`** (odděleně od Invoices).
+- **RBAC – Scopes & Roles**
+    - Rozšířený **katalog scopes** pro fakturaci (invoices, customers, lines, series, payments, dunning, settings, integration, VAT, reports, templates, webhooks, e-invoicing).
+    - **Payments**: doplněn meta-scope `payments:write` + agregace.
+    - **BuiltInRoles**: smysluplné agregace pro všechny `CompanyRoleName` (OWNER, COMPANY_ADMIN, ACCOUNTANT, …).
+    - Fix: `HR_MANAGER_BASE` – `ADMIN_USERS_READ` zabalen do `of(...)` (typová korekce).
+- **Aplikace startuje** (migrace OK: pg_trgm fallback + DO $$ guardy).
+
+---
+
+### TODO (MVP – další PRy)
+- **Testy**
+    - `@DataJpaTest` pro `CustomerRepository` (tenancy + fulltext).
+    - `@WebMvcTest` pro `CustomersController` (200/201/204, 401/403/404/409).
+    - `@SpringBootTest` integrační: `createInvoice(customerId)` → zapisuje snapshot `buyer_*` a drží `customer_id`.
+- **InvoiceService**
+    - Implementovat vytvoření faktury z `customerId` (prefill + snapshot), validace existence v rámci `companyId`.
+- **Vyhledávání**
+    - Přidat `Specification` (name/ico/dic) s `lower(...)` kompatibilní s oběma indexy (trgm/btree).
+- **Validace & i18n**
+    - IČO/DIČ validátory; i18n klíče (`customer.*`, konflikty typu `ico.exists`).
+- **RBAC anotace & FE toggly**
+    - Nechat Customers zatím na `INVOICES_*`; připravit přepnutí na `CUSTOMERS_*` (bez změny FE).
+    - FE: přidat toggly pro nové scopy (payments, series, dunning…).
+- **OpenAPI**
+    - Zkontrolovat název security schématu (default `bearerAuth`); přidat příklady odpovědí u list/detail.
+
+---
+
+### FUTURE (beze zlomů veřejného API)
+- **Split Customers → `customers:*`** v kontrolerech (granulárnější řízení), BE už připraveno.
+- **CRM-lite „partners“**: rozšíření Customers (kontaktní osoby, více adres, tagy); zachovat `Invoice.customerId`.
+- **Klientský portál**
+    - Endpoint `POST /customers/{id}/link-user/{userId}` (role `CLIENT` jako `ProjectMember`).
+- **Import/Export & Suggest**
+    - `POST /customers/import` (CSV/XLSX/JSON), `GET /customers/export`, `GET /customers/suggest?q=`.
+- **Soft delete** pro Customers (auditori, historie), politiky kolizí s FK.
+- **ARES/VIES**: prefill/ověření IČO/DIČ.
+- **Finance PRO**
+    - Proformy, dobropisy, **recurring**, nákupní faktury, ceníky/katalog, bankovní výpisy & párování,
+    - e-invoicing (ISDOC/Peppol), platební brány, VAT reporty, reporting.
+
+---
+
+### PR/Repo poznámky
+- Dodržet **small PRs (~200 LOC)**, Conventional Commits.
+- Po každém PR: aktualizovat tento soubor (sekce HOTOVO/TODO), `CHANGELOG.md`, štítky a sprint odkaz.
+
+
+## [2025-09-27] [MVP] Customers – PR 1/6 (FE)
+**HOTOVO**
+- Základ modulu Customers (list): route `/app/customers`, debounced search (`q`), stránkování (`page`,`size`), RBAC guard (`invoices:read`).
+- API klient: `listCustomers`, `getCustomer`; DTO typy včetně `PageResponse`.
+
+**TODO (další PR)**
+- Detail drawer + `getCustomer` napojení (PR 2/6).
+- Create/Edit form (RHF+Zod), validace IČO/DIČ (PR 3/6).
+- Delete flow s potvrzením (PR 4/6).
+- i18n rozšíření + RBAC toggly pro akce (PR 5/6).
+- Testy (unit/RTL/E2E) + contract check PageResponse (PR 6/6).
+
+**FUTURE**
+- Server-side sorting & advanced filtry.
+- Import/Export, napojení na ARES suggest.
+- Přepnutí scopes z `invoices:*` na `customers:*` pouhou změnou mapy.
+
+## [2025-09-27] [MVP] Customers – PR 2/6 (FE)
+**HOTOVO**
+- Detail zákazníka jako inline drawer nad listem.
+- Deep-link routa `/app/customers/:id` (sdílí stránku listu kvůli kontextu).
+- `getCustomer()` + `CustomerDto`, mapování chyb (RFC7807), RBAC READ guard.
+
+**TODO (další PR)**
+- Create/Edit `CustomerForm` + validace IČO/DIČ (PR 3/6).
+- Delete flow s potvrzením (PR 4/6).
+- i18n doplnění textů a RBAC toggly pro akce (PR 5/6).
+- Testy (unit/RTL/E2E) + contract check (PR 6/6).
+
+**FUTURE**
+- Server-side sorting + další filtry (město, IČO).
+- Import/Export, ARES suggest, LinkUser.
+- Přepnutí z `invoices:*` na `customers:*` jen úpravou mapy.
+
+## [2025-09-27] [MVP] Customers – PR 3/6 (FE)
+**HOTOVO**
+- CustomerForm (RHF+Zod) s validací IČO/DIČ (CZ).
+- CustomerFormDrawer pro create/edit, napojení na API (POST/PATCH).
+- „Nový“ na listu s RBAC CREATE, route `/app/customers/new`.
+
+**TODO (další PR)**
+- Delete flow + potvrzení (PR 4/6).
+- i18n doplnění tooltipů pro RBAC toggly + disable stavy (PR 5/6).
+- Testy (unit: validátory, form; RTL: render & submit; E2E: create→edit) (PR 6/6).
+
+**FUTURE**
+- Validace DIČ pro další státy (EU VAT).
+- ARES suggest/autofill, Import/Export.
+
+## ✅ HOTOVO — 2025-09-27 — PR#1 FE+BE Address/Contact unifikace (MVP)
+- Přidán kanonický `Address` (common/domain), `AddressDto` (common/api/dto),
+  `AddressMapper` (common/mapping) a `AddressJsonConverter` (common/persistence).
+- Unit test: round-trip JSON → objekt → JSON (AddressJsonConverterTest).
+- Žádné změny existujících entit, žádná DB migrace.
+
+### 🔜 TODO (PR#2)
+- Refactor Customers: nahradit `billingAddressJson:String` → `Address` (JSONB) v entitě,
+  DTO a mapper + migrační skript (pokud bude třeba převod legacy dat).
+- Doplňkové testy: @DataJpaTest se skutečným JSONB sloupcem (Testcontainers).
+
+### 💡 FUTURE
+- Normalizační helper (např. formátování `formatted`, PSČ, house/orientation merge).
+- Integrace s Geo (Mapy.cz) a ARES mappery do `Address`.
+- Lokalizační labely typů adres (fakturace/dodání) pro moduly Invoices/Customers.
+
+## ✅ HOTOVO — 2025-09-27 — PR#2 Customers → Address JSONB (typed)
+- Customer: přidán `billing_address` (JSONB) + mapování na `Address`.
+- DTO: `billingAddress` (AddressDto) + ponechán deprecated `billingAddressJson` pro přechod FE.
+- Migrace: přidán sloupec a best-effort naplnění z legacy textu (bez dropu).
+- Test: @DataJpaTest – round-trip JSONB.
+- Removed entity legacy field; legacy JSON emulated in DTO mapping
+
+### 🔜 TODO (PR#3)
+- Odstranění `billingAddressJson` (sloupec + DTO) po úpravě FE.
+- Doplňkové validační/normalizační helpery pro Address (PSČ, formatted).
+- Integrační testy s REST (WebMvcTest) + contract test FE/BE.
+
+### 💡 FUTURE
+- Unified „address kind“ (billing/shipping/registered) + labely (i18n).
+- Reuse Address pro další moduly (Projects sites, Company registered address).
+
+### ✅ 2025-10-01 – 🟢 Modul Team – Skeleton + FE/BE integrace
+
+## ✅ HOTOVO
+- FE skeleton modulu **Team**:
+    - `api/client.ts` – CRUD funkce + `updateMemberProfile`, `updateMemberRole`, `getMembersStats`
+    - `api/types.ts` – sjednocené DTO (`MemberDto`, `MemberSummaryDto`, `MembersStatsDto`, requesty)
+    - `components/TeamTable.tsx` – integrace s `DataTableV2`, RBAC row actions
+    - `components/TeamForm.tsx` – validace přes Zod schémata, props `lockCompanyRole`, `lockReasonKey`
+    - `components/TeamFormDrawer.tsx` – načítání detailu (`getMember`), integrace `useMembersStats`, `safeOnSubmit` s kontrolou posledního OWNERa
+    - `components/TeamDetailDrawer.tsx` – profesionální preview člena (připraveno na rozšíření o avatar, adresy)
+    - `pages/TeamPage.tsx` – integrace všech částí (list, create, edit, detail), FAB, empty states, i18n
+    - `validation/schemas.ts` – `MemberSchema`, typ `AnyTeamFormValues`
+- Vytvořen hook `useMembersStats` – načítá data z BE endpointu (počty členů, validace posledního OWNERa).
+- Vytvořen **prompt** pro BE endpoint `GET /tenants/{companyId}/members/stats` (DTO + návrh implementace).
+- UI kit: rozšířený `Button` (varianty `xs`, `fab`, decentní destructive variant).
+- Upraveny empty/error/loading stavy v `TeamPage` → používají stavbau-ui a i18n.
+- Refaktoring `TeamForm` a `TeamFormDrawer` – podpora uzamčení změny role, hlášky přes i18n.
+
+## 🟡 TODO
+- FE:
+    - Rozšířit `TeamDetailDrawer` o profilový obrázek, trvalou a doručovací adresu.
+    - Doplnit unit/integration testy pro `TeamTable`, `TeamForm`, `useMembersStats`.
+    - Přidat contract testy pro `getMembersStats` (mock server).
+- BE:
+    - Implementovat endpoint `GET /api/v1/tenants/{companyId}/members/stats` dle připraveného promptu.
+    - Pokrýt integračními testy (počty ownerů, invited, disabled, total).
+- Governance:
+    - Vytvořit PR: `feat(team): add members stats endpoint`.
+    - Po nasazení aktualizovat i18n klíče (`errors.lastOwner`, `detail.*`).
+- UX:
+    - Vylepšit FAB a row actions pro mobilní zobrazení.
+    - Přidat toast/notifikace po úspěšném create/edit/delete člena.
+
+## 🕒 FUTURE
+- Integrovat adresy (Registered + Delivery) do profilu člena (FE + BE).
+- Podpora avatarů přes file upload (profile picture).
+- Statistiky v dashboardu firmy (počty aktivních členů, invited apod. na hlavní stránce).
+- Konsolidace validace mezi FE a BE (Zod ↔ Bean Validation).
+- Hotový základ pro další rozšiřování profilu (CompanyMember) člena (adresy, avatar).
+
+### ✅ 2025-10-01 – BE: Members stats endpoint (Team)
+- Přidán endpoint `GET /api/v1/tenants/{companyId}/members/stats`
+- RBAC: vyžaduje `team:read`
+- Vrací: `{ owners, active, invited, disabled, total }` (company-scoped)
+- Implementace: DTO + repo agregace (COUNT/CASE) + service + controller
+- Testy: WebMvcTest (403/200), DataJpaTest (agregace)
+
+**TODO (next):**
+- Validovat/zarovnat `status` pole v `CompanyMember` (ACTIVE/INVITED/DISABLED) – sjednotit enum.
+- (Volit.) cache krátkým TTL (Caffeine) pro velké firmy.
+- (Volit.) rozšířit o další metriky (např. počet podle projektové role).
+
+**FUTURE:**
+- Admin náhled: stats napříč více firmami (jen pro SUPERADMIN).
+
+### 🕒 Milník – 2025-10-01
+Dokončen skeleton FE modulu **Team** (list, detail, form, drawery, RBAC, validace, i18n, hook `useMembersStats`).  
+Připraven prompt pro BE endpoint `GET /members/stats`.  
+Hotový základ pro další rozšiřování profilu člena (adresy, avatar).  
+
+## 🕒 Milník 2025-10-03
+
+### Hotovo
+- Upraven `TeamForm` tak, aby podporoval `resetAfterSubmit` (výchozí true pro `create`, false pro `edit`).
+- Přidán `key` na komponentu `TeamForm` (`${mode}-${memberId}`) → správný remount při změně módu nebo člena.
+- Doplněn cleanup `prefill` při zavření `TeamFormDrawer` → žádná stará data při znovuotevření.
+- Ošetřen lokální error nad formulářem a sjednoceno chování při submitu.
+- Formulář se nyní korektně resetuje po úspěšném vytvoření člena (create), zatímco v editu zachovává hodnoty.
+
+### TODO
+- Rozšířit validace (např. phone pattern, volitelné další pole).
+- Přidat loading stavy do submit tlačítka (`isLoading`) v `TeamForm`.
+- Otestovat více edge-case scénářů (cancel během editace, zavření šuplíku při pending submit).
+
+### Future
+- Připravit jednotnou logiku pro validaci unikátnosti emailu už na FE (např. async validator).
+- Rozšířit `TeamForm` o adresy (permanentní/doručovací) až BE endpoint bude připraven.
+
+### ✅ 2025-10-02 – BE:  PR 1/4 – Projects: DB & model (MVP)
+- Přidány tabulky: `projects`, `project_translations`, `project_members` (Flyway).
+- Vytvořeny entity: Project, ProjectTranslation, ProjectMember (+ repo vrstvy).
+- Přidán enum ProjectRoleName (PROJECT_MANAGER, SITE_MANAGER, QUANTITY_SURVEYOR, MEMBER, VIEWER).
+- Dodržena modularita by-feature, i18n translation table, připraveno na RBAC 2.1 projektové role.
+- Bez změn API (service/REST naváže v PR 2/4 a 3/4).
+
+### ▶ TODO next
+- PR 2/4: `ProjectService` + MapStruct mapper (DTO, i18n fallback, tenancy guard).
+- PR 3/4: `ProjectController` + RBAC anotace (`projects:read|create|update|delete|assign`).
+- PR 4/4: FE skeleton (list + create) s DataTableV2.
+
+### ✅ 2025-10-02 – BE: PR 2/4 – doplněn i18n stack (LocaleResolver)
+- Přidán LocaleResolver + LocaleContext (request-scoped), MessageService, EnumLabeler.
+- Konfigurace: MessageSourceConfig, WebConfig (interceptor pro nastavení locale).
+- SecurityUtils: helper currentUserLocale().
+- Projects service nyní řeší fallback řetězec: ?lang → Accept-Language → user → company → app default.
+
+### ▶ TODO next
+- PR 3/4: ProjectController + @PreAuthorize + PageResponse + hlavičky `Content-Language` a `Vary: Accept-Language`.
+- Přidat EnumLabeler pro `statusLabel` (Projects).
+- Rozšířit list o fulltext přes `project_translations` (per-locale).
+
+### ✅ 2025-10-03 – BE: PR 2b/4 – Company defaults (locale)
+- DB: přidán sloupec `companies.default_locale` + CHECK regex; seed na `cs-CZ`.
+- BE: `Company.defaultLocale` s @Pattern; repo metoda pro čtení.
+- Service: `CompanyLocaleService` + impl; LocaleResolver používá firemní fallback.
+
+### ▶ TODO next
+- UI: nastavení jazyka firmy (select `cs-CZ`/`en`…), validace BCP-47.
+- (volitelné) Company defaults rozšířit o `defaultCurrency`, `vatMode` (budoucí moduly).
+
+### ✅ 2025-10-03 – BE:  PR 3/4 – Projects: REST + RBAC + i18n headers (rozpracovat)
+- Controller: /api/v1/projects (list/get/create/update/delete).
+- Přidán `/api/v1/projects/{id}/archive` (soft delete).
+- Stubs: `POST /{id}/members`, `DELETE /{id}/members/{userId}` (zatím 202/204).
+- RBAC: @PreAuthorize s 'projects:*'.
+- I18n: Content-Language + Vary: Accept-Language.
+- Swagger: tag "Projects".
+
+### ▶ TODO next
+- Implementovat service metody: `assignMember`, `removeMember`.
+- Rozšířit list o filtry `status`, `archived`.
+- @WebMvcTest testy na RBAC a i18n hlavičky.
+

@@ -18,6 +18,8 @@ const buttonVariants = cva(
           "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600",
         outline:
           "border border-[rgb(var(--sb-border))] bg-transparent text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
+        outlinegreen:
+          "border border-[rgb(var(--sb-border))] bg-emerald-100 text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-emerald-200",          
         ghost:
           "bg-transparent text-[rgb(var(--sb-fg))] hover:bg-[rgba(var(--sb-border)/0.2)] focus-visible:ring-gray-300",
         danger:
