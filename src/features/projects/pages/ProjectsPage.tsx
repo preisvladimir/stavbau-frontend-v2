@@ -7,9 +7,9 @@ import { ProjectsTable } from '../components/ProjectsTable';
 import ProjectDetailDrawer from '../components/ProjectDetailDrawer';
 import ProjectFormDrawer from '../components/ProjectFormDrawer';
 
-import { listProjects, createProject, updateProject, archiveProject, getProject } from '../api/client';
+import { listProjectSummaries, createProject, updateProject, archiveProject } from '../api/client';
 import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
-import { adaptSpringPage, normalizeProjectSummary } from '../mappers/ProjectsMappers';
+import { normalizeProjectSummary } from '../mappers/ProjectsMappers';
 
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
@@ -49,13 +49,11 @@ export default function ProjectsPage() {
     setLoading(true);
     setError(null);
 
-    // Preferuj serverové řazení (škáluje lépe než client sort)
-    listProjects({ page, size, q: search, sort: 'name,asc' })
-      .then((raw) => {
-        const res = adaptSpringPage<ProjectSummaryDto>(raw);
+    listProjectSummaries({ page, size, q: search, sort: 'name,asc', signal: ac.signal })
+      .then((res) => {
         setItems((res.items ?? []).map(normalizeProjectSummary));
-        setPage(res.page ?? page);
-        setSize(res.size ?? size);
+        setPage(res.page);
+        setSize(res.size);
       })
       .catch((e: any) => {
         if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError') return;
@@ -76,8 +74,7 @@ export default function ProjectsPage() {
   const closeOverlays = () => navigate('/app/projects');
 
   const refreshList = React.useCallback(async () => {
-    const raw = await listProjects({ page, size, q: search, sort: 'name,asc' });
-    const res = adaptSpringPage<ProjectSummaryDto>(raw);
+    const res = await listProjectSummaries({ page, size, q: search, sort: 'name,asc' });
     setItems((res.items ?? []).map(normalizeProjectSummary));
   }, [page, size, search]);
 
@@ -127,24 +124,15 @@ export default function ProjectsPage() {
     />
   );
 
-  // FAB: jen pokud má uživatel právo vytvářet
+  // FAB
   React.useEffect(() => {
-    const canShow = true; // ScopeGuard řešíme v buttonu níž, FAB držíme univerzální – lze rozšířit o RBAC hook
-    if (canShow) {
-      setFab({
-        label: t('list.actions.new', { defaultValue: 'Nový projekt' }),
-        onClick: () => openNew(),
-        icon: <Plus className="h-6 w-6" />,
-      });
-    }
+    setFab({
+      label: t('list.actions.new', { defaultValue: 'Nový projekt' }),
+      onClick: () => openNew(),
+      icon: <Plus className="h-6 w-6" />,
+    });
     return () => setFab(null);
   }, [setFab, t]);
-
-  // rychlý prefill pro edit
-  const editingProject = React.useMemo(
-    () => (isEdit ? items.find((i) => i.id === params.id) : undefined),
-    [isEdit, items, params.id]
-  );
 
   return (
     <div className="p-4">
@@ -186,7 +174,6 @@ export default function ProjectsPage() {
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
-          // toolbar (search řízená stránkou, DataTableV2 ji propouští dál)
           search={search}
           onSearchChange={(q) => {
             setSearch(q);
@@ -194,9 +181,7 @@ export default function ProjectsPage() {
           }}
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
-          // row click → detail
           onRowClick={(p) => openDetail(p.id as UUID)}
-          // row actions (RBAC na stránce)
           rowActions={(p) => (
             <div className="flex items-center gap-2">
               <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
@@ -230,7 +215,7 @@ export default function ProjectsPage() {
             </div>
           )}
           emptyContent={emptyNode}
-          canCreate={false} // tlačítko už máme nahoře + FAB (nechceme duplikovat)
+          canCreate={false}
           onOpenCreate={undefined}
         />
 
@@ -244,7 +229,7 @@ export default function ProjectsPage() {
           onSubmit={(vals) => void handleCreate(vals)}
         />
 
-        {/* Detail – natahuje si data sám (prefill pro rychlé vykreslení) */}
+        {/* Detail */}
         <ProjectDetailDrawer
           i18nNamespaces={i18nNamespaces}
           open={isDetail && !isEdit}
@@ -255,7 +240,7 @@ export default function ProjectsPage() {
           prefill={items.find((i) => i.id === params.id) as any}
         />
 
-        {/* Edit – form si natahuje detail sám, ale dáváme i rychlý prefill ze summary */}
+        {/* Edit */}
         <ProjectFormDrawer
           mode="edit"
           i18nNamespaces={i18nNamespaces}

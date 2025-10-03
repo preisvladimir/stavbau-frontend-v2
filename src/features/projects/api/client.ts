@@ -1,81 +1,210 @@
 // src/features/projects/api/client.ts
-import { api } from '@/lib/api/client'; // sdílená Axios instance (baseURL, interceptors)
-import i18n from "@/i18n";
+import { api } from '@/lib/api/client';
+import i18n from '@/i18n';
+import { mapAndThrow } from '@/lib/api/problem';
+import { toPageResponse, type PageResponse } from '@/types/PageResponse';
 import type {
-  ProjectsPage,
   ProjectSummaryDto,
   ProjectDto,
   CreateProjectRequest,
   UpdateProjectRequest,
   ProjectMemberRequest,
   UUID,
-} from "./types";
+} from './types';
 
-const base = "/api/v1/projects";
+// ------------------------------------------------------
+// Helpers (DX, bezpečnost)
+// ------------------------------------------------------
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+const toInt = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? (Number(v) | 0) : fallback);
+const sanitizeQ = (q?: string) => (q ?? '').trim().slice(0, 200);
+const isCanceled = (e: unknown): boolean =>
+  (e as any)?.code === 'ERR_CANCELED' ||
+  (e as any)?.name === 'AbortError' ||
+  (api as any)?.isCancel?.(e) === true ||
+  (e as any)?.name === 'CanceledError' ||
+  (e as any)?.message === 'canceled';
 
-type ListParams = {
+// Strongly-typed shallow compact: zahodí null/undefined, zachová keyof T
+function compact<T extends Record<string, any>>(obj: T): Partial<T> {
+  const out = {} as Partial<T>;
+  (Object.keys(obj) as (keyof T)[]).forEach((k) => {
+    const v = obj[k];
+    if (v !== null && v !== undefined) (out as any)[k] = v;
+  });
+  return out;
+}
+
+function langHeader() {
+  return { 'Accept-Language': i18n.language };
+}
+
+// ------------------------------------------------------
+// Endpointy
+// ------------------------------------------------------
+const base = '/projects';
+const projectUrl = (id: UUID) => `${base}/${encodeURIComponent(String(id))}`;
+const projectArchiveUrl = (id: UUID) => `${projectUrl(id)}/archive`;
+const projectMembersUrl = (id: UUID) => `${projectUrl(id)}/members`;
+
+// ------------------------------------------------------
+// Typy volání listingu
+// ------------------------------------------------------
+export type ListOptions = {
   q?: string;
   page?: number;
   size?: number;
-  sort?: string; // např. "code,asc"
+  sort?: string;        // např. "name,asc" | "code,asc"
+  signal?: AbortSignal;
+  /** Volitelné extra hlavičky (If-None-Match apod.). */
+  headers?: Record<string, string>;
+  /** Rezerva: kurzorové stránkování v budoucnu */
+  cursor?: string;
 };
 
-function langHeader() {
-  return { "Accept-Language": i18n.language };
+// ------------------------------------------------------
+// Listing — doporučený vstupní bod (PageResponse<ProjectSummaryDto>)
+// ------------------------------------------------------
+export async function listProjectSummaries(
+  opts: ListOptions = {}
+): Promise<PageResponse<ProjectSummaryDto>> {
+  const rawPage = toInt(opts.page, 0);
+  const rawSize = toInt(opts.size, 20);
+  const page = clamp(rawPage, 0, 1_000_000);
+  const size = clamp(rawSize, 1, 100);
+  const q = sanitizeQ(opts.q);
+  const { signal, headers, sort, cursor } = opts;
+
+  try {
+    const params = cursor ? { cursor, q, sort } : { q, page, size, sort };
+    const res = await api.get<any>(base, {
+      params,
+      signal,
+      headers: { ...langHeader(), ...headers },
+    });
+
+    // Centrální adaptér zachová i raw Spring Page pole
+    return toPageResponse<ProjectSummaryDto>(res.data);
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
-export async function listProjects(params: ListParams = {}): Promise<ProjectsPage> {
-  const { data } = await api.get(`${base}`, {
-    params,
-    headers: langHeader(),
-  });
-  // data: Spring Page => necháme adaptér až ve step 3 (mappers)
-  // Zde prozatím vracíme surový payload, mapper to sjednotí na PageResponse.
-  return data;
+// ------------------------------------------------------
+// Listing — původní (RAW Spring Page) pro zpětnou kompatibilitu
+//   ⚠️ Preferuj listProjectSummaries výše.
+// ------------------------------------------------------
+export async function listProjects(opts: ListOptions = {}): Promise<any> {
+  const params = {
+    q: sanitizeQ(opts.q),
+    page: toInt(opts.page, 0),
+    size: clamp(toInt(opts.size, 20), 1, 100),
+    sort: opts.sort,
+    cursor: opts.cursor, // BE zatím ignoruje
+  };
+
+  const { signal, headers } = opts;
+  try {
+    const { data } = await api.get(base, {
+      params,
+      signal,
+      headers: { ...langHeader(), ...headers },
+    });
+    return data; // RAW Spring Page (content, number, size, totalElements, …)
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
-export async function getProject(id: UUID): Promise<ProjectDto> {
-  const { data } = await api.get(`${base}/${id}`, {
-    headers: langHeader(),
-  });
-  return data;
+// ------------------------------------------------------
+// Detail
+// ------------------------------------------------------
+export async function getProject(id: UUID, opts?: { signal?: AbortSignal }): Promise<ProjectDto> {
+  try {
+    const { data } = await api.get<ProjectDto>(projectUrl(id), {
+      signal: opts?.signal,
+      headers: langHeader(),
+    });
+    return data;
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
+// ------------------------------------------------------
+// Create / Update
+// ------------------------------------------------------
 export async function createProject(body: CreateProjectRequest): Promise<ProjectDto> {
-  const { data } = await api.post(base, body, {
-    headers: langHeader(),
-  });
-  return data;
+  try {
+    const sanitized = compact<CreateProjectRequest>(body);
+    const { data } = await api.post<ProjectDto>(base, sanitized, {
+      headers: langHeader(),
+    });
+    return data;
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
 export async function updateProject(id: UUID, body: UpdateProjectRequest): Promise<ProjectDto> {
-  const { data } = await api.patch(`${base}/${id}`, body, {
-    headers: langHeader(),
-  });
-  return data;
+  try {
+    const sanitized = compact<UpdateProjectRequest>(body);
+    const { data } = await api.patch<ProjectDto>(projectUrl(id), sanitized, {
+      headers: langHeader(),
+    });
+    return data;
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
+// ------------------------------------------------------
+// Delete / Archive (soft delete preferováno)
+// ------------------------------------------------------
 export async function deleteProject(id: UUID): Promise<void> {
-  await api.delete(`${base}/${id}`, {
-    headers: langHeader(),
-  });
+  try {
+    await api.delete<void>(projectUrl(id), { headers: langHeader() });
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
 export async function archiveProject(id: UUID): Promise<void> {
-  await api.post(`${base}/${id}/archive`, null, {
-    headers: langHeader(),
-  });
+  try {
+    await api.post<void>(projectArchiveUrl(id), null, { headers: langHeader() });
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
-// --- stubs: členové projektu (MVP Accepted/204) ---
+// ------------------------------------------------------
+// Členové projektu (MVP stub – 202/204)
+// ------------------------------------------------------
 export async function addProjectMember(id: UUID, body: ProjectMemberRequest): Promise<void> {
-  await api.post(`${base}/${id}/members`, body, {
-    headers: langHeader(),
-  });
+  try {
+    await api.post<void>(projectMembersUrl(id), body, {
+      headers: langHeader(),
+    });
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }
 
 export async function removeProjectMember(id: UUID, userId: UUID): Promise<void> {
-  await api.delete(`${base}/${id}/members/${userId}`, {
-    headers: langHeader(),
-  });
+  try {
+    await api.delete<void>(`${projectMembersUrl(id)}/${encodeURIComponent(String(userId))}`, {
+      headers: langHeader(),
+    });
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
 }

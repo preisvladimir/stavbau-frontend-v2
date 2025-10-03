@@ -38,8 +38,6 @@ export const router = createBrowserRouter([
             element: <AppLayout />,
             children: [
               { path: "dashboard", element: <DashboardPage /> },
-              { path: "projects", element: <ProjectsListPage /> },
-              { path: "projects/new", element: <ProjectNewPage /> },
               {
                 path: "team",
                 element: (
@@ -80,6 +78,14 @@ export const router = createBrowserRouter([
                   </ScopeGuard>
                 ),
               },
+              {
+                path: "projects/:id",
+                element: (
+                  <ScopeGuard required={["projects:read", "projects:write"]}>
+                    <ProjectsPage />
+                  </ScopeGuard>
+                ),
+              },              
             ],
           },
         ],
