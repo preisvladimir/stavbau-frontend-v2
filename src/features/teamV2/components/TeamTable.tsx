@@ -33,7 +33,7 @@ export function TeamTable({
   rowActions,
   emptyContent,
 }: TeamTableProps) {
-  const { t } = useTranslation('team');
+  const { t } = useTranslation(i18nNamespaces);
 
   const columns = React.useMemo(
     () => [

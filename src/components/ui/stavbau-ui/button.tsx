@@ -16,6 +16,8 @@ const buttonVariants = cva(
         // brand primary (už ne černá)
         primary:
           "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600",
+        secondary:
+          "border border-[rgb(var(--sb-border))] bg-white text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",          
         outline:
           "border border-[rgb(var(--sb-border))] bg-transparent text-[rgb(var(--sb-fg))] hover:bg-slate-50 focus-visible:ring-gray-300",
         outlinegreen:
