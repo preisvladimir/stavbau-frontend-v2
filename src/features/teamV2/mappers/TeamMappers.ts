@@ -4,9 +4,9 @@ import type {
   UpdateMemberRoleRequest,
   UpdateMemberProfileRequest,
   CompanyRoleName, // můžeš importovat z types, nebo z "@/types/common/rbac" — dle tvé struktury
-} from './api/types'; // ← uprav cestu dle umístění souboru
+} from '../api/types'; // ← uprav cestu dle umístění souboru
 
-import type { AnyTeamFormValues } from './validation/schemas'; // ← uprav cestu dle umístění souboru
+import type { AnyTeamFormValues } from '../validation/schemas'; // ← uprav cestu dle umístění souboru
 
 // --- Name helper usable with both legacy and v2 DTOs ---
 export function memberDisplayName(m: any): string {

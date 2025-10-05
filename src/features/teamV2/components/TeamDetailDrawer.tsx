@@ -246,11 +246,11 @@ export function TeamDetailDrawer({
               </div>
               <div className="space-y-1">
                 <div className="opacity-70">{t('detail.createdAt', { defaultValue: 'Vytvořeno' })}</div>
-                {loading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate(data?.createdAt)}</div>}
+                {loading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate((data as any)?.createdAt)}</div>}
               </div>
               <div className="space-y-1">
                 <div className="opacity-70">{t('detail.updatedAt', { defaultValue: 'Upraveno' })}</div>
-                {loading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate(data?.updatedAt)}</div>}
+                {loading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate((data as any)?.updatedAt)}</div>}
               </div>
             </div>
           </div>

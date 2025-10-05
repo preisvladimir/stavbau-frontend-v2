@@ -1,84 +1,106 @@
 // src/features/customers/components/CustomerFormDrawer.tsx
-import * as React from "react";
-import { useNavigate } from "react-router-dom";
-import { CustomerForm, type CustomerFormValues } from "./CustomerForm";
-import { createCustomer, getCustomer, updateCustomer } from '../api/client';
-import type { CustomerDto }  from "../api/types";
-import { Loading } from "@/components/ui/stavbau-ui/loading";
-import { ErrorState } from "@/components/ui/stavbau-ui/errorstate";
-import ScopeGuard from "@/features/auth/guards/ScopeGuard";
-import { RBAC_AREAS } from '@/lib/rbac/areas';
-import { dtoToFormDefaults, formToCreateBody, formToUpdateBody } from "../mappers";
-import { FormDrawer } from "@/components/ui/stavbau-ui/drawer/form-drawer";
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { FormDrawer } from '@/components/ui/stavbau-ui/drawer/form-drawer';
+import { CustomerForm, type CustomerFormValues } from './CustomerForm';
+import { getCustomer } from '../api/client';
+import { dtoToFormDefaults } from '../mappers';
 
-export const CustomerFormDrawer: React.FC<{
-    id?: string; // pokud je, jde o edit
-    onClose: () => void;
-}> = ({ id, onClose }) => {
-    const navigate = useNavigate();
-    const isEdit = Boolean(id);
-    const [loading, setLoading] = React.useState<boolean>(!!isEdit);
-    const [error, setError] = React.useState<{ title?: string; detail?: string }>();
-    const [data, setData] = React.useState<CustomerDto | undefined>();
-    const [submitting, setSubmitting] = React.useState(false);
+export type CustomerFormDrawerProps = {
+  i18nNamespaces?: string[];
+  open: boolean;
+  mode: 'create' | 'edit';
+  id?: string | null;                 // když je mode === 'edit', očekáváme id
+  titleKey?: string;                  // volitelně vlastní klíč nadpisu
+  submitting?: boolean;               // řízeno zvenčí (např. stránkou)
+  defaultValues?: Partial<CustomerFormValues>;
+  onClose: () => void;
+  onSubmit: (values: CustomerFormValues) => void | Promise<void>;
+};
 
-    React.useEffect(() => {
-        if (!isEdit) return;
-        let ignore = false;
-        setLoading(true);
-        getCustomer(id!)
-            .then((d) => !ignore && (setData(d), setLoading(false)))
-            .catch((e) => {
-                const detail = e?.response?.data?.detail ?? e.message;
-                const title = e?.response?.data?.title ?? "Error";
-                !ignore && (setError({ title, detail }), setLoading(false));
-            });
-        return () => { ignore = true; };
-    }, [id, isEdit]);
+export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
+  i18nNamespaces = ['customers', 'common'],
+  open,
+  mode,
+  id,
+  titleKey,
+  submitting,
+  defaultValues,
+  onClose,
+  onSubmit,
+}) => {
+  const { t } = useTranslation(i18nNamespaces);
 
+  const title = titleKey
+    ? t(titleKey)
+    : mode === 'edit'
+    ? t('form.title.edit', { defaultValue: 'Upravit zákazníka' })
+    : t('form.title.create', { defaultValue: 'Nový zákazník' });
 
-    const onSubmit = async (values: CustomerFormValues) => {
-        setSubmitting(true);
-        try {
-            if (isEdit) {
-                await updateCustomer(id!, formToUpdateBody(values));
-            } else {
-                const created = await createCustomer(formToCreateBody(values));
-                navigate(`/app/customers/${created.id}`, { replace: true });
-            }
-            onClose();
-        } catch (e: any) {
-            const detail = e?.response?.data?.detail ?? e.message;
-            const title = e?.response?.data?.title ?? "Error";
-            setError({ title, detail });
-        } finally {
-            setSubmitting(false);
-        }
-    };
+  const [prefill, setPrefill] = React.useState<Partial<CustomerFormValues> | undefined>(defaultValues);
+  const [localError, setLocalError] = React.useState<string | null>(null);
 
- return (
-   <>
-     {error && <ErrorState title={error.title} description={error.detail} />}
-     {loading ? (
-       <Loading />
-     ) : (
-       <ScopeGuard anyOf={[isEdit ? RBAC_AREAS.CUSTOMERS.UPDATE : RBAC_AREAS.CUSTOMERS.CREATE]}>
-         <FormDrawer
-           open
-           onClose={onClose}
-           mode={isEdit ? "edit" : "create"}
-           title={isEdit ? "Upravit zákazníka" : "Nový zákazník"}
-           showFooter={false}
-           form={
-             <CustomerForm
-               defaultValues={dtoToFormDefaults(data)}
-               onSubmit={onSubmit}
-               submitting={submitting}
-             />
-           }
-         />
-       </ScopeGuard>
-     )}
-   </>
- );
- }
+  // Při editu si dotáhneme detail a prefillneme formulář
+  React.useEffect(() => {
+    if (!open || mode !== 'edit' || !id) return;
+    const ac = new AbortController();
+    setLocalError(null);
+
+    getCustomer(id, { signal: ac.signal })
+      .then((d) => setPrefill(dtoToFormDefaults(d)))
+      .catch((e: any) => {
+        setLocalError(e?.response?.data?.detail || e?.message || 'Failed to load');
+      });
+
+    return () => ac.abort();
+  }, [open, mode, id]);
+
+  // Po zavření reset lokálního stavu
+  React.useEffect(() => {
+    if (!open) {
+      setPrefill(undefined);
+      setLocalError(null);
+    }
+  }, [open]);
+
+  const safeOnSubmit = React.useCallback(
+    (values: CustomerFormValues) => {
+      setLocalError(null);
+      onSubmit(values);
+    },
+    [onSubmit]
+  );
+
+  return (
+    <FormDrawer
+      open={open}
+      onClose={onClose}
+      title={title}
+      mode={mode}
+      showFooter={false}
+      form={
+        <>
+          {/* (volitelné) lokální info/chyba nad formulářem */}
+          {localError && (
+            <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {localError}
+            </div>
+          )}
+
+          <CustomerForm
+            key={`${mode}-${id ?? 'new'}`}
+            mode={mode}
+            i18nNamespaces={i18nNamespaces}
+            defaultValues={prefill ?? defaultValues}
+            submitting={submitting}
+            onSubmit={safeOnSubmit}
+            onCancel={onClose}
+            resetAfterSubmit={mode === 'create'}
+          />
+        </>
+      }
+    />
+  );
+};
+
+export default CustomerFormDrawer;

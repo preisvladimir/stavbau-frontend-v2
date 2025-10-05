@@ -1,4 +1,6 @@
+// src/features/team/api/types.ts
 // Team feature DTOs and API helpers
+
 import type {
   CompanyRoleName,
   ProjectRoleName,
@@ -8,7 +10,7 @@ import type {
 // Standardní stránkovaná odpověď (FE kontrakt)
 export { type PageResponse } from "@/types/PageResponse";
 
-export type {CompanyRoleName};
+export type { CompanyRoleName };
 
 // --- Primitives & aliases ---
 export type UUID = string;
@@ -23,8 +25,8 @@ export type ProjectRoleAssignmentDto = {
 // --- Members ---
 
 /**
- * Lehká varianta pro list (pokud ji BE někdy poskytne).
- * UI si full name skládá samo z firstName/lastName; displayName je volitelný precomputed label, pokud by ho BE posílal.
+ * Lehká varianta pro list.
+ * UI si full name skládá samo z firstName/lastName; displayName je volitelný precomputed label.
  * Pozn.: Některé payloady mohou používat `companyRole` místo `role` → držíme obě pro kompatibilitu.
  */
 export type MemberSummaryDto = {
@@ -37,25 +39,44 @@ export type MemberSummaryDto = {
   companyRole?: CompanyRoleName | null;
   phone?: string | null;
   displayName?: string;
+  /** Volitelně, pokud BE začne posílat i stav do summary. */
+  status?: MemberStatus | (string & {});
+  /** Volitelně: některé payloady mohou posílat userId zvlášť. */
+  userId?: UUID | null;
 };
 
 /**
- * Plný profil člena – konzistentní s mapováním v api/client.ts::normalizeOne
+ * Plný profil člena – **normalized** tvar po klientské normalizaci.
  * Primární je `role`; `companyRole` je volitelný alias (pro starší/alternativní payloady).
  */
 export interface MemberDto {
-  id: string;
+  /** Normalizované ID (může pocházet z memberId/userId/raw id). */
+  id: UUID;
   email: string;
-  /** Company role z BE (RBAC na úrovni firmy) – primární pole */
+
+  /** Company role z BE (RBAC na úrovni firmy) – primární pole. */
   role: CompanyRoleName;
-  /** Volitelný alias (přechodové payloady) */
+  /** Volitelný alias (přechodové payloady). */
   companyRole?: CompanyRoleName | null;
+
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
-  status: MemberStatus;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
+
+  /** Volitelný precomputed label (pokud ho BE dodává). */
+  displayName?: string;
+
+  /**
+   * Stav účtu/člena – BE může posílat různé enumy; buď náš MemberStatus,
+   * nebo jiný string. Proto ponecháváme tolerantní typ.
+   */
+  status?: MemberStatus | (string & {});
+
+  /** Volitelně: BE může posílat i userId (nezaměňovat s id). */
+  userId?: UUID | null;
+
+  createdAt?: ISODateString | null;
+  updatedAt?: ISODateString | null;
 }
 
 // --- Requests ---

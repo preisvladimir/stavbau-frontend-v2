@@ -1,4 +1,4 @@
-// PATCH: datatable-v2-core.ts
+// src/components/ui/stavbau-ui/datatable-v2-core.ts
 import * as React from 'react';
 import {
   type ColumnDef as TSColumnDef,
@@ -12,7 +12,14 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 
-export type TableDensity = "compact" | "cozy" | "comfortable";
+export type TableDensity = 'compact' | 'cozy' | 'comfortable';
+
+// --- Filters typy ---
+export type FilterValue = string | number | boolean | null | undefined;
+export type Filters = Record<string, FilterValue>;
+
+// Volby pro role v toolbaru (Select)
+export type ToolbarRoleOption = { value: string; label: React.ReactNode };
 
 export type DataTableV2Column<T extends RowData> = {
   id: string;
@@ -53,11 +60,10 @@ export type DataTableV2Props<T extends RowData> = {
   search?: string;                           // controlled
   onSearchChange?: (q: string) => void;
   defaultSearch?: string;                    // uncontrolled init
-
   /**
- * Debounce (v ms) pro změny vyhledávání. Default: 250 ms.
- * Debounce probíhá v DataTableV2 a do onSearchChange se posílá až „ustálená“ hodnota.
- */
+   * Debounce (v ms) pro změny vyhledávání. Default: 250 ms.
+   * Debounce probíhá v DataTableV2 a do onSearchChange se posílá až „ustálená“ hodnota.
+   */
   searchDebounceMs?: number;
   /**
    * Způsob zobrazení načítání:
@@ -75,7 +81,7 @@ export type DataTableV2Props<T extends RowData> = {
   onDensityChange?: (d: TableDensity) => void;
   defaultDensity?: TableDensity;
 
-  showToolbar?: boolean;                     // default true  
+  showToolbar?: boolean; // default true
 
   /** Toolbar: page size options for selector (PR 4.1) */
   onReset?: () => void;
@@ -96,7 +102,45 @@ export type DataTableV2Props<T extends RowData> = {
    * Pokud není uvedeno, použije se ['common'].
    */
   i18nNamespaces?: string[];
+
+  // --- Filters (controlled/uncontrolled) ---
+  filters?: Filters;                         // controlled
+  onFiltersChange?: (next: Filters) => void; // callback pro controlled režim
+  initialFilters?: Filters;                  // default pro uncontrolled
+
+  // --- NEW: volitelné options pro role filter v toolbaru ---
+  roleOptions?: ToolbarRoleOption[];
 };
+
+// -- util pro controlled/uncontrolled stav (podpora functional updates) --
+function useControllableState<T>({
+  prop,
+  defaultProp,
+  onChange,
+}: {
+  prop?: T;
+  defaultProp: T;
+  onChange?: (v: T) => void;
+}) {
+  const [internal, setInternal] = React.useState<T>(defaultProp);
+  const isControlled = prop !== undefined;
+  const value = (isControlled ? (prop as T) : internal) as T;
+
+  const setValue = React.useCallback(
+    (nextOrUpdater: T | ((prev: T) => T)) => {
+      const nextValue =
+        typeof nextOrUpdater === 'function'
+          ? (nextOrUpdater as (prev: T) => T)(value)
+          : nextOrUpdater;
+
+      if (!isControlled) setInternal(nextValue);
+      onChange?.(nextValue);
+    },
+    [isControlled, onChange, value]
+  );
+
+  return [value, setValue] as const;
+}
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
   const tanColumns = React.useMemo<TSColumnDef<T>[]>(() => {
@@ -135,26 +179,50 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
   const pageSize = controlledPageSize ?? internalPageSize;
 
   // Page count: client ↔ server
-  const total = props.enableClientPaging === false && typeof props.total === 'number'
-    ? props.total
-    : props.data.length;
+  const total =
+    props.enableClientPaging === false && typeof props.total === 'number'
+      ? props.total
+      : props.data.length;
   const pageCount = Math.max(1, Math.ceil((total || 0) / (pageSize || 1)));
 
-  // ---- PR4: search (zatím jen prop, filtr necháme na parentu v PR 4.2) ----
+  // ---- Search (PR4) ----
   const [internalSearch, setInternalSearch] = React.useState(props.defaultSearch ?? '');
   const search = props.search ?? internalSearch;
   const setSearch = (q: string) => (props.onSearchChange ? props.onSearchChange(q) : setInternalSearch(q));
 
-  // ---- PR4: column visibility ----
-  const [internalVisibility, setInternalVisibility] = React.useState<VisibilityState>(props.defaultColumnVisibility ?? {});
+  // ---- Column visibility (PR4) ----
+  const [internalVisibility, setInternalVisibility] = React.useState<VisibilityState>(
+    props.defaultColumnVisibility ?? {}
+  );
   const visibility = props.columnVisibility ?? internalVisibility;
 
-  // ---- PR4: density ----
+  // ---- Density (PR4) ----
   const [internalDensity, setInternalDensity] = React.useState<TableDensity>(props.defaultDensity ?? 'cozy');
   const density = props.density ?? internalDensity;
-  const setDensity = (d: TableDensity) => (props.onDensityChange ? props.onDensityChange(d) : setInternalDensity(d));
+  const setDensity = (d: TableDensity) =>
+    props.onDensityChange ? props.onDensityChange(d) : setInternalDensity(d);
 
+  // ---- Filters (PR6) ----
+  const [filters, setFilters] = useControllableState<Filters>({
+    prop: props.filters,
+    defaultProp: props.initialFilters ?? {},
+    onChange: props.onFiltersChange,
+  });
 
+  const setFilter = React.useCallback(
+    (key: string, value: FilterValue) =>
+      setFilters((prev) => {
+        const next = { ...prev, [key]: value };
+        // očista prázdných hodnot – menší payload/URL
+        if (next[key] === '' || next[key] === null || next[key] === undefined) {
+          delete next[key];
+        }
+        return next;
+      }),
+    [setFilters]
+  );
+
+  const resetFilters = React.useCallback(() => setFilters({}), [setFilters]);
 
   const table = useReactTable<T>({
     data: props.data,
@@ -163,6 +231,7 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
       sorting,
       pagination: { pageIndex, pageSize },
       columnVisibility: visibility,
+      // Filtry držíme mimo TanStack a používáme je v parent/server vrstvě.
     },
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
@@ -177,43 +246,33 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     onPaginationChange: (updater) => {
       const prev = { pageIndex, pageSize };
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // 0-based → 1-based callbacky
       if (next.pageIndex !== prev.pageIndex) {
-        props.onPageChange
-          ? props.onPageChange(next.pageIndex + 1)
-          : setInternalPageIndex(next.pageIndex);
+        props.onPageChange ? props.onPageChange(next.pageIndex + 1) : setInternalPageIndex(next.pageIndex);
       }
       if (next.pageSize !== prev.pageSize) {
-        props.onPageSizeChange
-          ? props.onPageSizeChange(next.pageSize)
-          : setInternalPageSize(next.pageSize);
+        props.onPageSizeChange ? props.onPageSizeChange(next.pageSize) : setInternalPageSize(next.pageSize);
       }
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: props.enableClientSort === false ? undefined : getSortedRowModel(),
     getPaginationRowModel: props.enableClientPaging === false ? undefined : getPaginationRowModel(), // client-only
-    pageCount, // i pro server mode, aby TanStack věděl limit
+    pageCount, // i pro server mode – TanStack ví o limitu
   });
 
-  const getRowKey = React.useCallback((row: T, idx: number) => {
-    if (typeof props.keyField === 'function') return props.keyField(row);
-    const k = (row as any)[props.keyField as keyof T];
-    return k ? String(k) : `row-${idx}`;
-  }, [props.keyField]);
+  const getRowKey = React.useCallback(
+    (row: T, idx: number) => {
+      if (typeof props.keyField === 'function') return props.keyField(row);
+      const k = (row as any)[props.keyField as keyof T];
+      return k ? String(k) : `row-${idx}`;
+    },
+    [props.keyField]
+  );
 
-  // Mobile-first, od lg výš lehce zahušťujeme (víc řádků na obrazovce)
+  // Mobile-first density
   const densityMap = {
-    compact: {
-      th: 'px-2 py-1 text-xs',
-      td: 'px-2 py-1 text-xs',
-    },
-    cozy: {
-      // mobil = příjemně čitelné, na lg zmenšíme výšku řádku
-      th: 'px-3 py-2 text-xs lg:py-1.5 xl:py-2',
-      td: 'px-3 py-2 text-sm lg:py-1.5 xl:py-2',
-    },
+    compact: { th: 'px-2 py-1 text-xs', td: 'px-2 py-1 text-xs' },
+    cozy: { th: 'px-3 py-2 text-xs lg:py-1.5 xl:py-2', td: 'px-3 py-2 text-sm lg:py-1.5 xl:py-2' },
     comfortable: {
-      // desktop (lg+) není „nafouklý“ – jen o fous vyšší než cozy
       th: 'px-4 py-3 text-sm md:py-3 lg:py-2.5 xl:py-1.5',
       td: 'px-4 py-3 text-base md:py-3 lg:py-2.5 xl:py-1.5',
     },
@@ -228,7 +287,15 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     pageCount,
     total,
     setPage: (p: number) => table.setPageIndex(Math.max(0, p - 1)),
-    setPageSize: (s: number) => table.setPageSize(Math.max(1, s)),   // ← NEW
+    setPageSize: (s: number) => {
+      const size = Math.max(1, s);
+      // 1) nastavit velikost stránky
+      table.setPageSize(size);
+      // 2) pro jistotu skočit na první stránku (0-based)
+      table.setPageIndex(0);
+      // Pozn.: naše onPaginationChange zajistí zavolání
+      // props.onPageSizeChange(size) a props.onPageChange(1)
+    },
     nextPage: () => table.nextPage(),
     prevPage: () => table.previousPage(),
     canNextPage: table.getCanNextPage(),
@@ -236,12 +303,16 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     /** Přímý skok na stránku (1-based). Ořízne mimo rozsah 1..pageCount. */
     gotoPage: (p: number) => {
       const safe = Math.max(1, Math.min(p, pageCount));
-      table.setPageIndex(safe - 1); // TanStack používá 0-based index
+      table.setPageIndex(safe - 1);
     },
-      
+
+    // Filters API pro parent/toolbar
+    filters,
+    setFilter,
+    resetFilters,
   };
 
-  // ← NEW helper: úplný reset toolbar stavů
+  // Kompletní reset toolbar stavů
   const resetAll = () => {
     table.resetSorting();
     table.resetColumnVisibility();
@@ -249,15 +320,28 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     table.setPageSize(props.defaultPageSize ?? pageSize);
     setDensity(props.defaultDensity ?? 'cozy');
     setSearch(props.defaultSearch ?? '');
+    resetFilters();
     props.onReset?.();
   };
 
   return {
-    table, flexRender, getRowKey,
+    table,
+    flexRender,
+    getRowKey,
     api,
+
     // PR4 exposes
-    search, setSearch,
-    density, setDensity, densityClasses, resetAll,
+    search,
+    setSearch,
+    density,
+    setDensity,
+    densityClasses,
+    resetAll,
     pageSizeOptions: props.pageSizeOptions ?? [5, 10, 20],
+
+    // Filters i „napřímo“ (mimo api), pokud se hodí v komponentě
+    filters,
+    setFilter,
+    resetFilters,
   };
 }

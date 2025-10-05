@@ -6,12 +6,10 @@ import LoginPage from "@/features/auth/pages/LoginPage";
 import ProtectedRoute from "@/features/auth/guards/ProtectedRoute";
 import AppLayout from "./AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
-import ProjectsListPage from "@/pages/projects/ProjectsListPage";
-import ProjectNewPage from "@/pages/projects/ProjectNewPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
 import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import TeamPageV2 from "@/features/teamV2/pages/TeamPage";
-import CustomersListPage from "@/features/customers/pages/CustomersListPage";
+import CustomersPage from "@/features/customers/pages/CustomersPage";
 import ProjectsPage from "@/features/projects/pages/ProjectsPage";
 
 function RootWithProviders() {
@@ -58,7 +56,7 @@ export const router = createBrowserRouter([
                 path: "customers",
                 element: (
                   <ScopeGuard required={["invoices:read", "invoices:write"]}>
-                    <CustomersListPage />
+                    <CustomersPage />
                   </ScopeGuard>
                 ),
               },
@@ -66,7 +64,7 @@ export const router = createBrowserRouter([
                 path: "customers/:id",
                 element: (
                   <ScopeGuard required={["invoices:read", "invoices:write"]}>
-                    <CustomersListPage />
+                    <CustomersPage />
                   </ScopeGuard>
                 ),
               },

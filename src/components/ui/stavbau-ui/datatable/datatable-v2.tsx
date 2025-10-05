@@ -1,18 +1,27 @@
+// src/components/ui/stavbau-ui/datatable/datatable-v2.tsx
 import * as React from 'react';
 import { useId } from 'react';
-import { useDataTableV2Core, type DataTableV2Props, type TableDensity } from './datatable-v2-core';
+import {
+  useDataTableV2Core,
+  type DataTableV2Props,
+  type TableDensity,
+  type Filters,
+  type ToolbarRoleOption,
+} from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
-import { SearchInput } from "@/components/ui/stavbau-ui/searchinput";
+import { SearchInput } from '@/components/ui/stavbau-ui/searchinput';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
 import { Select } from '@/components/ui/stavbau-ui/select';
-import { Button } from "@/components/ui/stavbau-ui/button";
-import { DensitySelect } from "@/components/ui/stavbau-ui/datatable/density-select";
+import { Button } from '@/components/ui/stavbau-ui/button';
+import { DensitySelect } from '@/components/ui/stavbau-ui/datatable/density-select';
 import { ColumnVisibilityMenu } from '@/components/ui/stavbau-ui/column-visibility';
-import { useTranslation } from 'react-i18next'; // ← i18n (PR4)
-import { X, ChevronLeft, ChevronRight } from "@/components/icons";
+import { useTranslation } from 'react-i18next';
+import { X, ChevronLeft, ChevronRight } from '@/components/icons';
 import { DataRowCard } from './DataRowCard';
 import { getStickySide, stickyHeaderClasses, stickyCellClasses } from './sticky';
-import { sbCardBase, sbFocusRing } from "@/components/ui/stavbau-ui/tokens";
+import { sbCardBase, sbFocusRing } from '@/components/ui/stavbau-ui/tokens';
+
+type RoleOption = { value: string; label: React.ReactNode };
 
 function DataTableV2Toolbar({
   table,
@@ -21,6 +30,8 @@ function DataTableV2Toolbar({
   t,
   page, pageCount, pageSize, setPageSize, pageSizeOptions,
   onReset,
+  filters, setFilter,
+  roleOptions,
 }: {
   table: ReturnType<typeof useDataTableV2Core<any>>['table'];
   searchValue: string; onSearchChange: (s: string) => void;
@@ -29,14 +40,23 @@ function DataTableV2Toolbar({
   page: number; pageCount: number; pageSize: number; setPageSize: (n: number) => void;
   pageSizeOptions: number[];
   onReset: () => void;
+  filters: Filters;
+  setFilter: (key: string, value: Filters[string]) => void;
+  roleOptions?: RoleOption[];
 }) {
-  const columns = table
-    .getAllLeafColumns()
-    .filter((c) => (c.getCanHide?.() ?? false));
+  const columns = table.getAllLeafColumns().filter((c) => (c.getCanHide?.() ?? false));
+
+  // <- filtr role přes core API
+  const handleRoleChange = (val: string) => {
+    setFilter('role', val || undefined);
+  };
+
+  const hasRoleFilter = Array.isArray(roleOptions) && roleOptions.length > 0;
+  const roleValue = String(filters.role ?? '');
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))] border-b border-[rgb(var(--sb-border))]">
-      {/* ===== MOBILE (xs–sm): jen Search + Reset ===== */}
+      {/* ===== MOBILE (xs–sm): Search + (Role) + Reset ===== */}
       <div className="w-full flex items-center gap-2 md:hidden">
         <SearchInput
           size="md"
@@ -45,34 +65,46 @@ function DataTableV2Toolbar({
           preset="v1"
           leftIcon="search"
           clearable
-          ariaLabel={t("datatable.search", { defaultValue: "Hledat" })}
-          placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
+          ariaLabel={t('datatable.search', { defaultValue: 'Hledat' })}
+          placeholder={t('datatable.searchPlaceholder', { defaultValue: 'Hledat e-mail, jméno, telefon…' })}
           className="flex-1"
         />
+        {hasRoleFilter && (
+          <Select
+            size="md"
+            variant="outline"
+            value={roleValue}
+            onChange={handleRoleChange}
+            ariaLabel={t('datatable.filter.role', { defaultValue: 'Filtrovat roli' })}
+            className="w-[9.5rem]"
+            options={[
+              { value: '', label: t('datatable.filter.all', { defaultValue: 'Vše' }) },
+              ...roleOptions!,
+            ]}
+          />
+        )}
         <Button
           variant="ghost"
           size="sm"
           leftIcon={<X size={16} />}
-          ariaLabel={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
-          title={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+          ariaLabel={t('datatable.reset', { defaultValue: 'Vymazat filtr' })}
+          title={t('datatable.reset', { defaultValue: 'Vymazat filtr' })}
           onClick={onReset}
         />
       </div>
 
-      {/* ===== TABLET/DESKTOP (md+): plnější toolbar ===== */}
+      {/* ===== TABLET/DESKTOP (md+): plný toolbar ===== */}
       <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:w-full">
         {/* Page size */}
         <div className="inline-flex items-center gap-2">
-          <span className="text-sm">
-            {t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
-          </span>
+          <span className="text-sm">{t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}</span>
           <Select
             size="md"
             variant="outline"
             value={String(pageSize)}
             onChange={(v) => setPageSize(Number(v))}
             ariaLabel={t('datatable.pageSize', { defaultValue: 'Počet na stránku' })}
-            options={pageSizeOptions.map(n => ({ value: String(n), label: String(n) }))}
+            options={pageSizeOptions.map((n) => ({ value: String(n), label: String(n) }))}
           />
         </div>
 
@@ -85,17 +117,15 @@ function DataTableV2Toolbar({
             ariaLabel={t('datatable.showColumns', { defaultValue: 'Zobrazit sloupce' })}
             items={columns.map((col) => {
               const id = String(col.id ?? '');
-              const startCase = id
-                ? id.replace(/[_-]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
-                : '';
+              const startCase = id ? id.replace(/[_-]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()) : '';
               const metaLabel = (col.columnDef.meta as any)?.stbMobile?.label as string | undefined;
               const header = col.columnDef.header;
               const labelText =
                 (typeof metaLabel === 'string' && metaLabel.trim())
                   ? metaLabel
                   : (typeof header === 'string'
-                    ? header
-                    : t(`columns.${id}`, { defaultValue: startCase }));
+                      ? header
+                      : t(`columns.${id}`, { defaultValue: startCase }));
 
               return {
                 id: col.id!,
@@ -118,7 +148,7 @@ function DataTableV2Toolbar({
           {t('datatable.pageIndicator', { defaultValue: 'Stránka {{p}} / {{c}}', p: page, c: pageCount })}
         </div>
 
-        {/* Search (md+) */}
+        {/* Search */}
         <div className="min-w-[320px] lg:min-w-[420px] md:flex-1">
           <SearchInput
             size="md"
@@ -127,32 +157,51 @@ function DataTableV2Toolbar({
             preset="v1"
             leftIcon="search"
             clearable
-            ariaLabel={t("datatable.search", { defaultValue: "Hledat" })}
-            placeholder={t("datatable.searchPlaceholder", { defaultValue: "Hledat e-mail, jméno, telefon…" })}
+            ariaLabel={t('datatable.search', { defaultValue: 'Hledat' })}
+            placeholder={t('datatable.searchPlaceholder', { defaultValue: 'Hledat e-mail, jméno, telefon…' })}
           />
         </div>
 
-        {/* Reset (vpravo) */}
+        {/* Role filter */}
+        {hasRoleFilter && (
+          <div className="inline-flex items-center gap-2">
+            <span className="text-sm">{t('datatable.filter.role', { defaultValue: 'Role' })}</span>
+            <Select
+              size="md"
+              variant="outline"
+              value={roleValue}
+              onChange={handleRoleChange}
+              ariaLabel={t('datatable.filter.role', { defaultValue: 'Filtrovat roli' })}
+              className="w-[11rem]"
+              options={[
+                { value: '', label: t('datatable.filter.all', { defaultValue: 'Vše' }) },
+                ...roleOptions!,
+              ]}
+            />
+          </div>
+        )}
+
+        {/* Reset (right) */}
         <div className="ml-auto">
           <Button
             variant="ghost"
             size="sm"
             leftIcon={<X size={16} />}
-            ariaLabel={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
-            title={t("datatable.reset", { defaultValue: "Vymazat filtr" })}
+            ariaLabel={t('datatable.reset', { defaultValue: 'Vymazat filtr' })}
+            title={t('datatable.reset', { defaultValue: 'Vymazat filtr' })}
             onClick={onReset}
           />
         </div>
 
-        {/* Density — až na desktopu (lg+) */}
+        {/* Density (lg+) */}
         <div className="hidden lg:block">
           <DensitySelect
             value={density}
             onChange={(d) => setDensity(d)}
-            label={t("datatable.density")}
-            optionCompact={t("datatable.density_compact")}
-            optionCozy={t("datatable.density_cozy")}
-            optionComfortable={t("datatable.density_comfortable")}
+            label={t('datatable.density')}
+            optionCompact={t('datatable.density_compact')}
+            optionCozy={t('datatable.density_cozy')}
+            optionComfortable={t('datatable.density_comfortable')}
           />
         </div>
       </div>
@@ -161,28 +210,27 @@ function DataTableV2Toolbar({
 }
 
 export function DataTableV2<T>(props: DataTableV2Props<T>) {
-  // běžné texty tabulky (toolbar, pager…) – common
   const { t: tCommon } = useTranslation('common');
   const tt = (k: string, o?: any) => String(tCommon(k, o));
-  // překladač pro karty: podle props.i18nNamespaces nebo ['common']
   const { t: tCard } = useTranslation(props.i18nNamespaces ?? ['common']);
   const tableId = useId();
+
   const {
     table, flexRender, getRowKey, api,
     search, setSearch, density, setDensity, densityClasses,
     resetAll, pageSizeOptions,
+    filters, setFilter,
   } = useDataTableV2Core(props);
 
   const isEmpty = !props.loading && props.data.length === 0;
   const hasRowActions = typeof (props as any).rowActions === 'function';
 
   const v = props.variant ?? 'plain';
-  const wrapperClass =
-    v === 'surface' ? sbCardBase : ""; // plain = bez karty
+  const wrapperClass = v === 'surface' ? sbCardBase : '';
 
   const rows = table.getRowModel().rows;
 
-  // Debounce vyhledávání – centralizovaně zde
+  // Debounce search
   const searchDebounceMs = props.searchDebounceMs ?? 250;
   const [searchLocal, setSearchLocal] = React.useState(search);
   React.useEffect(() => setSearchLocal(search), [search]);
@@ -193,25 +241,25 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
     return () => window.clearTimeout(h);
   }, [searchLocal, search, searchDebounceMs, setSearch]);
 
-  // Loading režimy: skeleton (initial) vs overlay (následně) — anti-flicker
+  // Loading anti-flicker
   const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
   React.useEffect(() => { if (!props.loading) setHasLoadedOnce(true); }, [props.loading]);
   const [delayedLoading, setDelayedLoading] = React.useState(false);
   React.useEffect(() => {
     let t: number | undefined;
-    if (props.loading) {
-      t = window.setTimeout(() => setDelayedLoading(true), 150);
-    } else {
-      setDelayedLoading(false);
-    }
+    if (props.loading) t = window.setTimeout(() => setDelayedLoading(true), 150);
+    else setDelayedLoading(false);
     return () => { if (t) window.clearTimeout(t); };
   }, [props.loading]);
   const mode = props.loadingMode ?? 'auto';
-  const showSkeleton = (mode === 'skeleton') || (mode === 'auto' && delayedLoading && !hasLoadedOnce);
-  const showOverlay = (mode === 'overlay') || (mode === 'auto' && delayedLoading && hasLoadedOnce);
+  const showSkeleton = mode === 'skeleton' || (mode === 'auto' && delayedLoading && !hasLoadedOnce);
+  const showOverlay = mode === 'overlay' || (mode === 'auto' && delayedLoading && hasLoadedOnce);
+
+  // Role options (pokud komponenta dostává)
+  const roleOptions: ToolbarRoleOption[] | undefined = props.roleOptions;
 
   return (
-    <div className={cn("w-full", wrapperClass, props.className)}>
+    <div className={cn('w-full', wrapperClass, props.className)}>
       {/* Toolbar */}
       {props.showToolbar !== false && (
         <DataTableV2Toolbar
@@ -227,13 +275,19 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           setPageSize={api.setPageSize}
           pageSizeOptions={pageSizeOptions}
           onReset={resetAll}
+          filters={filters}
+          setFilter={setFilter}
+          roleOptions={roleOptions}
         />
       )}
 
       {/* ===== MOBILE <md: KARTY ===== */}
-      <div className="md:hidden px-3 py-3 space-y-3" role="list" aria-label={tt('datatable.mobileListLabel', { defaultValue: 'Seznam záznamů' })}>
+      <div
+        className="md:hidden px-3 py-3 space-y-3"
+        role="list"
+        aria-label={tt('datatable.mobileListLabel', { defaultValue: 'Seznam záznamů' })}
+      >
         {showSkeleton ? (
-          // jednoduchý skeleton pro 3 karty
           Array.from({ length: 3 }).map((_, i) => (
             <div key={`sk-card-${i}`} className="rounded-2xl border p-3 shadow-sm animate-pulse">
               <div className="h-5 w-2/3 bg-muted rounded mb-2" />
@@ -243,14 +297,14 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </div>
           ))
         ) : isEmpty ? (
-          props.emptyContent ?? <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />
+          props.emptyContent ?? (
+            <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />
+          )
         ) : (
           rows.map((row, idx) => (
             <DataRowCard
               key={getRowKey(row.original as T, idx)}
               row={row}
-              // volitelný prop – předej do DataRowCard a tam vlož do actions místa:
-              // {actionsRenderer?.(row.original)}
               actionsRenderer={hasRowActions ? (props as any).rowActions : undefined}
               onRowClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
               t={tCard}
@@ -261,15 +315,8 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
 
       {/* ===== DESKTOP md+: TABULKA ===== */}
       <div className="hidden md:block">
-        {/* H-scroll pro md–lg; na lg už typicky min-w stačí = full */}
-        <div className={cn("md:overflow-x-auto")}>
-          <table
-            role="table"
-            id={tableId}
-            className={cn(
-              "sb-table text-sm md:min-w-[900px] lg:min-w-full break-words"
-            )}
-          >
+        <div className={cn('md:overflow-x-auto')}>
+          <table role="table" id={tableId} className={cn('sb-table text-sm md:min-w-[900px] lg:min-w-full break-words')}>
             <thead className="lg:sticky lg:top-0 lg:z-10 lg:bg-[rgb(var(--sb-surface))] lg:backdrop-blur-[2px]">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="text-[rgb(var(--sb-muted))] text-left">
@@ -290,15 +337,13 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         scope="col"
                         aria-sort={aria as any}
                         className={cn(
-                          "px-3 py-2 font-medium",
+                          'px-3 py-2 font-medium',
                           densityClasses.th,
-                          "px-3 py-2 font-medium bg-[rgb(var(--sb-surface))] lg:bg-clip-padding",
-                          canSort && cn("cursor-pointer hover:text-foreground rounded", sbFocusRing),
-                          // sticky na md, static na lg
+                          'px-3 py-2 font-medium bg-[rgb(var(--sb-surface))] lg:bg-clip-padding',
+                          canSort && cn('cursor-pointer hover:text-foreground rounded', sbFocusRing),
                           stickyHeaderClasses(stickySide),
-                          // malá pomocná bordura, ať je sticky hranice patrná
-                          stickySide === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
-                          stickySide === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
+                          stickySide === 'left' && 'md:border-r md:border-[rgb(var(--sb-border))]',
+                          stickySide === 'right' && 'md:border-l md:border-[rgb(var(--sb-border))]'
                         )}
                         onClick={onClick}
                         tabIndex={canSort ? 0 : -1}
@@ -319,11 +364,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                       >
                         <div className="inline-flex items-center gap-1">
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                          {canSort && (
-                            <span aria-hidden className="text-foreground/50">
-                              {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}
-                            </span>
-                          )}
+                          {canSort && <span aria-hidden className="text-foreground/50">{sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : '↕'}</span>}
                         </div>
                       </th>
                     );
@@ -332,12 +373,11 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     <th
                       scope="col"
                       className={cn(
-                        "px-3 py-2 font-medium",
+                        'px-3 py-2 font-medium',
                         densityClasses.th,
-                        "text-right text-foreground/80 select-none",
-                        // akční header sticky vpravo (md), static na lg
+                        'text-right text-foreground/80 select-none',
                         stickyHeaderClasses('right'),
-                        "md:border-l md:border-[rgb(var(--sb-border))]"
+                        'md:border-l md:border-[rgb(var(--sb-border))]'
                       )}
                       data-testid="dtv2-actions-header"
                     >
@@ -358,12 +398,12 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         <td
                           key={c.id}
                           className={cn(
-                            "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                            'px-3 py-2 border-t border-[rgb(var(--sb-border))]',
                             densityClasses.td,
-                            "break-words",
+                            'break-words',
                             stickyCellClasses(side),
-                            side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
-                            side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
+                            side === 'left' && 'md:border-r md:border-[rgb(var(--sb-border))]',
+                            side === 'right' && 'md:border-l md:border-[rgb(var(--sb-border))]'
                           )}
                         >
                           <div className="h-4 w-24 rounded bg-muted" />
@@ -373,11 +413,11 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     {hasRowActions && (
                       <td
                         className={cn(
-                          "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                          'px-3 py-2 border-t border-[rgb(var(--sb-border))]',
                           densityClasses.td,
-                          "text-right break-words",
+                          'text-right break-words',
                           stickyCellClasses('right'),
-                          "md:border-l md:border-[rgb(var(--sb-border))]"
+                          'md:border-l md:border-[rgb(var(--sb-border))]'
                         )}
                       >
                         <div className="h-4 w-10 rounded bg-muted" />
@@ -387,8 +427,13 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                 ))
               ) : isEmpty ? (
                 <tr>
-                  <td colSpan={table.getAllColumns().length + (hasRowActions ? 1 : 0)} className={cn(densityClasses.td, 'py-6')}>
-                    {props.emptyContent ?? <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />}
+                  <td
+                    colSpan={table.getAllColumns().length + (hasRowActions ? 1 : 0)}
+                    className={cn(densityClasses.td, 'py-6')}
+                  >
+                    {props.emptyContent ?? (
+                      <EmptyState title={tt('datatable.empty.title')} description={tt('datatable.empty.desc')} />
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -397,9 +442,9 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     key={getRowKey(row.original as T, idx)}
                     className={cn(
                       v === 'surface'
-                        ? "odd:bg-white even:bg-[rgb(var(--sb-surface-2))] " + "hover:bg-[rgb(var(--sb-surface-hover))]"
-                        : "hover:bg-muted/40",
-                      props.onRowClick && "cursor-pointer"
+                        ? 'odd:bg-white even:bg-[rgb(var(--sb-surface-2))] hover:bg-[rgb(var(--sb-surface-hover))]'
+                        : 'hover:bg-muted/40',
+                      props.onRowClick && 'cursor-pointer'
                     )}
                     onClick={props.onRowClick ? () => props.onRowClick!(row.original as T) : undefined}
                     tabIndex={props.onRowClick ? 0 : -1}
@@ -411,12 +456,12 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                         <td
                           key={cell.id}
                           className={cn(
-                            "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                            'px-3 py-2 border-t border-[rgb(var(--sb-border))]',
                             densityClasses.td,
-                            "break-words",
+                            'break-words',
                             stickyCellClasses(side),
-                            side === 'left' && "md:border-r md:border-[rgb(var(--sb-border))]",
-                            side === 'right' && "md:border-l md:border-[rgb(var(--sb-border))]"
+                            side === 'left' && 'md:border-r md:border-[rgb(var(--sb-border))]',
+                            side === 'right' && 'md:border-l md:border-[rgb(var(--sb-border))]'
                           )}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -426,18 +471,17 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                     {hasRowActions && (
                       <td
                         className={cn(
-                          "px-3 py-2 border-t border-[rgb(var(--sb-border))]",
+                          'px-3 py-2 border-t border-[rgb(var(--sb-border))]',
                           densityClasses.td,
-                          "text-right",
+                          'text-right',
                           stickyCellClasses('right'),
-                          "md:border-l md:border-[rgb(var(--sb-border))]"
+                          'md:border-l md:border-[rgb(var(--sb-border))]'
                         )}
                       >
                         <div
                           className="inline-flex items-center gap-1"
                           onClick={(e) => {
-                            // Zabrání přeposílání na onRowClick
-                            e.stopPropagation();
+                            e.stopPropagation(); // nepropagovat do onRowClick
                           }}
                         >
                           {(props as any).rowActions(row.original as T)}
@@ -450,7 +494,7 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
             </tbody>
           </table>
 
-          {/* Overlay načítání – zachová stará data, zamezí klikům; bez probliknutí */}
+          {/* Overlay loading */}
           {showOverlay && (
             <div
               aria-live="polite"
@@ -471,11 +515,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           <div aria-live="polite">
             {tt('datatable.pageIndicator', {
               defaultValue: 'Stránka {{p}} / {{c}} • Záznamů: {{n}}',
-              p: api.page, c: api.pageCount, n: api.total
+              p: api.page, c: api.pageCount, n: api.total,
             })}
           </div>
 
-          {/* Navigace: mobil = jen šipky; md+ = šipky + čísla */}
           <nav className="inline-flex items-center gap-1" aria-label={tt('datatable.pagination', { defaultValue: 'Stránkování' })}>
             <Button
               size="sm"
@@ -486,8 +529,6 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               ariaLabel={tt('datatable.prev', { defaultValue: 'Předchozí stránka' })}
               aria-controls={tableId}
             />
-
-            {/* Číselné stránky jen na md+ (na mobilu šetříme místo) */}
             <div className="hidden md:flex items-center gap-1">
               {(() => {
                 const pages: (number | '…')[] = [];
@@ -523,7 +564,6 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                 );
               })()}
             </div>
-
             <Button
               size="sm"
               variant="outline"
