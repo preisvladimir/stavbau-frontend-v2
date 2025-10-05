@@ -32,7 +32,7 @@ import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 
 // volitelně můžeš nějaké role v UI skrýt (ponech prázdné = zobrazit všechny)
 const UI_ROLE_BLACKLIST = new Set<CompanyRoleName>([
-  // 'SUPERADMIN',
+   'SUPERADMIN',
 ]);
 
 // fallback humanizér pro případ, že chybí překladový klíč
