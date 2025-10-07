@@ -1,12 +1,20 @@
 // src/features/projects/components/ProjectsTable.tsx
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import type { DataTableV2Sort } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 import { DataTableV2 } from '@/components/ui/stavbau-ui/datatable/datatable-v2';
 import type { ProjectSummaryDto } from '../api/types';
 
 export type ProjectsTableProps = {
   data: ProjectSummaryDto[];
   loading?: boolean;
+  page?: number;
+  pageSize?: number;
+  totalItems?: number;
+  onPageChange: (nextPage: number) => void;
+  onPageSizeChange: (nextSize: number) => void;
+  onSortChange: (sortState: DataTableV2Sort) => void;
+  sort: DataTableV2Sort;
   i18nNamespaces?: string[];
   search: string;
   onSearchChange: (q: string) => void;
@@ -17,14 +25,21 @@ export type ProjectsTableProps = {
   onRowClick?: (p: ProjectSummaryDto) => void;
   rowActions?: (p: ProjectSummaryDto) => React.ReactNode;
   emptyContent?: React.ReactNode;
- canCreate?: boolean;
- onOpenCreate?: () => void;
+  canCreate?: boolean;
+  onOpenCreate?: () => void;
 };
 
 export function ProjectsTable({
   data,
   loading,
   i18nNamespaces = ['projects'],
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
+  onSortChange,
+  sort,
   search,
   onSearchChange,
   pageSizeOptions = [5, 10, 20],
@@ -34,8 +49,6 @@ export function ProjectsTable({
   onRowClick,
   rowActions,
   emptyContent,
- canCreate = false,
- onOpenCreate 
 }: ProjectsTableProps) {
   const { t } = useTranslation(i18nNamespaces);
 
@@ -92,6 +105,13 @@ export function ProjectsTable({
       variant={variant}
       className={className}
       data={data}
+      page={page}
+      pageSize={pageSize}
+      total={totalItems}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      onSortChange={onSortChange}
+      sort={sort}
       columns={columns as any}
       keyField={(p) => p.id}
       loading={loading}

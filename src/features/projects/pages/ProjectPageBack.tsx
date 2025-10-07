@@ -7,11 +7,11 @@ import { ProjectsTable } from '../components/ProjectsTable';
 import ProjectDetailDrawer from '../components/ProjectDetailDrawer';
 import ProjectFormDrawer from '../components/ProjectFormDrawer';
 
-import { listProjects, createProject, updateProject, archiveProject } from '../api/client';
+import { listProjects, listProjectSummaries, createProject, updateProject, archiveProject , toSortParams} from '../api/client';
+import type { PageResponse } from '@/types/PageResponse';
 
 import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
-
-import { useServerTableState } from '@/lib/hooks/useServerTableState';
+import { normalizeProjectSummary } from '../mappers/ProjectsMappers';
 
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
@@ -23,6 +23,7 @@ import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 import { useFab } from '@/components/layout';
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
+import type { DataTableV2Sort } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 
 export default function ProjectsPage() {
   const { setFab } = useFab();
@@ -33,6 +34,7 @@ export default function ProjectsPage() {
   const params = useParams<{ id?: string }>();
   const { search: locationSearch } = useLocation();
 
+  const [items, setItems] = React.useState<ProjectSummaryDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
   const [search, setSearch] = React.useState('');
@@ -41,6 +43,80 @@ export default function ProjectsPage() {
   const isDetail = !!params.id && params.id !== 'new';
   const isEdit = isDetail && new URLSearchParams(locationSearch).get('edit') === '1';
 
+
+
+//*******************************************************************/
+ // Server-side řízení tabulky
+ const [q, setQ] = React.useState<string>('');
+ const [page, setPage] = React.useState<number>(0);   // 0-based
+ const [size, setSize] = React.useState<number>(20);
+  const [sort, setSort] = React.useState<DataTableV2Sort>([
+    { id: 'createdAt', desc: true },
+  ]);
+ const [loading, setLoading] = React.useState<boolean>(false);
+
+ const [data, setData] = React.useState<PageResponse<ProjectSummaryDto>>({
+   items: [],
+   page: 0,
+   size: 20,
+   total: 0,
+ });
+
+ // Fetch při změně q/page/size/sort
+ React.useEffect(() => {
+   let mounted = true;
+   (async () => {
+     setLoading(true);
+     try {
+        const res = await listProjects({
+          q, page, size, sort: toSortParams(sort),
+        });
+       if (mounted) setData(res);
+     } finally {
+       if (mounted) setLoading(false);
+     }
+   })();
+   return () => { mounted = false; };
+ }, [q, page, size, JSON.stringify(sort)]); 
+
+  // Handlery z DataTableV2 (přizpůsob dle své komponenty)
+  const handlePageChange = (nextPage: number) => setPage(Math.max(0, nextPage));
+  const handlePageSizeChange = (nextSize: number) => { setSize(nextSize); setPage(0); };
+  /**
+   * DataTableV2 předává pole prioritizovaných sortů.
+  * Např. [{id:'code',desc:false},{id:'createdAt',desc:true}]
+   */
+  const handleSortChange = (sortState: DataTableV2Sort) => {
+    setSort(sortState?.length ? sortState : [{ id: 'createdAt', desc: true }]);
+    setPage(0);
+  };
+
+//*******************************************************************/
+
+  // --- List (summary) ---
+  React.useEffect(() => {
+    const ac = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    listProjectSummaries({ page, size, q: search, sort: 'code,asc', signal: ac.signal })
+      .then((res) => {
+        console.log(res);
+        setItems((res.items ?? []).map(normalizeProjectSummary));
+        setPage(res.page);
+        setSize(res.size);
+      })
+      .catch((e: any) => {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError') return;
+        setError(e?.response?.data?.detail ?? e?.message ?? 'Failed to load');
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false);
+      });
+
+    return () => ac.abort();
+  }, [page, size, search]);
+
   // --- Routing helpers ---
   const moduleBase = '/app/projects/';
   const openNew = () => navigate(`${moduleBase}new`);
@@ -48,48 +124,30 @@ export default function ProjectsPage() {
   const openEdit = (id: UUID) => navigate({ pathname: `${moduleBase}${id}`, search: '?edit=1' });
   const closeOverlays = () => navigate('/app/projects');
 
-
-  //*******************************************************************/
-  // Server-side řízení tabulky
-
-  const fetcher = React.useCallback(
-    ({ q, page, size, sort }: { q?: string; page?: number; size?: number; sort?: string | string[] }) =>
-      listProjects({ q, page, size, sort }),
-    []
-  );
-
-  const {
-    data, loading,
-    q, sort, page, size,
-    onSearchChange, onSortChange, onPageChange, onPageSizeChange,
-    refreshList, refreshAfterMutation,
-  } = useServerTableState<ProjectSummaryDto>({
-    fetcher,
-    defaults: { q: '', page: 0, size: 20, sort: [{ id: 'code', desc: false }] },
-  });
-
-  //*******************************************************************/
+  const refreshList = React.useCallback(async () => {
+    const res = await listProjectSummaries({ page, size, q: search, sort: 'code,asc' });
+    setItems((res.items ?? []).map(normalizeProjectSummary));
+  }, [page, size, search]);
 
   // --- CREATE ---
   const handleCreate = async (values: Partial<ProjectDto>) => {
     await createProject(values as any);
     closeOverlays();
-    await refreshAfterMutation();
+    await refreshList();
   };
 
   // --- EDIT ---
   const handleEdit = async (values: Partial<ProjectDto>, id: UUID) => {
     await updateProject(id, values as any);
-    closeOverlays();
     await refreshList();
-
+    closeOverlays();
   };
 
   // --- ARCHIVE (soft delete) ---
   const handleArchive = async (id: UUID) => {
     await archiveProject(id);
-    closeOverlays();
     await refreshList();
+    closeOverlays();
   };
 
   // Empty state (kontext vyhledávání)
@@ -164,18 +222,18 @@ export default function ProjectsPage() {
         <ProjectsTable
           data={data.items}
           loading={loading}
-          page={page}
-          pageSize={size}
+          page={data.page}
+          pageSize={data.size}
           totalItems={data.total}
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          sort={sort}
-          onSortChange={onSortChange}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          sort = {sort}
+          onSortChange={handleSortChange}
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           search={q}
-          onSearchChange={onSearchChange}
+          onSearchChange={(val: string) => { setQ(val); setPage(0); }}
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
           onRowClick={(p) => openDetail(p.id as UUID)}
@@ -234,7 +292,7 @@ export default function ProjectsPage() {
           onClose={closeOverlays}
           onEdit={() => openEdit(params.id as UUID)}
           onArchive={(id) => void handleArchive(id)}
-          prefill={data.items.find((i) => i.id === params.id) as any}
+          prefill={items.find((i) => i.id === params.id) as any}
         />
 
         {/* Edit */}
@@ -247,11 +305,11 @@ export default function ProjectsPage() {
           onClose={closeOverlays}
           onSubmit={(vals) => void handleEdit(vals, params.id as UUID)}
           defaultValues={{
-            name: data.items.find((i) => i.id === params.id)?.name ?? '',
-            code: data.items.find((i) => i.id === params.id)?.code ?? '',
+            name: items.find((i) => i.id === params.id)?.name ?? '',
+            code: items.find((i) => i.id === params.id)?.code ?? '',
             description: '',
-            customerId: (data.items.find((i) => i.id === params.id) as any)?.customerId ?? '',
-            projectManagerId: (data.items.find((i) => i.id === params.id) as any)?.projectManagerId ?? '',
+            customerId: (items.find((i) => i.id === params.id) as any)?.customerId ?? '',
+            projectManagerId: (items.find((i) => i.id === params.id) as any)?.projectManagerId ?? '',
             plannedStartDate: '',
             plannedEndDate: '',
             currency: '',

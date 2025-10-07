@@ -57,6 +57,100 @@ export async function listProjects(
   return toPageResponse<ProjectSummaryDto>(data);
 }
 
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------
+// Typy volání listingu
+// ------------------------------------------------------
+export type ListOptions = {
+  q?: string;
+  page?: number;
+  size?: number;
+  sort?: string;        // např. "name,asc" | "code,asc"
+  signal?: AbortSignal;
+  /** Volitelné extra hlavičky (If-None-Match apod.). */
+  headers?: Record<string, string>;
+  /** Rezerva: kurzorové stránkování v budoucnu */
+  cursor?: string;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------
+// Listing — doporučený vstupní bod (PageResponse<ProjectSummaryDto>)
+// ------------------------------------------------------
+export async function listProjectSummaries(
+  opts: ListOptions = {}
+): Promise<PageResponse<ProjectSummaryDto>> {
+  const rawPage = toInt(opts.page, 0);
+  const rawSize = toInt(opts.size, 20);
+  const page = clamp(rawPage, 0, 1_000_000);
+  const size = clamp(rawSize, 1, 100);
+  const q = sanitizeQ(opts.q);
+  const { signal, headers, sort, cursor } = opts;
+
+  try {
+    const params = cursor ? { cursor, q, sort } : { q, page, size, sort };
+    const res = await api.get<any>(base, {
+      params,
+      signal,
+      headers: { ...langHeader(), ...headers },
+    });
+
+    // Centrální adaptér zachová i raw Spring Page pole
+    return toPageResponse<ProjectSummaryDto>(res.data);
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
+}
+
+// ------------------------------------------------------
+// Listing — původní (RAW Spring Page) pro zpětnou kompatibilitu
+//   ⚠️ Preferuj listProjectSummaries výše.
+// ------------------------------------------------------
+export async function listProjectsDeprecated(opts: ListOptions = {}): Promise<any> {
+  const params = {
+    q: sanitizeQ(opts.q),
+    page: toInt(opts.page, 0),
+    size: clamp(toInt(opts.size, 20), 1, 100),
+    sort: opts.sort,
+    cursor: opts.cursor, // BE zatím ignoruje
+  };
+
+  const { signal, headers } = opts;
+  try {
+    const { data } = await api.get(base, {
+      params,
+      signal,
+      headers: { ...langHeader(), ...headers },
+    });
+    return data; // RAW Spring Page (content, number, size, totalElements, …)
+  } catch (e) {
+    if (isCanceled(e)) throw e;
+    mapAndThrow(e);
+  }
+}
+
 // ------------------------------------------------------
 // Detail
 // ------------------------------------------------------
