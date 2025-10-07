@@ -1,6 +1,5 @@
 // src/features/customers/api/client.ts
 import { api } from '@/lib/api/client';
-import i18n from '@/i18n';
 import { mapAndThrow } from '@/lib/api/problem';
 import { toPageResponse, type PageResponse } from '@/types/PageResponse';
 import type {
@@ -9,33 +8,19 @@ import type {
   CreateCustomerRequest,
   UpdateCustomerRequest,
 } from './types';
-
+import { ALLOWED_SORT } from './types';
+import {
+  clamp,
+  toInt,
+  sanitizeQ,
+  isCanceled,
+  langHeader,
+  compact,
+  normalizeSort,
+} from '@/lib/api/utils';
 // ------------------------------------------------------
-// Helpers (DX, bezpečnost)
+// (helpers přesunuty do @/lib/api/utils)
 // ------------------------------------------------------
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-const toInt = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? (Number(v) | 0) : fallback);
-const sanitizeQ = (q?: string) => (q ?? '').trim().slice(0, 200);
-const isCanceled = (e: unknown): boolean =>
-  (e as any)?.code === 'ERR_CANCELED' ||
-  (e as any)?.name === 'AbortError' ||
-  (api as any)?.isCancel?.(e) === true ||
-  (e as any)?.name === 'CanceledError' ||
-  (e as any)?.message === 'canceled';
-
-// Shallow compact: zahodí null/undefined, zachová keyof T
-function compact<T extends Record<string, any>>(obj: T): Partial<T> {
-  const out = {} as Partial<T>;
-  (Object.keys(obj) as (keyof T)[]).forEach((k) => {
-    const v = obj[k];
-    if (v !== null && v !== undefined) (out as any)[k] = v;
-  });
-  return out;
-}
-
-function langHeader() {
-  return { 'Accept-Language': i18n.language };
-}
 
 // ------------------------------------------------------
 // Endpointy
@@ -56,15 +41,7 @@ export type ListOptions = {
   cursor?: string;      // rezerva do budoucna
 };
 
-// FE whitelist sort klíčů v sync s BE
-const ALLOWED_SORT = new Set(['name', 'ico', 'dic', 'createdAt', 'updatedAt', 'id']);
-const normalizeSort = (s?: string) => {
-  if (!s) return undefined;
-  const [key, dir = 'asc'] = s.split(',', 2);
-  const k = key?.trim();
-  if (!k || !ALLOWED_SORT.has(k)) return undefined; // ponech default BE
-  return `${k},${dir}`;
-};
+const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
 
 // ------------------------------------------------------
 // Listing — doporučený vstupní bod (PageResponse<CustomerSummaryDto>)
@@ -78,7 +55,7 @@ export async function listCustomerSummaries(
   const size = clamp(rawSize, 1, 100);
   const q = sanitizeQ(opts.q);
   const { signal, headers, cursor } = opts;
-  const sort = normalizeSort(opts.sort);
+  const sort = normalizeSortLocal(opts.sort);
 
   try {
     const params = cursor ? { cursor, q, sort } : { q, page, size, sort };
@@ -99,6 +76,33 @@ export async function listCustomerSummaries(
 // ------------------------------------------------------
 export async function listCustomers(params: ListOptions = {}) {
   return listCustomerSummaries(params);
+}
+
+type CustomerSummary = { id: string; name?: string | null; ico?: string | null; email?: string | null };
+
+export async function searchCustomers(
+  q: string,
+  signal?: AbortSignal
+): Promise<{ value: string; label: string }[]> {
+  const params = new URLSearchParams();
+  params.set('page', '0');
+  params.set('size', '10');
+  params.set('sort', 'name,asc');
+  if (q?.trim()) params.set('q', q.trim());
+
+  const res = await api.get(`/customers?${params.toString()}`, {
+    signal,
+    headers: langHeader(),
+  });
+
+  // ✅ sjednocení Spring Page (content) vs. PageResponse (items)
+  const page = toPageResponse<CustomerSummary>(res.data);
+
+  return (page.items ?? []).map((c) => {
+    const base = c.name?.trim() || c.email?.trim() || String(c.id);
+    const label = c.ico?.trim() ? `${base} (${c.ico})` : base;
+    return { value: String(c.id), label };
+  });
 }
 
 // ------------------------------------------------------

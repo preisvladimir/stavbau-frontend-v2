@@ -7,6 +7,8 @@ export type ListCustomersParams = {
   size?: number;
 };
 
+export const ALLOWED_SORT = new Set(['name', 'ico', 'dic', 'createdAt', 'updatedAt', 'id']);
+
 export interface CustomerDto {
     id: string;
     type: 'ORGANIZATION' | 'PERSON';

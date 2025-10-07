@@ -1,9 +1,7 @@
 // src/features/team/api/client.ts
 import { api } from '@/lib/api/client';
-import i18n from '@/i18n';
 import { mapAndThrow } from '@/lib/api/problem';
 import { toPageResponse, type PageResponse } from '@/types/PageResponse';
-
 import type {
   MembersStatsDto,
   MemberSummaryDto,
@@ -15,53 +13,20 @@ import type {
   UUID,
 } from './types';
 import { type CompanyRoleName, ROLE_WHITELIST } from '@/types/common/rbac';
-
+import {
+  clamp,
+  toInt,
+  compact,
+  compactNonEmpty,
+  toNonEmpty,
+  isCanceled,
+  langHeader,
+  normalizeSort,
+} from '@/lib/api/utils';
+const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
 // ------------------------------------------------------
-// Helpers (DX, bezpečnost)
+// // (helpers přesunuty do @/lib/api/utils)
 // ------------------------------------------------------
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-const toInt = (v: unknown, fallback = 0) =>
-  Number.isFinite(Number(v)) ? (Number(v) | 0) : fallback;
-
-//const sanitizeStr = (v?: string) => (v ?? '').trim().slice(0, 200);
-const isCanceled = (e: unknown): boolean =>
-  (e as any)?.code === 'ERR_CANCELED' ||
-  (e as any)?.name === 'AbortError' ||
-  (api as any)?.isCancel?.(e) === true ||
-  (e as any)?.name === 'CanceledError' ||
-  (e as any)?.message === 'canceled';
-
-// Shallow compact: zahodí null/undefined, zachová keyof T
-function compact<T extends Record<string, any>>(obj: T): Partial<T> {
-  const out = {} as Partial<T>;
-  (Object.keys(obj) as (keyof T)[]).forEach((k) => {
-    const v = obj[k];
-    if (v !== null && v !== undefined) (out as any)[k] = v;
-  });
-  return out;
-}
-
-// helpers
-function compactNonEmpty<T extends Record<string, any>>(obj: T): Partial<T> {
-  const out = {} as Partial<T>;
-  (Object.keys(obj) as (keyof T)[]).forEach((k) => {
-    const v = obj[k];
-    if (v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '')) {
-      (out as any)[k] = v;
-    }
-  });
-  return out;
-}
-
-// NOVÝ: vrací undefined, pokud je to prázdné → param se vůbec nepošle
-const toNonEmpty = (v?: string) => {
-  const s = (v ?? '').trim();
-  return s ? s.slice(0, 200) : undefined;
-};
-
-function langHeader() {
-  return { 'Accept-Language': i18n.language };
-}
 
 // FE whitelist sort klíčů v sync s BE (pokud BE rozšíří, stačí přidat sem)
 const ALLOWED_SORT = new Set([
@@ -74,14 +39,8 @@ const ALLOWED_SORT = new Set([
   'createdAt',
   'updatedAt',
 ]);
-const normalizeSort = (s?: string) => {
-  if (!s) return undefined;
-  const [key, dir = 'asc'] = s.split(',', 2);
-  const k = key?.trim();
-  if (!k || !ALLOWED_SORT.has(k)) return undefined; // necháme default BE
-  return `${k},${dir}`;
-};
-
+//const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
+//const sort = normalizeSortLocal(opts.sort);
 // ------------------------------------------------------
 // Endpointy
 // ------------------------------------------------------
@@ -154,7 +113,7 @@ export async function listMemberSummaries(
 ): Promise<PageResponse<MemberSummaryDto>> {
   const page = clamp(toInt(opts.page, 0), 0, 1_000_000);
   const size = clamp(toInt(opts.size, 20), 1, 100);
-  const sort = normalizeSort(opts.sort);
+  const sort = normalizeSortLocal(opts.sort);
 
   const paramsRaw = opts.cursor
     ? {
@@ -195,13 +154,41 @@ console.log(params);
   }
 }
 
+/**
+ * Typeahead vyhledávání členů týmu pro selecty.
+ * @param companyId  tenant/company ID
+ * @param q          fulltext dotaz (jméno, email…)
+ * @param signal     AbortSignal pro cancel rozpracovaných dotazů
+ * @returns pole { value, label } vhodné pro AsyncSearchSelect
+ */
+export async function searchTeamMembers(
+  companyId: string,
+  q: string,
+  signal?: AbortSignal
+): Promise<{ value: string; label: string }[]> {
+  const page = await listMemberSummaries(companyId, {
+    q,
+    page: 0,
+    size: 10,
+    sort: 'firstName,asc',
+    signal,
+  });
+
+  return (page.items ?? []).map((m) => {
+    const name = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+    const label = name || m.email || m.id;
+    return { value: String(m.id), label };
+  });
+}
+
+
 export async function listMembers(
   companyId: string,
   opts: ListOptions = {}
 ): Promise<PageResponse<MemberDto>> {
   const page = clamp(toInt(opts.page, 0), 0, 1_000_000);
   const size = clamp(toInt(opts.size, 20), 1, 100);
-const sort = normalizeSort(opts.sort);
+const sort = normalizeSortLocal(opts.sort);
 
 const paramsRaw = opts.cursor
   ? {

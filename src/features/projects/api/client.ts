@@ -1,6 +1,5 @@
 // src/features/projects/api/client.ts
 import { api } from '@/lib/api/client';
-import i18n from '@/i18n';
 import { mapAndThrow } from '@/lib/api/problem';
 import { toPageResponse, type PageResponse } from '@/types/PageResponse';
 import type {
@@ -11,34 +10,18 @@ import type {
   ProjectMemberRequest,
   UUID,
 } from './types';
+import { formToCreateBody, formToUpdateBody } from '../mappers/ProjectsMappers';
+import type { AnyProjectFormValues } from '../validation/schemas';
+import {
+  clamp,
+  toInt,
+  sanitizeQ,
+  isCanceled,
+  langHeader,
+  compact,
+} from '@/lib/api/utils';
 
-// ------------------------------------------------------
-// Helpers (DX, bezpečnost)
-// ------------------------------------------------------
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-const toInt = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? (Number(v) | 0) : fallback);
-const sanitizeQ = (q?: string) => (q ?? '').trim().slice(0, 200);
-const isCanceled = (e: unknown): boolean =>
-  (e as any)?.code === 'ERR_CANCELED' ||
-  (e as any)?.name === 'AbortError' ||
-  (api as any)?.isCancel?.(e) === true ||
-  (e as any)?.name === 'CanceledError' ||
-  (e as any)?.message === 'canceled';
-
-// Strongly-typed shallow compact: zahodí null/undefined, zachová keyof T
-function compact<T extends Record<string, any>>(obj: T): Partial<T> {
-  const out = {} as Partial<T>;
-  (Object.keys(obj) as (keyof T)[]).forEach((k) => {
-    const v = obj[k];
-    if (v !== null && v !== undefined) (out as any)[k] = v;
-  });
-  return out;
-}
-
-function langHeader() {
-  return { 'Accept-Language': i18n.language };
-}
-
+// (helpers přesunuty do @/lib/api/utils)
 // ------------------------------------------------------
 // Endpointy
 // ------------------------------------------------------
@@ -161,6 +144,17 @@ export async function updateProject(id: UUID, body: UpdateProjectRequest): Promi
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
+}
+
+// ------------------------------------------------------
+// Form helpers (využij normalizaci v ../mappers)
+// ------------------------------------------------------
+export async function createProjectFromForm(v: AnyProjectFormValues): Promise<ProjectDto> {
+  return createProject(formToCreateBody(v));
+}
+
+export async function updateProjectFromForm(id: UUID, v: AnyProjectFormValues): Promise<ProjectDto> {
+  return updateProject(id, formToUpdateBody(v));
 }
 
 // ------------------------------------------------------

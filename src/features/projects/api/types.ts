@@ -1,5 +1,6 @@
 // src/features/projects/api/types.ts
 import type { PageResponse } from "@/types/PageResponse";
+import { type AddressDto } from '@/types/common/address';
 
 export type UUID = string;
 
@@ -44,6 +45,7 @@ export type ProjectDto = {
   actualEndDate?: string;    // ISO
   currency?: string;
   vatMode?: string;
+  siteAddress?: AddressDto;
 };
 
 export type CreateProjectRequest = {
@@ -56,6 +58,7 @@ export type CreateProjectRequest = {
   plannedEndDate?: string;
   currency?: string;
   vatMode?: string;
+  siteAddress?: AddressDto;
 };
 
 export type UpdateProjectRequest = Partial<CreateProjectRequest>;
