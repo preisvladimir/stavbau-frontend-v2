@@ -25,7 +25,7 @@ export function normalizeProject(p: ProjectDto): ProjectDto {
 /** Form → Create payload (undefined = neposílat) */
 export function formToCreateBody(v: AnyProjectFormValues): CreateProjectRequest {
   return {
-    code: trimToUndef(v.code),
+    //code: trimToUndef(v.code),
     name: v.name, // required ve schématu
     description: trimToUndef(v.description),
     customerId: v.customerId, // required ve schématu
@@ -41,7 +41,7 @@ export function formToCreateBody(v: AnyProjectFormValues): CreateProjectRequest 
 /** Form → Update payload (PATCH sémantika: undefined = beze změny) */
 export function formToUpdateBody(v: AnyProjectFormValues): UpdateProjectRequest {
   return {
-    code: trimToUndef(v.code),
+   // code: trimToUndef(v.code),
     name: trimToUndef(v.name),
     description: trimToUndef(v.description),
     customerId: trimToUndef(v.customerId),

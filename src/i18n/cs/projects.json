@@ -1,11 +1,100 @@
 {
   "title": "Projekty",
-  "actions": { "newProject": "Nový projekt" },
+  "actions": {
+    "newProject": "Nový projekt"
+  },
   "loading": "Načítám…",
   "error": "Chyba načtení.",
   "list": {
+    "columns": {
+      "code": "Kód",
+      "name": "Název",
+      "status": "Stav"
+    },
     "emptyTitle": "Zatím žádné projekty",
     "emptyDesc": "Přidejte první projekt.",
-    "actions": { "open": "Zrušit hledání", "new": "Nový projekt" }
+    "actions": {
+      "open": "Zrušit hledání",
+      "new": "Nový projekt"
+    }
+  },
+  "detail": {
+    "title": "Detail projektu",
+    "code": "Kód",
+    "actions": {
+      "edit": "Upravit",
+      "archive": "Archivovat",
+      "delete": "Smazat"
+    },
+    "archiveConfirm": {
+      "title": "Archivovat projekt?",
+      "desc": "Projekt bude skryt z hlavního výpisu.",
+      "confirm": "Archivovat"
+    },
+    "deleteConfirm": {
+      "title": "Smazat projekt?",
+      "desc": "Tato akce je nevratná.",
+      "confirm": "Smazat",
+      "cancel": "Zrušit"
+    },
+    "schedule": {
+      "title": "Harmonogram"
+    },
+    "plannedStartDate": "Plán. začátek",
+    "plannedEndDate": "Plán. konec",
+    "actualStartDate": "Skut. začátek",
+    "actualEndDate": "Skut. konec",
+    "parties": {
+      "title": "Zákazník & PM"
+    },
+    "customer": "Zákazník",
+    "projectManager": "Projektový manažer",
+    "description": "Popis"
+  },
+  "form": {
+    "title": {
+      "create": "Nový projekt",
+      "edit": "Upravit projekt"
+    },
+    "name": {
+      "label": "Název",
+      "error": "Zadejte název"
+    },
+    "code": {
+      "label": "Kód"
+    },
+    "customer": {
+      "label": "Zákazník",
+      "error": "Vyberte zákazníka"
+    },
+    "projectManager": {
+      "label": "Projektový manažer"
+    },
+    "plannedStartDate": {
+      "label": "Plán. začátek"
+    },
+    "plannedEndDate": {
+      "label": "Plán. konec"
+    },
+    "description": {
+      "label": "Popis"
+    },
+    "currency": {
+      "label": "Měna"
+    },
+    "vatMode": {
+      "label": "DPH režim"
+    },
+    "actions": {
+      "cancel": "Zrušit",
+      "submit": "Uložit"
+    }
+  },
+  "status": {
+    "PLANNED": "Plánováno",
+    "IN_PROGRESS": "Probíhá",
+    "ON_HOLD": "Pozastaveno",
+    "DONE": "Dokončeno",
+    "ARCHIVED": "Archivováno"
   }
 }

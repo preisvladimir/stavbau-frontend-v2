@@ -101,6 +101,20 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       if (isControlled) setInner(value);
     }, [isControlled, value]);
 
+    React.useEffect(() => {
+      if (import.meta.env.DEV && Array.isArray(options)) {
+        const seen = new Set<string>();
+        for (const o of options) {
+          const v = String(o.value);
+          if (seen.has(v)) {
+            console.warn(`[Select] Duplicate option value detected: "${v}"`, options);
+            break; // stačí ohlásit první nález
+          }
+          seen.add(v);
+        }
+      }
+    }, [options]);
+
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       if (!isControlled) setInner(e.target.value);
       onChange?.(e.target.value);
@@ -158,11 +172,15 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             )}
 
             {options
-              ? options.map(opt => (
-                  <option key={String(opt.value)} value={opt.value} disabled={opt.disabled}>
-                    {opt.label as any}
-                  </option>
-                ))
+              ? options.map((opt, i) => (
+                <option
+                  key={`${String(opt.value)}::${i}`}
+                  value={opt.value}
+                  disabled={opt.disabled}
+                >
+                  {opt.label as any}
+                </option>
+              ))
               : children}
           </select>
 
@@ -175,7 +193,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                 fill="none"
                 aria-hidden="true"
               >
-                <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </span>

@@ -53,6 +53,13 @@ function DataTableV2Toolbar({
 
   const hasRoleFilter = Array.isArray(roleOptions) && roleOptions.length > 0;
   const roleValue = String(filters.role ?? '');
+  const options = React.useMemo(() => {
+    const base = roleOptions ?? [];
+    const hasAll = base.some(o => String(o.value) === '');
+    return hasAll
+      ? base
+      : [{ value: '', label: t('datatable.filter.all', { defaultValue: '— Vše —' }) }, ...base];
+  }, [roleOptions, t]);
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-[rgb(var(--sb-surface))] border-b border-[rgb(var(--sb-border))]">
@@ -124,8 +131,8 @@ function DataTableV2Toolbar({
                 (typeof metaLabel === 'string' && metaLabel.trim())
                   ? metaLabel
                   : (typeof header === 'string'
-                      ? header
-                      : t(`columns.${id}`, { defaultValue: startCase }));
+                    ? header
+                    : t(`columns.${id}`, { defaultValue: startCase }));
 
               return {
                 id: col.id!,
@@ -173,10 +180,7 @@ function DataTableV2Toolbar({
               onChange={handleRoleChange}
               ariaLabel={t('datatable.filter.role', { defaultValue: 'Filtrovat roli' })}
               className="w-[11rem]"
-              options={[
-                { value: '', label: t('datatable.filter.all', { defaultValue: 'Vše' }) },
-                ...roleOptions!,
-              ]}
+              options={options}
             />
           </div>
         )}

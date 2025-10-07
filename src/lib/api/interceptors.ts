@@ -1,80 +1,142 @@
-import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } from "axios";
-import { tokenManager } from "./tokenManager";
-import i18n from "@/i18n";
+import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import i18n from '@/i18n';
+import { tokenManager } from '@/lib/api/tokenManager';
 
+// ---- Axios module augmentation (interní flagy) -----------------------------
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** Zabrání zacyklení – request se po refresh zkusí jen jednou. */
+    _retried?: boolean;
+    /** Nepokoušet se o refresh (např. samotný /auth/refresh). */
+    _skipRefresh?: boolean;
+  }
+  export interface InternalAxiosRequestConfig<D = any> {
+    _retried?: boolean;
+    _skipRefresh?: boolean;
+  }
+}
+
+// ---- Helpers ----------------------------------------------------------------
+
+/** Bezpečné rozlišení jazyka (BCP-47), fallback 'cs'. */
+function resolveLanguageTag(): string {
+  const lng = (i18n as any)?.language;
+  return (typeof lng === 'string' && lng.trim()) ? lng : 'cs';
+}
+
+/** case-insensitive kontrola, zda headers už klíč obsahují (pro plain objekty) */
+function hasHeaderCI(headers: any, key: string): boolean {
+  if (!headers) return false;
+  if (typeof headers.has === 'function') return headers.has(key); // AxiosHeaders – case-insensitive
+  const lower = key.toLowerCase();
+  return Object.keys(headers).some(k => k.toLowerCase() === lower);
+}
+
+/** nastavení hlavičky s respektem k AxiosHeaders i plain objektu */
+function setHeader(headers: any, key: string, value: string, overrideIfMissingOnly = true) {
+  if (!headers) return;
+  if (overrideIfMissingOnly && hasHeaderCI(headers, key)) return;
+  if (typeof headers.set === 'function') headers.set(key, value); // AxiosHeaders
+  else headers[key] = value;                                       // plain object
+}
+
+// ---- single-flight refresh fronta ------------------------------------------
 let isRefreshing = false;
-let waitQueue: Array<() => void> = [];
-
-function onRefreshed() {
-  waitQueue.forEach((cb) => cb());
-  waitQueue = [];
+type Waiter = (newToken: string | null) => void;
+const waitQueue: Waiter[] = [];
+function enqueue(waiter: Waiter) { waitQueue.push(waiter); }
+function flushQueue(token: string | null) {
+  while (waitQueue.length) {
+    const cb = waitQueue.shift();
+    try { cb?.(token); } catch { /* noop */ }
+  }
 }
 
-function enqueue(cb: () => void) {
-  waitQueue.push(cb);
-}
-
-export function withInterceptors(instance: AxiosInstance) {
-  // Request: Authorization header
+// ---- Public API -------------------------------------------------------------
+/** Připojí request/response interceptory k dané Axios instance. */
+export function withInterceptors(instance: AxiosInstance): AxiosInstance {
+  // REQUEST
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const access = tokenManager.getAccessToken();
-    const lang =
-      i18n.resolvedLanguage || (i18n as any).language || "cs"; // fallback    
-    if (access) {
-      config.headers = config.headers ?? {};
-      (config.headers as any).Authorization = `Bearer ${access}`;
-    }
-    if (!config.headers["Accept-Language"]) {
-      config.headers["Accept-Language"] = lang;
-    }    
+    const headers: any = config.headers; // InternalAxiosRequestConfig má vždy headers
+
+    // Accept-Language (nepřepisovat, pokud je nastaveno explicitně)
+    setHeader(headers, 'Accept-Language', resolveLanguageTag(), /*overrideIfMissingOnly*/ true);
+
+    // Authorization (Bearer) – nepřepisovat, pokud už je header nastaven
+    const access = tokenManager.getAccessToken?.();
+    if (access) setHeader(headers, 'Authorization', `Bearer ${access}`, /*overrideIfMissingOnly*/ true);
+
+    // U refresh endpointu zakážeme refresh smyčku
+    const url = String(config.url ?? '');
+    if (url.includes('/auth/refresh')) config._skipRefresh = true;
+
     return config;
   });
 
-  // Response: 401→refresh→retry, 403/429 UX
+  // RESPONSE
   instance.interceptors.response.use(
-    (res) => res,
+    (response) => response,
     async (error: AxiosError) => {
-      const original = error.config as AxiosRequestConfig & { _retried?: boolean; _skipRefresh?: boolean };
-      const status = error.response?.status;
+      const { response, config } = error;
+      if (!response || !config) return Promise.reject(error);
 
-      // ⛳️ Pojistka: speciálně označené requesty (např. první /auth/me po loginu) NErefreshujeme
-      if (status === 401 && original?._skipRefresh) {
-        tokenManager.onUnauthorized?.();
+      // 403 – předat na hook a odmítnout
+      if (response.status === 403) {
+        tokenManager.onForbidden?.(response);
         return Promise.reject(error);
-      }     
+      }
 
-      if (status === 401 && !original?._retried) {
-        if (!tokenManager.getRefreshToken()) {
-          tokenManager.onUnauthorized?.();
-          return Promise.reject(error);
-        }
+      // 429 – oznámit; (retry dle Retry-After lze přidat později)
+      if (response.status === 429) {
+        tokenManager.onRateLimit?.(response);
+        return Promise.reject(error);
+      }
+
+      // 401 – zkuste refresh (pouze 1× a ne pro refresh endpoint)
+      const cfg = config as InternalAxiosRequestConfig;
+      if (response.status === 401 && !cfg._skipRefresh && !cfg._retried) {
+        cfg._retried = true;
+
+        // Pokud refresh už běží, zařaď se do fronty
         if (isRefreshing) {
-          // čekej na dokončení refresh
-         await new Promise<void>((resolve) => enqueue(resolve));
-          original._retried = true;
-          return instance(original);
+          return new Promise((resolve, reject) => {
+            enqueue((newToken) => {
+              if (!newToken) return reject(error);
+              setHeader(cfg.headers as any, 'Authorization', `Bearer ${newToken}`, /*overrideIfMissingOnly*/ false);
+              resolve(instance.request(cfg));
+            });
+          });
         }
-        try {
-          isRefreshing = true;
-          await tokenManager.refreshTokens(); // delegováno do AuthContext
-         onRefreshed();
-          original._retried = true;
-          return instance(original);
-        } catch (e) {
-          tokenManager.onUnauthorized?.();
-          return Promise.reject(e);
-        } finally {
-         isRefreshing = false;
-        }
-     }
 
-      if (status === 403) {
-        tokenManager.onForbidden?.(error);
-    } else if (status === 429) {
-        tokenManager.onRateLimit?.(error);
-     }
+        // Spusť refresh – single-flight
+        isRefreshing = true;
+        try {
+          // nečekáme návrat tokenu; po refreshi si token načteme sami
+          await tokenManager.refreshTokens?.();
+
+          const latestToken = tokenManager.getAccessToken?.() ?? null;
+          flushQueue(latestToken);
+
+          if (!latestToken) {
+            tokenManager.onUnauthorized?.();
+            return Promise.reject(error);
+          }
+
+          setHeader(cfg.headers as any, 'Authorization', `Bearer ${latestToken}`, /*overrideIfMissingOnly*/ false);
+          return instance.request(cfg);
+        } catch {
+          tokenManager.onUnauthorized?.();
+          flushQueue(null);
+          return Promise.reject(error);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
+      // Ostatní chyby – předat dál
       return Promise.reject(error);
     }
   );
+
   return instance;
 }

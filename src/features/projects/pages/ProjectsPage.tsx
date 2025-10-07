@@ -51,6 +51,7 @@ export default function ProjectsPage() {
 
     listProjectSummaries({ page, size, q: search, sort: 'code,asc', signal: ac.signal })
       .then((res) => {
+        console.log(res);
         setItems((res.items ?? []).map(normalizeProjectSummary));
         setPage(res.page);
         setSize(res.size);

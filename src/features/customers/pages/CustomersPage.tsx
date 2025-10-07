@@ -55,6 +55,7 @@ export default function CustomersPage() {
     // BE má default sort "name,asc" → nemusíme posílat
     listCustomerSummaries({ page, size, q: search, sort: 'name,asc', signal: ac.signal })
       .then((res) => {
+        console.log(res);
         setItems(res.items ?? []);
         setPage(res.page);
         setSize(res.size);

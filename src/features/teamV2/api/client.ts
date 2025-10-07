@@ -139,7 +139,6 @@ export async function listMemberSummaries(
     };
 
   const params = compactNonEmpty(paramsRaw);
-console.log(params);
   try {
     const res = await api.get<any>(endpoint(companyId), {
       params,

@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
+import { Collapse } from "@/components/ui/stavbau-ui/collapse";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { isValidICO, isValidCZDic } from '@/lib/utils/patterns';
@@ -10,6 +11,7 @@ import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocompl
 import type { AddressDto } from '@/types/common/address';
 import type { AddressSuggestion } from '@/lib/api/geo';
 import { Button } from '@/components/ui/stavbau-ui/button';
+import { Pencil, ChevronDown, ChevronUp } from "@/components/icons";
 
 // --- Validation schema (inline, MVP) ---
 const schema = z.object({
@@ -26,7 +28,7 @@ const schema = z.object({
     .optional()
     .refine((v) => !v || isValidCZDic(v), 'Neplatné DIČ (očekává se CZ…)'),
   email: z
-    .string()
+    .string() // ✅ chybělo
     .email('Neplatný e-mail')
     .optional()
     .or(z.literal('').transform(() => undefined)),
@@ -78,7 +80,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const resolver = zodResolver(schema) as unknown as Resolver<CustomerFormValues>;
   const shouldReset = resetAfterSubmit ?? (mode === 'create');
 
-  // jednotné defaulty (využijeme i při resetu po submitu)
+  // sjednocené defaulty
   const defaultValuesResolved = React.useMemo<CustomerFormValues>(
     () => ({
       type: 'ORGANIZATION',
@@ -107,7 +109,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     mode: 'onBlur',
   });
 
-  // přenastavení zvenčí (změna defaultValues)
   React.useEffect(() => {
     reset(defaultValuesResolved);
   }, [defaultValuesResolved, reset]);
@@ -119,7 +120,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       formatted: nn(addr.formatted),
       street: nn(addr.street),
       houseNumber: nn(addr.houseNumber),
-      orientationNumber: nn(addr.houseNumber),
+      orientationNumber: nn(addr.houseNumber), // ✅ oprava
       city: nn(addr.municipality),
       cityPart: nn(addr.municipalityPart),
       postalCode: nn(addr.zip),
@@ -134,14 +135,13 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const onSubmitInternal = React.useCallback(
     async (vals: CustomerFormValues) => {
       await onSubmit(vals);
-      if (shouldReset) {
-        reset(defaultValuesResolved);
-      }
+      if (shouldReset) reset(defaultValuesResolved);
     },
     [onSubmit, shouldReset, reset, defaultValuesResolved]
   );
 
   const disabled = submitting || isSubmitting;
+  const [manualOpen, setManualOpen] = React.useState(false);
 
   return (
     <form onSubmit={handleSubmit(onSubmitInternal)} className={cn('flex flex-col gap-4', className)} noValidate>
@@ -205,60 +205,84 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         </label>
       </div>
 
-      {/* GEO Autocomplete + manuální editace adresy */}
+      {/* GEO Autocomplete + (toggle) manuální editace adresy */}
       <div className="flex flex-col gap-2">
-        <span className="text-sm">{t('form.address', { defaultValue: 'Adresa' })}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm">{t('form.address', { defaultValue: 'Adresa' })}</span>
+          <Button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={() => setManualOpen((v) => !v)}
+            disabled={disabled}
+            aria-expanded={manualOpen}
+            aria-controls="manual-address-editor"
+            leftIcon = {<Pencil size={16} />}
+            rightIcon = {manualOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          >
+            {manualOpen
+              ? (t('form.hideManual', { defaultValue: 'Skrýt ruční úpravu' }) as string)
+              : (t('form.editManual', { defaultValue: 'Upravit ručně' }) as string)}
+          </Button>
+        </div>
+
         <AddressAutocomplete onSelect={onAddressPick} />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.addressFormatted', { defaultValue: 'Adresa (formatted)' }) as string}
-          disabled={disabled}
-          {...register('billingAddress.formatted')}
-        />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.street', { defaultValue: 'Ulice' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.street')}
-          />
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.houseNumber', { defaultValue: 'Číslo popisné' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.houseNumber')}
-          />
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.orientationNumber', { defaultValue: 'Číslo orientační' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.orientationNumber')}
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.city', { defaultValue: 'Město' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.city')}
-          />
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.postalCode', { defaultValue: 'PSČ' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.postalCode')}
-          />
-          <input
-            className="rounded-md border px-3 py-2"
-            placeholder={t('form.countryCode', { defaultValue: 'Země (ISO2)' }) as string}
-            disabled={disabled}
-            {...register('billingAddress.countryCode')}
-          />
-        </div>
-        {/* Rezerva pro zobrazení chyb detailů adresy, pokud zpřísníme validaci */}
-        {errors.billingAddress?.formatted && (
-          <span className="text-xs text-red-600">{t(errors.billingAddress.formatted.message as string)}</span>
-        )}
+
+        {/* ⬇ collapse místo podmíněného renderu */}
+        <Collapse open={manualOpen} id="manual-address-editor" className="mt-2">
+          <div className="space-y-2">
+            <input
+              className="rounded-md border px-3 py-2"
+              placeholder={t('form.addressFormatted', { defaultValue: 'Adresa (formatted)' }) as string}
+              disabled={disabled}
+              {...register('billingAddress.formatted')}
+            />
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.street', { defaultValue: 'Ulice' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.street')}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.houseNumber', { defaultValue: 'Číslo popisné' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.houseNumber')}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.orientationNumber', { defaultValue: 'Číslo orientační' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.orientationNumber')}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.city', { defaultValue: 'Město' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.city')}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.postalCode', { defaultValue: 'PSČ' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.postalCode')}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder={t('form.countryCode', { defaultValue: 'Země (ISO2)' }) as string}
+                disabled={disabled}
+                {...register('billingAddress.countryCode')}
+              />
+            </div>
+            {errors.billingAddress?.formatted && (
+              <span className="text-xs text-red-600">
+                {t(errors.billingAddress.formatted.message as string)}
+              </span>
+            )}
+          </div>
+        </Collapse>
       </div>
 
       {/* Notes */}

@@ -47,7 +47,7 @@ export function ProjectForm({
   const defaultValuesResolved = React.useMemo<AnyProjectFormValues>(
     () => ({
       name: '',
-      code: '',
+     // code: '',
       description: '',
       customerId: '',
       projectManagerId: '',
@@ -133,13 +133,6 @@ export function ProjectForm({
             })}
           </span>
         )}
-      </label>
-
-      {/* Code */}
-      <label className="flex flex-col gap-1">
-        <span className="text-sm">{t('form.code.label', { defaultValue: 'Kód' })}</span>
-        <input className="rounded-md border px-3 py-2" autoComplete="off" disabled={disabled} {...register('code')} />
-        {errors.code && <span className="text-xs text-red-600">{t(errors.code.message as string)}</span>}
       </label>
 
       {/* Customer & PM */}

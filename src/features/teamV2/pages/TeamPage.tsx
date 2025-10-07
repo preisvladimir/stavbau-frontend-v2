@@ -50,21 +50,12 @@ export function useRoleOptions(): RoleOption[] {
   const { t } = useTranslation(['team', 'common']);
 
   return React.useMemo<RoleOption[]>(() => {
-    const allOption: RoleOption = {
-      value: '',
-      label: t('list.filter.all', { ns: 'team', defaultValue: '— Vše —' }),
-    };
-
-    const roleOptions: RoleOption[] = ROLE_WHITELIST
-      // pokud chceš něco skrýt v UI:
+    return ROLE_WHITELIST
       .filter((r) => !UI_ROLE_BLACKLIST.has(r as CompanyRoleName))
-      // zachová pořadí z whitelistu a nalepí lokalizovaný label
       .map((r) => ({
         value: r,
         label: t(`roles.${r}`, { defaultValue: humanizeRole(String(r)) }),
       }));
-
-    return [allOption, ...roleOptions];
   }, [t]);
 }
 
@@ -101,8 +92,7 @@ export default function TeamPage() {
     setError(null);
 
     const CompanyRole = filters.role && String(filters.role).trim() ? String(filters.role) : undefined;
-    console.log(CompanyRole);
-    listMemberSummaries(companyId, {
+      listMemberSummaries(companyId, {
       page,
       size,
       q: search,
@@ -110,6 +100,7 @@ export default function TeamPage() {
       signal: ac.signal,
     })
       .then((res) => {
+        console.log(res);
         const sorted = [...(res.items ?? [])].sort((a, b) => {
           const an = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.displayName || a.email || '';
           const bn = [b.firstName, b.lastName].filter(Boolean).join(' ') || b.displayName || b.email || '';

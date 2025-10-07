@@ -1,11 +1,100 @@
 {
   "title": "Projects",
-  "actions": { "newProject": "New project" },
+  "actions": {
+    "newProject": "New project"
+  },
   "loading": "Loading…",
   "error": "Failed to load.",
   "list": {
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "status": "Status"
+    },
     "emptyTitle": "No projects yet",
-    "emptyDesc": "Create your first project.",
-    "actions": { "open": "Clear search", "new": "New project" }
+    "emptyDesc": "Add your first project.",
+    "actions": {
+      "open": "Clear search",
+      "new": "New project"
+    }
+  },
+  "detail": {
+    "title": "Project details",
+    "code": "Code",
+    "actions": {
+      "edit": "Edit",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "archiveConfirm": {
+      "title": "Archive project?",
+      "desc": "The project will be hidden from the main list.",
+      "confirm": "Archive"
+    },
+    "deleteConfirm": {
+      "title": "Delete project?",
+      "desc": "This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "schedule": {
+      "title": "Schedule"
+    },
+    "plannedStartDate": "Planned start",
+    "plannedEndDate": "Planned end",
+    "actualStartDate": "Actual start",
+    "actualEndDate": "Actual end",
+    "parties": {
+      "title": "Customer & PM"
+    },
+    "customer": "Customer",
+    "projectManager": "Project manager",
+    "description": "Description"
+  },
+  "form": {
+    "title": {
+      "create": "New project",
+      "edit": "Edit project"
+    },
+    "name": {
+      "label": "Name",
+      "error": "Please enter a name"
+    },
+    "code": {
+      "label": "Code"
+    },
+    "customer": {
+      "label": "Customer",
+      "error": "Please select a customer"
+    },
+    "projectManager": {
+      "label": "Project manager"
+    },
+    "plannedStartDate": {
+      "label": "Planned start"
+    },
+    "plannedEndDate": {
+      "label": "Planned end"
+    },
+    "description": {
+      "label": "Description"
+    },
+    "currency": {
+      "label": "Currency"
+    },
+    "vatMode": {
+      "label": "VAT mode"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submit": "Save"
+    }
+  },
+  "status": {
+    "PLANNED": "Planned",
+    "IN_PROGRESS": "In progress",
+    "ON_HOLD": "On hold",
+    "DONE": "Done",
+    "ARCHIVED": "Archived"
   }
 }
