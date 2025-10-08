@@ -1,152 +1,79 @@
-// src/features/team/api/client.ts
+// src/features/teamV2/api/client.ts
+// Server-side paging/sorting/search ve stejném duchu jako Projects
 import { api } from '@/lib/api/client';
 import { mapAndThrow } from '@/lib/api/problem';
-import { toPageResponse, type PageResponse } from '@/types/PageResponse';
+import { toPageResponse, type PageResponse } from '@/lib/api/types/PageResponse';
+import { isCanceled, langHeader, compact, sanitizeQ } from '@/lib/api/utils';
+import type { DataTableV2Sort } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 import type {
-  MembersStatsDto,
   MemberSummaryDto,
-  MemberDto,
-  CreateMemberRequest,
-  UpdateMemberRequest,          // ponecháno kvůli deprecated updateMember
-  UpdateMemberRoleRequest,
-  UpdateMemberProfileRequest,
   UUID,
+  CreateMemberRequest,
+  UpdateMemberProfileRequest,
+  UpdateMemberRoleRequest,
 } from './types';
-import { type CompanyRoleName, ROLE_WHITELIST } from '@/types/common/rbac';
-import {
-  clamp,
-  toInt,
-  compact,
-  compactNonEmpty,
-  toNonEmpty,
-  isCanceled,
-  langHeader,
-  normalizeSort,
-} from '@/lib/api/utils';
-const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
-// ------------------------------------------------------
-// // (helpers přesunuty do @/lib/api/utils)
-// ------------------------------------------------------
 
-// FE whitelist sort klíčů v sync s BE (pokud BE rozšíří, stačí přidat sem)
-const ALLOWED_SORT = new Set([
-  'id',
-  'email',
-  'firstName',
-  'lastName',
-  'phone',
-  'role',
-  'createdAt',
-  'updatedAt',
-]);
-//const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
-//const sort = normalizeSortLocal(opts.sort);
-// ------------------------------------------------------
-// Endpointy
-// ------------------------------------------------------
-export const endpoint = (companyId: string) =>
-  `/tenants/${encodeURIComponent(companyId)}/members`;
-export const memberUrl = (companyId: string, memberId: string) =>
-  `${endpoint(companyId)}/${encodeURIComponent(memberId)}`;
-export const memberProfileUrl = (companyId: string, memberId: string) =>
-  `${memberUrl(companyId, memberId)}/profile`;
-export const membersStatsUrl = (companyId: string) =>
-  `${endpoint(companyId)}/stats`;
+/**
+ * ------------------------------------------------------
+ * Endpoint buildery (jediný zdroj pravdy pro URL)
+ * ------------------------------------------------------
+ */
+const base = (companyId: UUID | string) =>
+  `/companies/${encodeURIComponent(String(companyId))}/members`;
+const memberUrl = (companyId: UUID | string, id: UUID | string) =>
+  `${base(companyId)}/${encodeURIComponent(String(id))}`;
+const memberProfileUrl = (companyId: UUID | string, id: UUID | string) =>
+  `${memberUrl(companyId, id)}/profile`;
+const memberRoleUrl = (companyId: UUID | string, id: UUID | string) =>
+  `${memberUrl(companyId, id)}/role`;
 
-// ------------------------------------------------------
-// Volby listingu (vč. rozšiřitelných filtrů)
-// ------------------------------------------------------
-export type ListOptions = {
+/**
+ * Vstupní parametry pro server-side list členů.
+ * - `page` je 0-based
+ * - `sort` může být 1× string, nebo pole (multi-sort)
+ * - `signal` pro AbortController (zrušení rozpracovaného dotazu)
+ */
+export type ListMembersParams = {
   q?: string;
-  role?: CompanyRoleName | string;
-  email?: string;
-  name?: string;    // firstName/lastName na FE si můžete skládat do "name"
-  phone?: string;
-  status?: string;
-
   page?: number;
   size?: number;
-  sort?: string;        // např. "firstName,asc"
-  cursor?: string;      // rezerva do budoucna (BE může ignorovat)
-
+  sort?: string | string[];
+  role?: string;
   signal?: AbortSignal;
-  headers?: Record<string, string>;
 };
 
-// ------------------------------------------------------
-// Normalizační utility (volitelně používejte v UI)
-// ------------------------------------------------------
-export function normalizeMember(m: any): MemberDto {
-  const role = (m?.companyRole ?? m?.role) as CompanyRoleName;
-  return {
-    id: String(m?.id ?? m?.memberId ?? m?.userId ?? m?.email),
-    email: m?.email,
-    role,
-    companyRole: m?.companyRole ?? null,
-    firstName: m?.firstName ?? null,
-    lastName: m?.lastName ?? null,
-    phone: m?.phone ?? null,
-    status: m?.status,
-    createdAt: m?.createdAt,
-    updatedAt: m?.updatedAt,
-  } as MemberDto;
+/**
+ * Adapter z DataTableV2Sort → `["field,asc","other,desc"]`
+ * - držíme se konvence `id,asc|desc`
+ * - defaultujeme stabilně na `email,asc`
+ */
+export function toSortParams(sort: DataTableV2Sort | null | undefined): string[] {
+  if (!sort || sort.length === 0) return ['email,asc'];
+  return sort.map(s => `${s.id},${s.desc ? 'desc' : 'asc'}`);
 }
 
-export function normalizeMemberSummary(m: any): MemberSummaryDto {
-  return {
-    id: String(m?.id ?? m?.memberId ?? m?.userId ?? m?.email),
-    email: m?.email,
-    firstName: m?.firstName ?? null,
-    lastName: m?.lastName ?? null,
-    role: (m?.role ?? m?.companyRole ?? null) as CompanyRoleName | null,
-    companyRole: (m?.companyRole ?? m?.role ?? null) as CompanyRoleName | null,
-    phone: m?.phone ?? null,
-  } as MemberSummaryDto;
-}
-
-// ------------------------------------------------------
-// Listing – sjednocený přes toPageResponse
-// ------------------------------------------------------
+/**
+ * Načte stránkovaný seznam členů a sjednotí payload na FE PageResponse<T>.
+ * - `sort` serializujeme jako opakovaný parametr: `?sort=a,asc&sort=b,desc`
+ * - `q` proženeme přes `sanitizeQ`
+ */
 export async function listMemberSummaries(
-  companyId: string,
-  opts: ListOptions = {}
+  companyId: UUID | string,
+  params: ListMembersParams = {}
 ): Promise<PageResponse<MemberSummaryDto>> {
-  const page = clamp(toInt(opts.page, 0), 0, 1_000_000);
-  const size = clamp(toInt(opts.size, 20), 1, 100);
-  const sort = normalizeSortLocal(opts.sort);
+  const { q, page = 0, size = 20, sort = 'email,asc', role, signal } = params;
+  const finalSort = Array.isArray(sort) ? sort : [sort];
 
-  const paramsRaw = opts.cursor
-    ? {
-      cursor: opts.cursor,
-      q: toNonEmpty(opts.q),
-      role: toNonEmpty(opts.role as string),
-      email: toNonEmpty(opts.email),
-      name: toNonEmpty(opts.name),
-      phone: toNonEmpty(opts.phone),
-      status: toNonEmpty(opts.status),
-      sort,
-    }
-    : {
-      q: toNonEmpty(opts.q),
-      role: toNonEmpty(opts.role as string),
-      email: toNonEmpty(opts.email),
-      name: toNonEmpty(opts.name),
-      phone: toNonEmpty(opts.phone),
-      status: toNonEmpty(opts.status),
-      page,
-      size,
-      sort,
-    };
+  const sp = new URLSearchParams();
+  if (q != null) sp.set('q', sanitizeQ(q));
+  if (role) sp.set('role', role);
+  sp.set('page', String(Math.max(0, page)));
+  sp.set('size', String(Math.max(1, size)));
+  for (const s of finalSort) sp.append('sort', s);
 
-  const params = compactNonEmpty(paramsRaw);
   try {
-    const res = await api.get<any>(endpoint(companyId), {
-      params,
-      signal: opts.signal,
-      headers: { ...langHeader(), ...(opts.headers ?? {}) },
-    });
-    // Centrální adaptér sjednotí Spring Page → PageResponse
-    return toPageResponse<MemberSummaryDto>(res.data);
+    const { data } = await api.get(`${base(companyId)}?${sp.toString()}`, { signal });
+    return toPageResponse<MemberSummaryDto>(data);
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
@@ -154,182 +81,61 @@ export async function listMemberSummaries(
 }
 
 /**
- * Typeahead vyhledávání členů týmu pro selecty.
- * @param companyId  tenant/company ID
- * @param q          fulltext dotaz (jméno, email…)
- * @param signal     AbortSignal pro cancel rozpracovaných dotazů
- * @returns pole { value, label } vhodné pro AsyncSearchSelect
+ * Create member
  */
-export async function searchTeamMembers(
-  companyId: string,
-  q: string,
-  signal?: AbortSignal
-): Promise<{ value: string; label: string }[]> {
-  const page = await listMemberSummaries(companyId, {
-    q,
-    page: 0,
-    size: 10,
-    sort: 'firstName,asc',
-    signal,
-  });
-
-  return (page.items ?? []).map((m) => {
-    const name = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
-    const label = name || m.email || m.id;
-    return { value: String(m.id), label };
-  });
-}
-
-
-export async function listMembers(
-  companyId: string,
-  opts: ListOptions = {}
-): Promise<PageResponse<MemberDto>> {
-  const page = clamp(toInt(opts.page, 0), 0, 1_000_000);
-  const size = clamp(toInt(opts.size, 20), 1, 100);
-const sort = normalizeSortLocal(opts.sort);
-
-const paramsRaw = opts.cursor
-  ? {
-      cursor: opts.cursor,
-      q: toNonEmpty(opts.q),
-      role: toNonEmpty(opts.role as string),
-      email: toNonEmpty(opts.email),
-      name: toNonEmpty(opts.name),
-      phone: toNonEmpty(opts.phone),
-      status: toNonEmpty(opts.status),
-      sort,
-    }
-  : {
-      q: toNonEmpty(opts.q),
-      role: toNonEmpty(opts.role as string),
-      email: toNonEmpty(opts.email),
-      name: toNonEmpty(opts.name),
-      phone: toNonEmpty(opts.phone),
-      status: toNonEmpty(opts.status),
-      page,
-      size,
-      sort,
-    };
-
-const params = compactNonEmpty(paramsRaw);
-
+export async function createMember(
+  companyId: UUID | string,
+  body: CreateMemberRequest
+): Promise<void> {
   try {
-    const res = await api.get<any>(endpoint(companyId), {
-      params,
-      signal: opts.signal,
-      headers: { ...langHeader(), ...(opts.headers ?? {}) },
-    });
-    return toPageResponse<MemberDto>(res.data);
+    const sanitized = compact<CreateMemberRequest>(body);
+    await api.post<void>(base(companyId), sanitized, { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
 }
 
-// ------------------------------------------------------
-// Detail
-// ------------------------------------------------------
-export async function getMember(companyId: UUID, memberId: UUID, opts?: { signal?: AbortSignal }) {
-  try {
-    const { data } = await api.get<MemberDto>(memberProfileUrl(companyId, memberId), {
-      signal: opts?.signal,
-      headers: langHeader(),
-    });
-    return data;
-  } catch (e) {
-    if (isCanceled(e)) throw e;
-    mapAndThrow(e);
-  }
-}
-
-// ------------------------------------------------------
-// Create / Update
-// ------------------------------------------------------
-export async function createMember(companyId: string, body: CreateMemberRequest) {
-  try {
-    const res = await api.post<any>(endpoint(companyId), body, { headers: langHeader() });
-    return normalizeMember(res.data);
-  } catch (e) {
-    if (isCanceled(e)) throw e;
-    mapAndThrow(e);
-  }
-}
-
+/**
+ * Update member profile (PATCH)
+ */
 export async function updateMemberProfile(
-  companyId: string,
-  memberId: string,
+  companyId: UUID | string,
+  id: UUID,
   body: UpdateMemberProfileRequest
-): Promise<MemberDto> {
+): Promise<void> {
   try {
     const sanitized = compact<UpdateMemberProfileRequest>(body);
-    const res = await api.patch<any>(memberProfileUrl(companyId, memberId), sanitized, {
-      headers: langHeader(),
-    });
-    return normalizeMember(res.data);
+    await api.patch<void>(memberProfileUrl(companyId, id), sanitized, { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
 }
 
-/** @deprecated Použij `updateMemberProfile` a `updateMemberRole`. */
-export async function updateMember(
-  companyId: string,
-  memberId: string,
-  body: UpdateMemberRequest
-): Promise<MemberDto> {
-  try {
-    const res = await api.patch<any>(memberProfileUrl(companyId, memberId), body, {
-      headers: langHeader(),
-    });
-    return normalizeMember(res.data);
-  } catch (e) {
-    if (isCanceled(e)) throw e;
-    mapAndThrow(e);
-  }
-}
-
-// ------------------------------------------------------
-// Role only / Delete / Stats
-// ------------------------------------------------------
+/**
+ * Update member role (PATCH)
+ */
 export async function updateMemberRole(
-  companyId: string,
-  memberId: string,
+  companyId: UUID | string,
+  id: UUID,
   body: UpdateMemberRoleRequest
-): Promise<MemberDto> {
+): Promise<void> {
   try {
-    if (body?.role && !(ROLE_WHITELIST as readonly string[]).includes(String(body.role))) {
-      throw new Error('Invalid role value on client');
-    }
-    const res = await api.patch<any>(memberUrl(companyId, memberId), body, { headers: langHeader() });
-    return normalizeMember(res.data);
+    const sanitized = compact<UpdateMemberRoleRequest>(body);
+    await api.patch<void>(memberRoleUrl(companyId, id), sanitized, { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
 }
 
-export async function deleteMember(companyId: UUID, memberId: UUID): Promise<void> {
+/**
+ * Delete member
+ */
+export async function deleteMember(companyId: UUID | string, id: UUID): Promise<void> {
   try {
-    await api.delete<void>(memberUrl(companyId, memberId), { headers: langHeader() });
-  } catch (e) {
-    if (isCanceled(e)) throw e;
-    mapAndThrow(e);
-  }
-}
-
-export async function getMembersStats(
-  companyId: string,
-  opts?: { signal?: AbortSignal }
-): Promise<MembersStatsDto> {
-  try {
-    const { data } = await api.get<MembersStatsDto>(membersStatsUrl(companyId), {
-      signal: opts?.signal,
-      headers: langHeader(),
-    });
-    const owners = Number((data as any)?.owners ?? 0);
-    return { ...data, owners };
+    await api.delete<void>(memberUrl(companyId, id), { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);

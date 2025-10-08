@@ -16,6 +16,17 @@ export type { CompanyRoleName };
 export type UUID = string;
 export type ISODateString = string; // ISO-8601 string (e.g. 2025-09-29T08:15:30Z)
 
+export const ALLOWED_SORT = new Set([
+  'id',
+  'email',
+  'firstName',
+  'lastName',
+  'phone',
+  'role',
+  'createdAt',
+  'updatedAt',
+]);
+
 // --- Project role assignment ---
 export type ProjectRoleAssignmentDto = {
   projectId: UUID;
