@@ -8,7 +8,6 @@ import ProjectDetailDrawer from '../components/ProjectDetailDrawer';
 import ProjectFormDrawer from '../components/ProjectFormDrawer';
 
 import { listProjects, createProject, updateProject, archiveProject } from '../api/client';
-
 import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
 
 import { useServerTableState } from '@/lib/hooks/useServerTableState';
@@ -24,34 +23,45 @@ import { useFab } from '@/components/layout';
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 
+/**
+ * Stránka „Projects“:
+ * - Server-side tabulka (q/page/size/sort) přes useServerTableState
+ * - CRUD akce (create, edit, archive)
+ * - Detail / Form v "drawer" režimu (řízeno přes URL)
+ */
 export default function ProjectsPage() {
-  const { setFab } = useFab();
+  // ---------------------------------------------------------------------------
+  // i18n & layout
+  // ---------------------------------------------------------------------------
   const i18nNamespaces = React.useMemo<string[]>(() => ['projects', 'common'], []);
   const { t } = useTranslation(i18nNamespaces);
+  const { setFab } = useFab();
 
+  // ---------------------------------------------------------------------------
+  // Routing
+  // ---------------------------------------------------------------------------
   const navigate = useNavigate();
   const params = useParams<{ id?: string }>();
   const { search: locationSearch } = useLocation();
 
-  const [error, setError] = React.useState<string | null>(null);
-
-  const [search, setSearch] = React.useState('');
+  const moduleBase = React.useMemo(() => '/app/projects/', []);
+  const openNew = React.useCallback(() => navigate(`${moduleBase}new`), [navigate, moduleBase]);
+  const openDetail = React.useCallback((id: UUID) => navigate(`${moduleBase}${id}`), [navigate, moduleBase]);
+  const openEdit = React.useCallback(
+    (id: UUID) => navigate({ pathname: `${moduleBase}${id}`, search: '?edit=1' }),
+    [navigate, moduleBase]
+  );
+  const closeOverlays = React.useCallback(() => navigate('/app/projects'), [navigate]);
 
   const isNew = params.id === 'new';
   const isDetail = !!params.id && params.id !== 'new';
   const isEdit = isDetail && new URLSearchParams(locationSearch).get('edit') === '1';
 
-  // --- Routing helpers ---
-  const moduleBase = '/app/projects/';
-  const openNew = () => navigate(`${moduleBase}new`);
-  const openDetail = (id: UUID) => navigate(`${moduleBase}${id}`);
-  const openEdit = (id: UUID) => navigate({ pathname: `${moduleBase}${id}`, search: '?edit=1' });
-  const closeOverlays = () => navigate('/app/projects');
-
-
-  //*******************************************************************/
-  // Server-side řízení tabulky
-
+  // ---------------------------------------------------------------------------
+  // Server-side řízení tabulky (unifikovaný hook)
+  // - fetcher stabilizovaný přes useCallback, aby se nespouštěl loop
+  // - default sort na existující sloupec `code`
+  // ---------------------------------------------------------------------------
   const fetcher = React.useCallback(
     ({ q, page, size, sort }: { q?: string; page?: number; size?: number; sort?: string | string[] }) =>
       listProjects({ q, page, size, sort }),
@@ -68,37 +78,68 @@ export default function ProjectsPage() {
     defaults: { q: '', page: 0, size: 20, sort: [{ id: 'code', desc: false }] },
   });
 
-  //*******************************************************************/
+  // Vybraný projekt (pro detail/form) – memoizace pro rychlý lookup
+  const selectedItem = React.useMemo<ProjectSummaryDto | undefined>(
+    () => data.items.find((i) => i.id === params.id),
+    [data.items, params.id]
+  );
 
-  // --- CREATE ---
-  const handleCreate = async (values: Partial<ProjectDto>) => {
-    await createProject(values as any);
-    closeOverlays();
-    await refreshAfterMutation();
-  };
+  // UI stav chyb (rezerva pro budoucí globální error boundary)
+  const [error, setError] = React.useState<string | null>(null);
 
-  // --- EDIT ---
-  const handleEdit = async (values: Partial<ProjectDto>, id: UUID) => {
-    await updateProject(id, values as any);
-    closeOverlays();
-    await refreshList();
+  // ---------------------------------------------------------------------------
+  // CRUD Handlery
+  // - create → reset na 1. stránku (refreshAfterMutation)
+  // - edit/archive → zůstaň na aktuální stránce (refreshList)
+  // ---------------------------------------------------------------------------
+  const handleCreate = React.useCallback(
+    async (values: Partial<ProjectDto>) => {
+      try {
+        await createProject(values as ProjectDto);
+        closeOverlays();
+        await refreshAfterMutation();
+      } catch (e: any) {
+        setError(e?.message ?? 'Create failed');
+      }
+    },
+    [closeOverlays, refreshAfterMutation]
+  );
 
-  };
+  const handleEdit = React.useCallback(
+    async (values: Partial<ProjectDto>, id: UUID) => {
+      try {
+        await updateProject(id, values as ProjectDto);
+        closeOverlays();
+        await refreshList();
+      } catch (e: any) {
+        setError(e?.message ?? 'Update failed');
+      }
+    },
+    [closeOverlays, refreshList]
+  );
 
-  // --- ARCHIVE (soft delete) ---
-  const handleArchive = async (id: UUID) => {
-    await archiveProject(id);
-    closeOverlays();
-    await refreshList();
-  };
+  const handleArchive = React.useCallback(
+    async (id: UUID) => {
+      try {
+        await archiveProject(id);
+        closeOverlays();
+        await refreshList();
+      } catch (e: any) {
+        setError(e?.message ?? 'Archive failed');
+      }
+    },
+    [closeOverlays, refreshList]
+  );
 
-  // Empty state (kontext vyhledávání)
-  const emptyNode = search ? (
+  // ---------------------------------------------------------------------------
+  // Empty state – respektuje, zda je aktivní vyhledávání (q)
+  // ---------------------------------------------------------------------------
+  const emptyNode = q ? (
     <EmptyState
       title={t('list.emptyTitle', { defaultValue: 'Nic jsme nenašli' })}
       description={t('list.emptyDesc', { defaultValue: 'Zkuste upravit hledaný výraz.' })}
       action={
-        <Button variant="outline" leftIcon={<X size={16} />} onClick={() => setSearch('')}>
+        <Button variant="outline" leftIcon={<X size={16} />} onClick={() => onSearchChange('')}>
           {t('list.actions.open', { defaultValue: 'Zrušit hledání' })}
         </Button>
       }
@@ -117,21 +158,30 @@ export default function ProjectsPage() {
     />
   );
 
-  // FAB
+  // ---------------------------------------------------------------------------
+  // FAB – rychlý přístup k vytvoření projektu
+  // ---------------------------------------------------------------------------
   React.useEffect(() => {
     setFab({
       label: t('list.actions.new', { defaultValue: 'Nový projekt' }),
-      onClick: () => openNew(),
+      onClick: openNew,
       icon: <Plus className="h-6 w-6" />,
     });
     return () => setFab(null);
-  }, [setFab, t]);
+  }, [setFab, t, openNew]);
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
         <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
-          <h1 className="text-xl font-semibold">{t('title', { defaultValue: 'Projekty' })}</h1>
+          <h1 className="text-xl font-semibold">
+            {t('title', { defaultValue: 'Projekty' })}
+          </h1>
+
+          {/* Primární CTA (na desktopu mimo tabulku, na mobilu FAB) */}
           <div className="hidden min-w-0 w-full md:w-auto md:flex items-center gap-2 md:gap-3">
             <ScopeGuard anyOf={[PROJECT_SCOPES.CREATE]}>
               <Button
@@ -149,10 +199,12 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* Status (bez layout shiftu) */}
+        {/* Status (bez layout shiftu, pro screen readery) */}
         <span className="sr-only" role="status" aria-live="polite">
           {loading ? t('loading', { defaultValue: 'Načítám…' }) : ''}
         </span>
+
+        {/* Chyby (dev režim ukáže detail) */}
         {!loading && error && (
           <div role="alert" className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700">
             {t('error', { defaultValue: 'Chyba načtení.' })}{' '}
@@ -160,24 +212,27 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* TABLE */}
+        {/* Tabulka projektů (server-side řízená) */}
         <ProjectsTable
           data={data.items}
           loading={loading}
           page={page}
           pageSize={size}
           totalItems={data.total}
+          sort={sort}
+          search={q}
+          // ovládání
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
-          sort={sort}
           onSortChange={onSortChange}
+          onSearchChange={onSearchChange}
+          // vzhled / texty
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
-          search={q}
-          onSearchChange={onSearchChange}
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
+          // interakce s řádky
           onRowClick={(p) => openDetail(p.id as UUID)}
           rowActions={(p) => (
             <div className="flex items-center gap-2">
@@ -212,11 +267,12 @@ export default function ProjectsPage() {
             </div>
           )}
           emptyContent={emptyNode}
+          // Create skrze FAB / primární CTA nahoře
           canCreate={false}
           onOpenCreate={undefined}
         />
 
-        {/* Create */}
+        {/* Drawer: Create */}
         <ProjectFormDrawer
           mode="create"
           i18nNamespaces={i18nNamespaces}
@@ -226,7 +282,7 @@ export default function ProjectsPage() {
           onSubmit={(vals) => void handleCreate(vals)}
         />
 
-        {/* Detail */}
+        {/* Drawer: Detail */}
         <ProjectDetailDrawer
           i18nNamespaces={i18nNamespaces}
           open={isDetail && !isEdit}
@@ -234,10 +290,10 @@ export default function ProjectsPage() {
           onClose={closeOverlays}
           onEdit={() => openEdit(params.id as UUID)}
           onArchive={(id) => void handleArchive(id)}
-          prefill={data.items.find((i) => i.id === params.id) as any}
+          prefill={selectedItem as any}
         />
 
-        {/* Edit */}
+        {/* Drawer: Edit */}
         <ProjectFormDrawer
           mode="edit"
           i18nNamespaces={i18nNamespaces}
@@ -247,11 +303,11 @@ export default function ProjectsPage() {
           onClose={closeOverlays}
           onSubmit={(vals) => void handleEdit(vals, params.id as UUID)}
           defaultValues={{
-            name: data.items.find((i) => i.id === params.id)?.name ?? '',
-            code: data.items.find((i) => i.id === params.id)?.code ?? '',
+            name: selectedItem?.name ?? '',
+            code: selectedItem?.code ?? '',
             description: '',
-            customerId: (data.items.find((i) => i.id === params.id) as any)?.customerId ?? '',
-            projectManagerId: (data.items.find((i) => i.id === params.id) as any)?.projectManagerId ?? '',
+            customerId: (selectedItem as any)?.customerId ?? '',
+            projectManagerId: (selectedItem as any)?.projectManagerId ?? '',
             plannedStartDate: '',
             plannedEndDate: '',
             currency: '',
