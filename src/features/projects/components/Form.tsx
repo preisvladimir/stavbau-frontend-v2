@@ -21,7 +21,7 @@ import {
   type AnyProjectFormValues,
 } from '../validation/schemas';
 
-export type ProjectFormProps = {
+export type FormProps = {
   companyId: UUID;
   mode: 'create' | 'edit';
   i18nNamespaces?: string[];
@@ -33,7 +33,7 @@ export type ProjectFormProps = {
   resetAfterSubmit?: boolean;
 };
 
-export function ProjectForm({
+export function Form({
   mode,
   i18nNamespaces,
   defaultValues,
@@ -41,7 +41,7 @@ export function ProjectForm({
   onSubmit,
   onCancel,
   resetAfterSubmit,
-}: ProjectFormProps) {
+}: FormProps) {
 
   const { t } = useTranslation(i18nNamespaces ?? ['projects', 'common']);
   const companyId = useRequiredCompanyId();
@@ -315,4 +315,4 @@ export function ProjectForm({
   );
 }
 
-export default ProjectForm;
+export default Form;

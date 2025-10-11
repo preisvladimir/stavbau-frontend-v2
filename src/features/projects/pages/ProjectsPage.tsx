@@ -14,9 +14,8 @@ import type { ProjectFilters } from '@/features/projects/api/projects-service';
 import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
 
 // --- UI components ---
-import { ProjectsTable } from '../components/ProjectsTable';
-import ProjectDetailDrawer from '../components/ProjectDetailDrawer';
-import ProjectFormDrawer from '../components/ProjectFormDrawer';
+import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
+import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
@@ -31,6 +30,11 @@ import { PROJECT_SCOPES } from '../const/scopes';
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 import { Plus } from '@/components/icons';
+
+import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer'; // orchestrátor
+import Detail from '../components/Detail';
+import { Form } from '../components/Form';
+import type { AnyProjectFormValues } from '../validation/schemas';
 
 export default function ProjectsPage() {
   const { setFab } = useFab();
@@ -87,7 +91,7 @@ export default function ProjectsPage() {
     fetcher,
     defaults: {
       q: '',
-      page: 0,
+      page: 0, // interně 0-based, hook vystavuje i page1 (1-based) pro UI
       size: 10,
       sort: [{ id: 'name', desc: false }],
       filters: { status: '' },
@@ -171,6 +175,19 @@ export default function ProjectsPage() {
     [data.items, routeId]
   );
 
+  // ---------------------------------------------------------------------------
+  // Sloupce tabulky (původně v ProjectsTable) – nyní lokálně pro StbEntityTable
+  // ---------------------------------------------------------------------------
+  const columns = React.useMemo<DataTableV2Column<ProjectSummaryDto>[]>(() => [
+    { id: 'createdAt', header: t('columns.createdAt', { defaultValue: 'Vytvořeno' }), accessor: (p) => p.createdAt, sortable: true, width: 140 },
+    { id: 'code', header: t('columns.code', { defaultValue: 'Kód' }), accessor: (p) => p.code, sortable: true, width: 120 },
+    { id: 'name', header: t('columns.name', { defaultValue: 'Název' }), accessor: (p) => p.name, sortable: true, minWidth: 220 },
+    { id: 'customerName', header: t('columns.customer', { defaultValue: 'Zákazník' }), accessor: (p) => p.customerName, sortable: true, minWidth: 200 },
+    { id: 'plannedStartDate', header: t('columns.plannedStart', { defaultValue: 'Plán. start' }), accessor: (p) => p.plannedStartDate, sortable: true, width: 130 },
+    { id: 'plannedEndDate', header: t('columns.plannedEnd', { defaultValue: 'Plán. konec' }), accessor: (p) => p.plannedEndDate, sortable: true, width: 130 },
+    { id: 'status', header: t('columns.status', { defaultValue: 'Stav' }), accessor: (p) => p.status, sortable: true, width: 120 },
+  ], [t]);
+
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
@@ -203,27 +220,35 @@ export default function ProjectsPage() {
           i18nNamespaces={i18nNamespaces}
         />
 
-        {/* Tabulka projektů (server-side řízená) */}
-        <ProjectsTable
-          data={data.items}
-          loading={loading}
-          page={page1}
-          pageSize={size}
-          total={total}        
-          pageCount={data.totalPages}
-          sort={sort}
-          search={q}
-          // ovládání
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          onSortChange={onSortChange}
-          onSearchChange={onSearchChange}
-          // vzhled / texty
+        {/* Tabulka projektů (server-side řízená) – StbEntityTable */}
+        <StbEntityTable<ProjectSummaryDto>
+          // i18n / vzhled
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
+
+          // data & řízení (1-based page)
+          data={data.items}
+          loading={loading}
+          page={page1}
+          pageSize={size}
+          total={total}
+          pageCount={data.totalPages}
+          sort={sort}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          onSortChange={onSortChange}
+
+          // vyhledávání
+          search={q}
+          onSearchChange={onSearchChange}
+
+          // sloupce
+          columns={columns}
+          keyField={(p) => String(p.id)}
+
           // interakce s řádky
           onRowClick={(p) => openDetail(p.id as UUID)}
           rowActions={(m) => (
@@ -247,57 +272,103 @@ export default function ProjectsPage() {
               ]}
             />
           )}
+
+          // empty state
           emptyContent={emptyNode}
-          // Create skrze FAB / primární CTA nahoře
-          canCreate={false}
-          onOpenCreate={undefined}
         />
+<CrudDrawer<ProjectSummaryDto, AnyProjectFormValues>
+  isDetail={isDetail && !isEdit}
+  isNew={isNew}
+  isEdit={!!isEdit}
+  entityId={isDetail || isEdit ? (routeId as UUID) : null}
+  onClose={closeOverlays}
+  titles={{
+    detail: t('detail.title', { defaultValue: 'Detail projektu' }),
+    create: t('form.title.create', { defaultValue: 'Nový projekt' }),
+    edit: t('form.title.edit', { defaultValue: 'Upravit projekt' }),
+  }}
 
-        {/* Drawer: Create */}
-        <ProjectFormDrawer
-          mode="create"
-          i18nNamespaces={i18nNamespaces}
-          companyId={companyId}
-          open={isNew}
-          titleKey="form.title.create"
-          onClose={closeOverlays}
-          onSubmit={(vals) => void handleCreate(vals)}
-        />
+  // rychlý prefill ze seznamu
+  listItems={data.items}
 
-        {/* Drawer: Detail */}
-        <ProjectDetailDrawer
-          i18nNamespaces={i18nNamespaces}
-          companyId={companyId}
-          open={isDetail && !isEdit}
-          projectId={isDetail ? (routeId as UUID) : null}
-          onClose={closeOverlays}
-          onArchive={(id) => void handleArchive(id)}
-          onEdit={() => openEdit(routeId as UUID)}
-          prefill={selectedItem ?? undefined}
-        />
+  // autoritativní fetch detailu
+  fetchDetail={(id, opts) => projectSvc.get?.(String(id), opts as any)}
 
-        {/* Drawer: Edit */}
-        <ProjectFormDrawer
-          mode="edit"
-          i18nNamespaces={i18nNamespaces}
-          companyId={companyId}
-          open={!!isEdit}
-          projectId={isEdit ? (routeId as UUID) : null}
-          titleKey="form.title.edit"
-          onClose={closeOverlays}
-          onSubmit={(vals) => void handleEdit(vals, routeId as UUID)}
-          defaultValues={{
-            name: selectedItem?.name ?? '',
-            code: selectedItem?.code ?? '',
-            description: '',
-            customerId: (selectedItem as any)?.customerId ?? '',
-            projectManagerId: (selectedItem as any)?.projectManagerId ?? '',
-            plannedStartDate: '',
-            plannedEndDate: '',
-            currency: '',
-            vatMode: '',
-          }}
-        />
+  // map detail -> form defaults (stejné jako ve stávajícím ProjectFormDrawer)
+  mapDetailToFormDefaults={(p) => {
+    const normalizeAddress = (a?: any) => {
+      if (!a) return undefined;
+      const cleaned = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v ?? undefined]));
+      const anyVal = Object.values(cleaned).some((v: any) =>
+        typeof v === 'string' ? v.trim().length > 0 : v != null
+      );
+      return anyVal ? (cleaned as any) : undefined;
+    };
+    return {
+      name: p?.name ?? '',
+      code: p?.code ?? '',
+      description: p?.description ?? '',
+      plannedStartDate: p?.plannedStartDate ?? '',
+      plannedEndDate: p?.plannedEndDate ?? '',
+      currency: p?.currency ?? '',
+      vatMode: p?.vatMode ?? '',
+      siteAddress: normalizeAddress(p?.siteAddress),
+      customerId: p?.customerId ?? '',
+      projectManagerId: p?.projectManagerId ?? '',
+      // nevalidované "label" hodnoty pro AsyncSearchSelect:
+      customerLabel: p?.customerName ?? undefined,
+      projectManagerLabel: p?.projectManagerName ?? undefined,
+    } as Partial<AnyProjectFormValues>;
+  }}
+
+  // DETAIL – prezentace nad StbDrawer, žádný fetch v komponentě
+  renderDetail={({ data, loading, error }) => (
+    <Detail
+      i18nNamespaces={i18nNamespaces}
+      open
+      onClose={closeOverlays}
+      onEdit={() => openEdit(routeId as UUID)}
+      onArchive={(id) => void handleArchive(id as UUID)}
+      // onUnarchive? pokud přidáš endpoint
+      data={data as any}
+      loading={loading}
+      error={error ?? null}
+    />
+  )}
+
+  // CREATE
+  renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+    <Form
+    companyId={companyId}
+      mode="create"
+      i18nNamespaces={i18nNamespaces}
+      defaultValues={defaultValues}
+      submitting={submitting}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+      resetAfterSubmit
+    />
+  )}
+
+  // EDIT
+  renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+    <Form
+      companyId={companyId}
+      mode="edit"
+      i18nNamespaces={i18nNamespaces}
+      defaultValues={defaultValues}
+      submitting={submitting}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    />
+  )}
+
+  // akce
+  onCreate={async (vals) => { await handleCreate(vals); }}
+  onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
+  onDelete={async (id) => { /* volitelné – pokud přidáš delete */ }}
+  afterMutate={refreshList}
+/>
       </div>
     </div>
   );

@@ -1,58 +1,48 @@
 // src/features/projects/pages/ProjectsPage.tsx
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';
 
-import { ProjectsTable } from '../components/ProjectsTable';
+// --- App hooks & routing ---
+import { useOverlayRouting } from '@/lib/router/useOverlayRouting';
+import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';
+import { useServerTableState } from '@/lib/hooks/useServerTableState';
+import { useFab } from '@/components/layout';
+
+// --- API / services & types ---
+import { projectsService } from '@/features/projects/api/projects-service';
+import type { ProjectFilters } from '@/features/projects/api/projects-service';
+import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
+
+// --- UI components ---
+import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
+import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 import ProjectDetailDrawer from '../components/ProjectDetailDrawer';
 import ProjectFormDrawer from '../components/ProjectFormDrawer';
-
-import {
-  listProjectsSummaries,
-  createProject,
-  updateProject,
-  archiveProject,
-} from '../api/client';
-import type {
-  ProjectSummaryDto,
-  ProjectDto,
-  UUID,
-  ProjectFilters,
-} from '../api/types';
-
-import { useServerTableState } from '@/lib/hooks/useServerTableState';
-
+import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
+import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
+import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
+import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
 import { Button } from '@/components/ui/stavbau-ui/button';
-import { useOverlayRouting } from '@/lib/router/useOverlayRouting';
-import { SmartEmptyState } from '@/components/ui/stavbau-ui/emptystate/SmartEmptyState';
-import { Plus } from '@/components/icons';
 
-import { PROJECT_SCOPES } from '../const/scopes';
+// --- RBAC / guards ---
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
+import { PROJECT_SCOPES } from '../const/scopes';
 
-import { useFab } from '@/components/layout';
+// --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
-import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
+import { Plus } from '@/components/icons';
 
-/**
- * Stránka „Projects“
- * - Server-side tabulka (q/page/size/sort) přes useServerTableState
- * - CRUD akce (create, edit, archive)
- * - Detail / Form v „drawer“ režimu (řízeno přes URL – useOverlayRouting)
- */
 export default function ProjectsPage() {
-  // ---------------------------------------------------------------------------
-  // i18n & layout
-  // ---------------------------------------------------------------------------
   const { setFab } = useFab();
   const i18nNamespaces = React.useMemo<string[]>(() => ['projects', 'common'], []);
   const { t } = useTranslation(i18nNamespaces);
+
   const companyId = useRequiredCompanyId();
+  const projectSvc = React.useMemo(() => projectsService(companyId), [companyId]);
 
   // ---------------------------------------------------------------------------
-  // Server-side fetcher (list)
+  // Server-side řízení tabulky
   // ---------------------------------------------------------------------------
   const fetcher = React.useCallback(
     ({
@@ -68,20 +58,16 @@ export default function ProjectsPage() {
       sort?: string | string[];
       filters?: ProjectFilters;
     }) =>
-      listProjectsSummaries(companyId, {
+      projectSvc.list({
         q,
         page,
         size,
         sort,
-        // BE čeká např. ?status=ACTIVE – prázdný string pošleme jako undefined
-        status: filters?.status?.trim() || undefined,
+        filters, // wrapper přes filtersToQuery převede { status }
       }),
-    [companyId]
+    [projectSvc]
   );
 
-  // ---------------------------------------------------------------------------
-  // useServerTableState – sjednocená logika page/sort/search/filters
-  // ---------------------------------------------------------------------------
   const {
     data,
     loading,
@@ -89,25 +75,22 @@ export default function ProjectsPage() {
     clearError,
     q,
     sort,
-    //page,
     size,
-    //filters,
     page1,
     total,
     onSearchChange,
     onSortChange,
     onPageChange,
     onPageSizeChange,
-    //onFiltersChange,
     refreshList,
     refreshAfterMutation,
   } = useServerTableState<ProjectSummaryDto, ProjectFilters>({
     fetcher,
     defaults: {
       q: '',
-      page: 0,
+      page: 0, // interně 0-based, hook vystavuje i page1 (1-based) pro UI
       size: 10,
-      sort: [{ id: 'name', desc: false }], // výchozí multi-sort pro projekty
+      sort: [{ id: 'name', desc: false }],
       filters: { status: '' },
     },
     onError: (e) => {
@@ -121,70 +104,52 @@ export default function ProjectsPage() {
   // ---------------------------------------------------------------------------
   // Routing (new/detail/edit overlay)
   // ---------------------------------------------------------------------------
-  const {
-    id: routeId,
-    isNew,
-    isDetail,
-    isEdit,
-    openNew,
-    openDetail,
-    openEdit,
-    closeOverlays,
-  } = useOverlayRouting({ module: 'projects' });
+  const { id: routeId, isNew, isDetail, isEdit, openNew, openDetail, openEdit, closeOverlays } =
+    useOverlayRouting({ module: 'projects' });
 
   // ---------------------------------------------------------------------------
   // CRUD handlery
-  // - create → reset na 1. stránku (refreshAfterMutation)
-  // - edit/archive → zůstaň na aktuální stránce (refreshList)
   // ---------------------------------------------------------------------------
   const handleCreate = React.useCallback(
     async (values: Partial<ProjectDto>) => {
-      await createProject(companyId, values as any);
+      await projectSvc.create(values as any);
       closeOverlays();
-      await refreshAfterMutation(); // po create skoč na první stránku
+      await refreshAfterMutation(); // po create skoč na 1. stránku
     },
-    [closeOverlays, refreshAfterMutation]
+    [projectSvc, closeOverlays, refreshAfterMutation]
   );
 
   const handleEdit = React.useCallback(
     async (values: Partial<ProjectDto>, id: UUID) => {
-      await updateProject(companyId, id, values as any);
+      await projectSvc.update(id, values as any);
       closeOverlays();
       await refreshList();
     },
-    [closeOverlays, refreshList]
+    [projectSvc, closeOverlays, refreshList]
   );
 
   const handleArchive = React.useCallback(
     async (id: UUID) => {
-      await archiveProject(companyId, id);
+      await projectSvc.archive(id);
       closeOverlays();
       await refreshList();
     },
-    [closeOverlays, refreshList]
+    [projectSvc, closeOverlays, refreshList]
   );
 
   // ---------------------------------------------------------------------------
   // Empty state – respektuje aktivní vyhledávání (q)
   // ---------------------------------------------------------------------------
   const emptyNode = (
-    <SmartEmptyState
-      hasSearch={!!q}
+    <ServerTableEmpty
+      q={q}
       i18nNamespaces={i18nNamespaces}
-      // search stav
-      searchTitleKey="list.emptyTitle"
-      searchDescKey="list.emptyDesc"
-      clearLabelKey="list.actions.open"
       onClearSearch={() => onSearchChange('')}
-      // no-data stav
-      emptyTitleKey="list.emptyTitle"
-      emptyDescKey="list.emptyDesc"
+      requiredScopesAnyOf={[PROJECT_SCOPES.RW, PROJECT_SCOPES.CREATE]}
       emptyAction={
-        <ScopeGuard anyOf={[PROJECT_SCOPES.RW, PROJECT_SCOPES.CREATE]}>
-          <Button leftIcon={<Plus size={16} />} onClick={openNew}>
-            {t('list.actions.new', { defaultValue: 'Nový projekt' })}
-          </Button>
-        </ScopeGuard>
+        <Button leftIcon={<Plus size={16} />} onClick={openNew}>
+          {t('list.actions.new', { defaultValue: 'Nový projekt' })}
+        </Button>
       }
     />
   );
@@ -201,25 +166,33 @@ export default function ProjectsPage() {
     return () => setFab(null);
   }, [setFab, t, openNew]);
 
-  // Vybraný projekt (pro rychlý prefill do detailu/formu)
+  // Vybraný projekt (pro rychlý prefill do formu/detailu)
   const selectedItem = React.useMemo<ProjectSummaryDto | null>(
     () => (routeId ? data.items.find((i) => String(i.id) === routeId) ?? null : null),
     [data.items, routeId]
   );
 
   // ---------------------------------------------------------------------------
-  // Render
+  // Sloupce tabulky (původně v ProjectsTable) – nyní lokálně pro StbEntityTable
   // ---------------------------------------------------------------------------
+  const columns = React.useMemo<DataTableV2Column<ProjectSummaryDto>[]>(() => [
+    { id: 'createdAt', header: t('columns.createdAt', { defaultValue: 'Vytvořeno' }), accessor: (p) => p.createdAt, sortable: true, width: 140 },
+    { id: 'code', header: t('columns.code', { defaultValue: 'Kód' }), accessor: (p) => p.code, sortable: true, width: 120 },
+    { id: 'name', header: t('columns.name', { defaultValue: 'Název' }), accessor: (p) => p.name, sortable: true, minWidth: 220 },
+    { id: 'customerName', header: t('columns.customer', { defaultValue: 'Zákazník' }), accessor: (p) => p.customerName, sortable: true, minWidth: 200 },
+    { id: 'plannedStartDate', header: t('columns.plannedStart', { defaultValue: 'Plán. start' }), accessor: (p) => p.plannedStartDate, sortable: true, width: 130 },
+    { id: 'plannedEndDate', header: t('columns.plannedEnd', { defaultValue: 'Plán. konec' }), accessor: (p) => p.plannedEndDate, sortable: true, width: 130 },
+    { id: 'status', header: t('columns.status', { defaultValue: 'Stav' }), accessor: (p) => p.status, sortable: true, width: 120 },
+  ], [t]);
+
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
-        <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
-          <h1 className="text-xl font-semibold">
-            {t('title', { defaultValue: 'Projekty' })}
-          </h1>
-
-          {/* Primární CTA (desktop; na mobilu FAB) */}
-          <div className="hidden min-w-0 w-full md:w-auto md:flex items-center gap-2 md:gap-3">
+        {/* Table Header */}
+        <TableHeader
+          title={t('title', { defaultValue: 'Projekty' })}
+          subtitle={t('subtitle', { defaultValue: 'Správa projektů' })}
+          actions={
             <ScopeGuard anyOf={[PROJECT_SCOPES.CREATE]}>
               <Button
                 type="button"
@@ -233,65 +206,72 @@ export default function ProjectsPage() {
                 <span>{t('actions.newProject', { defaultValue: 'Nový projekt' })}</span>
               </Button>
             </ScopeGuard>
-          </div>
-        </div>
+          }
+        />
 
         {/* Status */}
         <LoadErrorStatus
           loading={loading}
           error={error}
           onClear={clearError}
-          // onRetry={() => refreshList()}         // volitelné
           i18nNamespaces={i18nNamespaces}
-        //labels={{ loading: 'Loading…', error: 'Failed to load', close: 'Close' }} // volitelné
         />
 
-        {/* Tabulka projektů (server-side řízená) */}
-        <ProjectsTable
-          data={data.items}
-          loading={loading}
-          page={page1}
-          pageSize={size}
-          total={total}//{data.total ?? data.totalElements ?? 0}
-          pageCount={data.totalPages}
-          sort={sort}
-          search={q}
-          // ovládání
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          onSortChange={onSortChange}
-          onSearchChange={onSearchChange}
-          // vzhled / texty
+        {/* Tabulka projektů (server-side řízená) – StbEntityTable */}
+        <StbEntityTable<ProjectSummaryDto>
+          // i18n / vzhled
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
+
+          // data & řízení (1-based page)
+          data={data.items}
+          loading={loading}
+          page={page1}
+          pageSize={size}
+          total={total}
+          pageCount={data.totalPages}
+          sort={sort}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          onSortChange={onSortChange}
+
+          // vyhledávání
+          search={q}
+          onSearchChange={onSearchChange}
+
+          // sloupce
+          columns={columns}
+          keyField={(p) => String(p.id)}
+
           // interakce s řádky
           onRowClick={(p) => openDetail(p.id as UUID)}
           rowActions={(m) => (
             <RowActions
               item={m}
-              asMenu // nebo 'auto' | false
+              asMenu
               maxInline={2}
               i18nNamespaces={i18nNamespaces}
               menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
               actions={[
                 { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.READ] },
                 { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.UPDATE] },
-                { kind: 'archive', onClick: async () => {/* await team.archive(m.id as UUID) */ }, scopesAnyOf: [PROJECT_SCOPES.ARCHIVE], confirm: {} },
-                // { kind: 'delete', onClick: () => handleDelete(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.REMOVE], confirm: {} },
+                {
+                  kind: 'archive',
+                  onClick: () => handleArchive(m.id as UUID),
+                  scopesAnyOf: [PROJECT_SCOPES.ARCHIVE],
+                  confirm: {},
+                },
+                // případně delete:
+                // { kind: 'delete', onClick: () => projectSvc.remove(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.DELETE], confirm: {} },
               ]}
             />
           )}
+
+          // empty state
           emptyContent={emptyNode}
-          // Create skrze FAB / primární CTA nahoře
-          canCreate={false}
-          onOpenCreate={undefined}
-        /** NEW: řízené filtry + options pro role */
-        //filters={filters}
-        //onFiltersChange={(next) => onFiltersChange(next)}
-        //roleOptions={roleOptions}
         />
 
         {/* Drawer: Create */}

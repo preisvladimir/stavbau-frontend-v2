@@ -33,6 +33,8 @@ export type ProjectSummaryDto = {
   customerName?: string;
   projectManagerId?: UUID;
   projectManagerName?: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
 };
 
 export type ProjectDto = {

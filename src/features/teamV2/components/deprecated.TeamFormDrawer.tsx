@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormDrawer } from "@/components/ui/stavbau-ui/drawer/form-drawer";
-import { TeamForm } from './TeamForm';
+import { Form } from './Form';
 import { type AnyTeamFormValues } from '../validation/schemas';
 import type { UUID } from '../api/types';
 import { getMember } from '../api/client';
@@ -105,7 +105,7 @@ React.useEffect(() => {
         </div>
       )}
 
-      <TeamForm
+      <Form
         key={`${mode}-${memberId ?? 'new'}`}
         mode={mode}
         i18nNamespaces={i18nNamespaces}

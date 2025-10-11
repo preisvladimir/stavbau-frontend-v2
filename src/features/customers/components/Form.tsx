@@ -44,21 +44,21 @@ const schema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
-export type CustomerFormValues = z.infer<typeof schema>;
+export type FormValues = z.infer<typeof schema>;
 
-export type CustomerFormProps = {
+export type FormProps = {
   mode: 'create' | 'edit';
   i18nNamespaces?: string[];
-  defaultValues?: Partial<CustomerFormValues>;
+  defaultValues?: Partial<FormValues>;
   submitting?: boolean;
-  onSubmit: (values: CustomerFormValues) => Promise<void> | void;
+  onSubmit: (values: FormValues) => Promise<void> | void;
   onCancel: () => void;
   /** Po úspěšném submitu vyresetovat formulář (default: true pro create, false pro edit) */
   resetAfterSubmit?: boolean;
   className?: string;
 };
 
-export const CustomerForm: React.FC<CustomerFormProps> = ({
+export const Form: React.FC<FormProps> = ({
   mode,
   i18nNamespaces,
   defaultValues,
@@ -69,11 +69,11 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   className,
 }) => {
   const { t } = useTranslation(i18nNamespaces ?? ['customers', 'common']);
-  const resolver = zodResolver(schema) as unknown as Resolver<CustomerFormValues>;
+  const resolver = zodResolver(schema) as unknown as Resolver<FormValues>;
   const shouldReset = resetAfterSubmit ?? (mode === 'create');
 
   // sjednocené defaulty (držíme i pro reset po submitu)
-  const defaultValuesResolved = React.useMemo<CustomerFormValues>(
+  const defaultValuesResolved = React.useMemo<FormValues>(
     () => ({
       type: 'ORGANIZATION',
       name: '',
@@ -84,7 +84,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       billingAddress: undefined,
       defaultPaymentTermsDays: undefined,
       notes: undefined,
-      ...(defaultValues as Partial<CustomerFormValues>),
+      ...(defaultValues as Partial<FormValues>),
     }),
     [defaultValues]
   );
@@ -95,7 +95,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     setValue,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<CustomerFormValues>({
+  } = useForm<FormValues>({
     resolver,
     defaultValues: defaultValuesResolved,
     mode: 'onBlur',
@@ -126,7 +126,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   };
 
   const onSubmitInternal = React.useCallback(
-    async (vals: CustomerFormValues) => {
+    async (vals: FormValues) => {
       await onSubmit(vals);
       if (shouldReset) reset(defaultValuesResolved);
     },

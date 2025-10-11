@@ -1,43 +1,51 @@
 // src/features/customers/pages/CustomersPage.tsx
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';
 
-import { CustomersTable } from '../components/CustomersTable';
-import { CustomerDetailDrawer } from '../components/CustomerDetailDrawer';
-import { CustomerFormDrawer } from '../components/CustomerFormDrawer';
-
-import {
-  listCustomerSummaries,
-  createCustomer,
-  updateCustomer,
-  deleteCustomer,
-} from '../api/client';
-import type { CustomerDto, CustomerSummaryDto, CustomerFilters, UUID } from '../api/types';
-
-import { Button } from '@/components/ui/stavbau-ui/button';
+// --- App hooks & routing ---
 import { useOverlayRouting } from '@/lib/router/useOverlayRouting';
-import { SmartEmptyState } from '@/components/ui/stavbau-ui/emptystate/SmartEmptyState';
-import { UserPlus, Pencil, Trash2, Plus } from '@/components/icons';
+import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';
+import { useServerTableState } from '@/lib/hooks/useServerTableState';
+import { useFab } from '@/components/layout';
 
+// --- RBAC / guards ---
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 import { CUSTOMERS_SCOPES } from '../const/scopes';
 
-import { useFab } from '@/components/layout';
+// --- API / service ---
+import { customersService } from '@/features/customers/api/customers-service';
+import type { CustomerFilters } from '@/features/customers/api/customers-service';
+
+// --- Types ---
+import type { CustomerDto, CustomerSummaryDto, UUID } from '../api/types';
+
+// --- UI components ---
+import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
+import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
+import { CustomerDetailDrawer } from '../components/CustomerDetailDrawer';
+import { CustomerFormDrawer } from '../components/CustomerFormDrawer';
+import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
+import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
+import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
+import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
+import { Button } from '@/components/ui/stavbau-ui/button';
+
+// --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
-import { useServerTableState } from '@/lib/hooks/useServerTableState';
+import { UserPlus, Plus, Mail } from '@/components/icons';
 
 export default function CustomersPage() {
   const { setFab } = useFab();
   const i18nNamespaces = React.useMemo<string[]>(() => ['customers', 'common'], []);
   const { t } = useTranslation(i18nNamespaces);
-  const companyId = useRequiredCompanyId();
 
-  // ------------------------------------------------------
-  // Server-side fetcher (list)
-  // ------------------------------------------------------
+  const companyId = useRequiredCompanyId();
+  const customers = React.useMemo(() => customersService(companyId), [companyId]);
+
+  // ---------------------------------------------------------------------------
+  // Server-side řízení tabulky
+  // ---------------------------------------------------------------------------
   const fetcher = React.useCallback(
     ({
       q,
@@ -52,19 +60,16 @@ export default function CustomersPage() {
       sort?: string | string[];
       filters?: CustomerFilters;
     }) =>
-      listCustomerSummaries(companyId, {
+      customers.list({
         q,
         page,
         size,
         sort,
-        status: filters?.status?.trim() || undefined,
+        filters, // wrapper si sám převede status přes filtersToQuery
       }),
-    [companyId]
+    [customers]
   );
 
-  // ------------------------------------------------------
-  // useServerTableState – jednotná logika pro page/sort/search/filters
-  // ------------------------------------------------------
   const {
     data,
     loading,
@@ -72,9 +77,8 @@ export default function CustomersPage() {
     clearError,
     q,
     sort,
-    // page,
     size,
-    // filters,
+    // filters,              // (případně přidej UI filtry)
     page1,
     total,
     onSearchChange,
@@ -88,7 +92,7 @@ export default function CustomersPage() {
     fetcher,
     defaults: {
       q: '',
-      page: 0,
+      page: 0, // interně 0-based; hook poskytuje page1 (1-based) pro UI
       size: 10,
       sort: [{ id: 'name', desc: false }],
       filters: { status: '' },
@@ -101,9 +105,9 @@ export default function CustomersPage() {
     },
   });
 
-  // ------------------------------------------------------
-  // Routing (new/detail/edit overlay)
-  // ------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Routing (new/detail/edit)
+  // ---------------------------------------------------------------------------
   const {
     id: routeId,
     isNew,
@@ -115,64 +119,62 @@ export default function CustomersPage() {
     closeOverlays,
   } = useOverlayRouting({ module: 'customers' });
 
-  // ------------------------------------------------------
-  // CRUD handlers
-  // ------------------------------------------------------
+  // Pro rychlý prefill do detailu / editu
+  const selectedCustomer = React.useMemo(
+    () => (routeId ? data.items.find((i) => String(i.id) === routeId) ?? null : null),
+    [data.items, routeId]
+  );
+
+  // ---------------------------------------------------------------------------
+  // CRUD handlery
+  // ---------------------------------------------------------------------------
   const handleCreate = React.useCallback(
     async (values: Partial<CustomerDto>) => {
-      await createCustomer(companyId, values as any);
+      await customers.create(values as any);
       closeOverlays();
-      await refreshAfterMutation(); // po create na 1. stránku
+      await refreshAfterMutation(); // po create skoč na 1. stránku
     },
-    [companyId, closeOverlays, refreshAfterMutation]
+    [customers, closeOverlays, refreshAfterMutation]
   );
 
   const handleEdit = React.useCallback(
     async (values: Partial<CustomerDto>, id: UUID) => {
-      await updateCustomer(companyId, id, values as any);
+      await customers.update(id, values as any);
       closeOverlays();
       await refreshList();
     },
-    [companyId, closeOverlays, refreshList]
+    [customers, closeOverlays, refreshList]
   );
 
   const handleDelete = React.useCallback(
     async (id: UUID | string) => {
-      await deleteCustomer(companyId, String(id));
+      await customers.remove(id as UUID);
       closeOverlays();
       await refreshList();
     },
-    [companyId, closeOverlays, refreshList]
+    [customers, closeOverlays, refreshList]
   );
 
-  // ------------------------------------------------------
-  // Empty state (kontext vyhledávání)
-  // ------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Empty state
+  // ---------------------------------------------------------------------------
   const emptyNode = (
-    <SmartEmptyState
-      hasSearch={!!q}
+    <ServerTableEmpty
+      q={q}
       i18nNamespaces={i18nNamespaces}
-      // search stav
-      searchTitleKey="list.emptyTitle"
-      searchDescKey="list.emptyDesc"
-      clearLabelKey="list.actions.open"
       onClearSearch={() => onSearchChange('')}
-      // no-data stav
-      emptyTitleKey="list.emptyTitle"
-      emptyDescKey="list.emptyDesc"
+      requiredScopesAnyOf={[CUSTOMERS_SCOPES.RW, CUSTOMERS_SCOPES.CREATE]}
       emptyAction={
-        <ScopeGuard anyOf={[CUSTOMERS_SCOPES.RW, CUSTOMERS_SCOPES.CREATE]}>
-          <Button leftIcon={<UserPlus size={16} />} onClick={openNew}>
-            {t('list.actions.add', { defaultValue: 'Přidat zákazníka' })}
-          </Button>
-        </ScopeGuard>
+        <Button leftIcon={<UserPlus size={16} />} onClick={openNew}>
+          {t('list.actions.add', { defaultValue: 'Přidat zákazníka' })}
+        </Button>
       }
     />
   );
 
-  // ------------------------------------------------------
-  // FAB – primární CTA (Nový zákazník)
-  // ------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // FAB
+  // ---------------------------------------------------------------------------
   React.useEffect(() => {
     setFab({
       label: t('list.actions.new', { defaultValue: 'Nový zákazník' }),
@@ -182,25 +184,67 @@ export default function CustomersPage() {
     return () => setFab(null);
   }, [setFab, t, openNew]);
 
-  // Výběr pro rychlý prefill do edit formu / detailu
-  const selectedCustomer = React.useMemo(
-    () => (routeId ? data.items.find((i) => String(i.id) === routeId) ?? null : null),
-    [data.items, routeId]
-  );
+  // ---------------------------------------------------------------------------
+  // Sloupce tabulky (původně v CustomersTable) – nyní lokálně pro StbEntityTable
+  // ---------------------------------------------------------------------------
+  const columns = React.useMemo<DataTableV2Column<CustomerSummaryDto>[]>(() => [
+    {
+      id: 'name',
+      header: t('columns.name', { defaultValue: 'Název' }),
+      accessor: (c) => c.name,
+      sortable: true,
+      minWidth: 220,
+      meta: { stbMobile: { isTitle: true, priority: 0, label: t('columns.name') } },
+    },
+    {
+      id: 'email',
+      header: t('columns.email', { defaultValue: 'E-mail' }),
+      accessor: (c) => (c as any).email ?? '—',
+      cell: (c) => (
+        <span className="inline-flex items-center gap-1 xl:max-w-[320px] xl:truncate">
+          <Mail size={14} />
+          <span className="truncate">{(c as any).email ?? '—'}</span>
+        </span>
+      ),
+      sortable: true,
+      meta: { stbMobile: { isSubtitle: true, priority: 1, label: t('columns.email') } },
+    },
+    {
+      id: 'ico',
+      header: t('columns.ico', { defaultValue: 'IČO' }),
+      accessor: (c) => (c as any).ico ?? '—',
+      sortable: true,
+      width: 120,
+      meta: { stbMobile: { priority: 2, label: t('columns.ico') } },
+    },
+    {
+      id: 'dic',
+      header: t('columns.dic', { defaultValue: 'DIČ' }),
+      accessor: (c) => (c as any).dic ?? '—',
+      sortable: true,
+      width: 140,
+      meta: { stbMobile: { priority: 3, label: t('columns.dic') } },
+    },
+    {
+      id: 'updatedAt',
+      header: t('columns.updatedAt', { defaultValue: 'Upraveno' }),
+      accessor: (c) => (c as any).updatedAt ?? (c as any).createdAt ?? '',
+      sortable: true,
+      width: 140,
+    },
+  ], [t]);
 
-  // ------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Render
-  // ------------------------------------------------------
+  // ---------------------------------------------------------------------------
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
-        <div className="mb-4 flex items-center justify-between gap-2 md:gap-4">
-          <h1 className="text-xl font-semibold">
-            {t('title', { defaultValue: 'Zákazníci' })}
-          </h1>
-
-          {/* Primární CTA (duplicitně k FAB pro desktop) */}
-          <div className="hidden min-w-0 w-full md:w-auto md:flex items-center gap-2 md:gap-3">
+        {/* Header sjednocený s Team/Projects */}
+        <TableHeader
+          title={t('title', { defaultValue: 'Zákazníci' })}
+          subtitle={t('subtitle', { defaultValue: 'Správa zákazníků' })}
+          actions={
             <ScopeGuard anyOf={[CUSTOMERS_SCOPES.CREATE, CUSTOMERS_SCOPES.RW]}>
               <Button
                 type="button"
@@ -208,93 +252,72 @@ export default function CustomersPage() {
                 onClick={openNew}
                 disabled={loading}
                 ariaLabel={t('actions.newCustomer', { defaultValue: 'Nový zákazník' }) as string}
-                leftIcon={<Plus size={16} />}
+                leftIcon={<UserPlus size={16} />}
                 className="shrink-0 whitespace-nowrap"
               >
                 <span>{t('actions.newCustomer', { defaultValue: 'Nový zákazník' })}</span>
               </Button>
             </ScopeGuard>
-          </div>
-        </div>
+          }
+        />
 
-        {/* ARIA status (bez layout shiftu) */}
-        <span className="sr-only" role="status" aria-live="polite">
-          {loading ? t('loading', { defaultValue: 'Načítám…' }) : ''}
-        </span>
-
-        {/* Status */}
+        {/* Status (ARIA + error banner) */}
         <LoadErrorStatus
           loading={loading}
           error={error}
           onClear={clearError}
-          // onRetry={() => refreshList()}         // volitelné
           i18nNamespaces={i18nNamespaces}
-        //labels={{ loading: 'Loading…', error: 'Failed to load', close: 'Close' }} // volitelné
         />
 
-        {/* TABLE */}
-        <CustomersTable
-          data={data.items}
-          loading={loading}
-          page={page1}
-          pageSize={size}
-          total={total}//{data.total ?? data.totalElements ?? 0}
-          pageCount={data.totalPages}
-          sort={sort}
-          search={q}
-          // ovládání
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          onSortChange={onSortChange}
-          onSearchChange={onSearchChange}
-          // vzhled / texty
+        {/* Tabulka zákazníků (server-side řízená) – StbEntityTable */}
+        <StbEntityTable<CustomerSummaryDto>
+          // i18n / vzhled
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
+
+          // data & řízení (1-based page)
+          data={data.items}
+          loading={loading}
+          page={page1}
+          pageSize={size}
+          total={total}
+          pageCount={data.totalPages}
+          sort={sort}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          onSortChange={onSortChange}
+
+          // search
+          search={q}
+          onSearchChange={onSearchChange}
+
+          // sloupce
+          columns={columns}
+          keyField={(c) => String(c.id)}
+
           // interakce s řádky
-          onRowClick={(p) => openDetail(p.id as UUID)}
+          onRowClick={(c) => openDetail(c.id as UUID)}
           rowActions={(c) => (
-            <div className="flex items-center gap-2">
-              <ScopeGuard anyOf={[CUSTOMERS_SCOPES.RW, CUSTOMERS_SCOPES.UPDATE]}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  aria-label={t('detail.actions.edit', { defaultValue: 'Upravit' }) as string}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEdit(c.id as UUID);
-                  }}
-                  title={t('detail.actions.edit', { defaultValue: 'Upravit' }) as string}
-                >
-                  <Pencil size={16} />
-                </Button>
-              </ScopeGuard>
-              <ScopeGuard anyOf={[CUSTOMERS_SCOPES.RW, CUSTOMERS_SCOPES.DELETE]}>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  aria-label={t('detail.actions.delete', { defaultValue: 'Smazat' }) as string}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleDelete(c.id as UUID);
-                  }}
-                  title={t('detail.actions.delete', { defaultValue: 'Smazat' }) as string}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </ScopeGuard>
-            </div>
+            <RowActions
+              item={c}
+              asMenu
+              maxInline={2}
+              compact
+              i18nNamespaces={i18nNamespaces}
+              menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
+              actions={[
+                { kind: 'detail', onClick: () => openDetail(c.id as UUID) },
+                { kind: 'edit', onClick: () => openEdit(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.UPDATE, CUSTOMERS_SCOPES.RW] },
+                { kind: 'delete', onClick: () => handleDelete(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.DELETE, CUSTOMERS_SCOPES.RW], confirm: {} },
+              ]}
+            />
           )}
+
+          // prázdný stav
           emptyContent={emptyNode}
-          // Create skrze FAB / primární CTA nahoře
-          canCreate={false}
-          onOpenCreate={undefined}
-        /** NEW: řízené filtry + options pro role */
-        //filters={filters}
-        //onFiltersChange={(next) => onFiltersChange(next)}
-        //roleOptions={roleOptions}
         />
 
         {/* Create */}
@@ -307,7 +330,7 @@ export default function CustomersPage() {
           onSubmit={handleCreate}
         />
 
-        {/* Detail (prefill + detail fetch uvnitř) */}
+        {/* Detail */}
         <CustomerDetailDrawer
           i18nNamespaces={i18nNamespaces}
           open={isDetail && !isEdit}

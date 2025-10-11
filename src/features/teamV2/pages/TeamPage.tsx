@@ -24,9 +24,11 @@ import { formToCreateBody, formToUpdateProfileBody } from '../mappers/TeamMapper
 import type { AnyTeamFormValues } from '../validation/schemas';
 
 // --- UI components ---
-import { TeamTable } from '../components/TeamTable';
-import { TeamDetailDrawer } from '../components/TeamDetailDrawer';
-import { TeamFormDrawer } from '../components/TeamFormDrawer';
+import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
+import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer';
+import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
+import { Detail as TeamDetail } from '../components/Detail';
+import { Form as TeamForm } from '../components/Form';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
@@ -36,6 +38,7 @@ import { Button } from '@/components/ui/stavbau-ui/button';
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
+import { Mail, Shield, User as UserIcon } from '@/components/icons';
 import { UserPlus, Plus } from '@/components/icons';
 
 export default function TeamPage() {
@@ -98,7 +101,7 @@ export default function TeamPage() {
     fetcher,
     defaults: {
       q: '',
-      page: 0,
+      page: 0, // interně 0-based, hook vystavuje i page1 (1-based) pro UI
       size: 10,
       sort: [{ id: 'lastName', desc: false }],
       filters: { role: '', status: '' },
@@ -197,6 +200,72 @@ export default function TeamPage() {
     return () => setFab(null);
   }, [setFab, t, openNew]);
 
+  // ---------------------------------------------------------------------------
+  // Sloupce tabulky (původně v TeamTable) – nyní lokálně pro StbEntityTable
+  // ---------------------------------------------------------------------------
+  const columns = React.useMemo<DataTableV2Column<MemberSummaryDto>[]>(() => [
+    {
+      id: 'avatar',
+      header: '',
+      accessor: (_m) => '',
+      cell: () => (
+        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+          <UserIcon size={16} />
+        </div>
+      ),
+      enableSorting: false,
+      meta: { stbMobile: { priority: 99, mobileHidden: true } },
+    },
+    // lastName (sort klíč) + firstName vedle
+    {
+      id: 'lastName',
+      header: t('list.columns.lastname'),
+      accessor: (m) => m.lastName ?? '—',
+      cell: (m) => (
+        <span className="block xl:max-w-[260px] xl:truncate">{m.lastName ?? '—'}</span>
+      ),
+      meta: { stbMobile: { isTitle: true, priority: 0, label: t('list.columns.name') } },
+    },
+    {
+      id: 'firstName',
+      header: t('list.columns.firstname'),
+      accessor: (m) => m.firstName ?? '—',
+      cell: (m) => (
+        <span className="block xl:max-w-[260px] xl:truncate">{m.firstName ?? '—'}</span>
+      ),
+      meta: { stbMobile: { isTitle: true, priority: 0, label: t('list.columns.name') } },
+    },
+    // email (aliased allowlist klíč 'user.email')
+    {
+      id: 'user.email',
+      header: t('list.columns.email'),
+      accessor: (m) => m.email ?? '—',
+      cell: (m) => (
+        <span className="inline-flex items-center gap-1 xl:max-w-[320px] xl:truncate">
+          <Mail size={14} />
+          <span className="truncate">{m.email ?? '—'}</span>
+        </span>
+      ),
+      meta: { stbMobile: { isSubtitle: true, priority: 1, label: t('list.columns.email') } },
+    },
+    // role (bez řazení)
+    {
+      id: 'role',
+      header: t('list.columns.companyRole'),
+      accessor: (m) => m.role ?? m.companyRole ?? '—',
+      cell: (m) => (
+        <span className="inline-flex items-center gap-1">
+          <Shield size={14} />{' '}
+          {t(`roles.${m.role ?? m.companyRole}`, {
+            defaultValue: m.role ?? m.companyRole ?? '—',
+          })}
+        </span>
+      ),
+      enableSorting: false,
+      meta: { stbMobile: { priority: 2, label: t('list.columns.companyRole') } },
+    },
+  ], [t]);
+
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
@@ -229,8 +298,16 @@ export default function TeamPage() {
           i18nNamespaces={i18nNamespaces}
         />
 
-        {/* TABLE */}
-        <TeamTable
+        {/* TABLE – StbEntityTable (1-based page) */}
+        <StbEntityTable<MemberSummaryDto>
+          // i18n / vzhled
+          i18nNamespaces={i18nNamespaces}
+          className="mt-2"
+          variant="surface"
+          defaultDensity="cozy"
+          pageSizeOptions={[5, 10, 20]}
+
+          // data & řízení (server-side; 1-based)
           data={data.items}
           loading={loading}
           page={page1}
@@ -238,18 +315,18 @@ export default function TeamPage() {
           total={total}
           pageCount={data.totalPages}
           sort={sort}
-          search={q}
-          // ovládání
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
           onSortChange={onSortChange}
+
+          // vyhledávání
+          search={q}
           onSearchChange={onSearchChange}
-          // vzhled / texty
-          i18nNamespaces={i18nNamespaces}
-          className="mt-2"
-          variant="surface"
-          defaultDensity="cozy"
-          pageSizeOptions={[5, 10, 20]}
+
+          // sloupce
+          columns={columns}
+          keyField={(m) => String(m.id)}
+
           // interakce s řádky
           onRowClick={(m) => openDetail(m.id as UUID)}
           rowActions={(m) => (
@@ -268,61 +345,90 @@ export default function TeamPage() {
               ]}
             />
           )}
-          emptyContent={emptyNode}
-          // Create skrze FAB / primární CTA nahoře
-          canCreate={false}
-          onOpenCreate={undefined}
-          // řízené filtry + options pro role
+
+          // řízené filtry + options pro role (toolbar)
           filters={filters}
           onFiltersChange={onFiltersChange}
           roleOptions={roleOptions}
+
+          // prázdný stav
+          emptyContent={emptyNode}
         />
 
-        {/* Create */}
-        <TeamFormDrawer
-          mode="create"
-          i18nNamespaces={i18nNamespaces}
-          open={isNew}
-          companyId={companyId}
-          titleKey="form.title.create"
+        <CrudDrawer<MemberSummaryDto, AnyTeamFormValues>
+          // režimy (z useOverlayRouting)
+          isDetail={isDetail && !isEdit}
+          isNew={isNew}
+          isEdit={!!isEdit}
+          entityId={isDetail || isEdit ? (routeId as UUID) : null}
           onClose={closeOverlays}
-          onSubmit={handleCreate}
-        />
 
-        {/* Detail */}
-        <TeamDetailDrawer
-          i18nNamespaces={i18nNamespaces}
-          open={isDetail && !isEdit}
-          companyId={companyId}
-          memberId={isDetail ? (routeId as UUID) : null}
-          onClose={closeOverlays}
-          onEdit={() => openEdit(routeId as UUID)}
-          onDelete={(id) => void handleDelete(id)}
-          prefill={data.items.find((i) => i.id === routeId) as any}
-        />
-
-        {/* Edit */}
-        <TeamFormDrawer
-          mode="edit"
-          i18nNamespaces={i18nNamespaces}
-          open={!!isEdit}
-          companyId={companyId}
-          memberId={isEdit ? (routeId as UUID) : null}
-          titleKey="form.title.edit"
-          onClose={closeOverlays}
-          onSubmit={(vals) => void handleEdit(vals, routeId as UUID)}
-          defaultValues={{
-            email: editingMember?.email,
-            firstName: editingMember?.firstName ?? '',
-            lastName: editingMember?.lastName ?? '',
-            phone: editingMember?.phone ?? '',
-            role: editingMember?.role ?? null,
-            companyRole: editingMember?.companyRole ?? null,
-            sendInvite: false,
+          // UI
+          titles={{
+            detail: t('detail.title', { defaultValue: 'Detail člena' }),
+            create: t('form.title.create', { defaultValue: 'Nový člen' }),
+            edit: t('form.title.edit', { defaultValue: 'Upravit člena' }),
           }}
-          currentCompanyRole={editingMember?.role ?? editingMember?.companyRole ?? null}
-          lockCompanyRole={false}
-          lockReasonKey="errors.lastOwner"
+
+          // data & prefill
+          listItems={data.items}
+          fetchDetail={(id, opts) => team.get(id as any, opts)}   // stejný vzor jako dnes
+          mapDetailToFormDefaults={(m) => ({
+            email: m.email,
+            firstName: m.firstName ?? '',
+            lastName: m.lastName ?? '',
+            phone: m.phone ?? '',
+            role: (m as any).role ?? (m as any).companyRole ?? null,
+            companyRole: (m as any).companyRole ?? (m as any).role ?? null,
+            sendInvite: false,
+          })}
+
+          // DETAIL (slot)
+          renderDetail={({ id, data, loading, error, onDelete }) => (
+            <TeamDetail
+              i18nNamespaces={i18nNamespaces}
+              open
+              prefill={undefined}             // už není třeba – data přichází z orchestrátoru
+              data={data as any}
+              loading={loading}
+              error={error ?? null}
+              onClose={closeOverlays}
+              onEdit={() => openEdit(routeId as UUID)}
+              onDelete={(x) => void onDelete?.(String(x))}
+            />
+          )}
+
+          // CREATE (slot)
+          renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+            <TeamForm
+              mode="create"
+              i18nNamespaces={i18nNamespaces}
+              defaultValues={defaultValues}
+              submitting={submitting}
+              onSubmit={onSubmit}
+              onCancel={onCancel}
+              resetAfterSubmit
+            />
+          )}
+
+          // EDIT (slot) + last OWNER guard může zůstat ve formu (TeamFormDrawer pattern)
+          renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+            <TeamForm
+              mode="edit"
+              i18nNamespaces={i18nNamespaces}
+              defaultValues={defaultValues}
+              submitting={submitting}
+              onSubmit={onSubmit}
+              onCancel={onCancel}
+            />
+          )}
+
+          // akce
+          onCreate={async (vals) => { await handleCreate(vals); }}
+          beforeEditSubmit={(vals, { id }) => { /* volitelně extra guard */ }}
+          onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
+          onDelete={async (id) => { await handleDelete(id as UUID); }}
+          afterMutate={refreshList}
         />
       </div>
     </div>
