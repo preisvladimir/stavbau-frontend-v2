@@ -1,5 +1,4 @@
 import { type AddressDto } from '@/types/common/address';
-export type { PageResponse } from "@/types/PageResponse";
 
 export type ListCustomersParams = {
   q?: string;
@@ -7,7 +6,9 @@ export type ListCustomersParams = {
   size?: number;
 };
 
+export type UUID = string;
 export const ALLOWED_SORT = new Set(['name', 'ico', 'dic', 'createdAt', 'updatedAt', 'id']);
+export type CustomerFilters = { status?: string };
 
 export interface CustomerDto {
     id: string;

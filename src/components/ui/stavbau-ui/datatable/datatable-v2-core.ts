@@ -27,6 +27,8 @@ export type DataTableV2Column<T extends RowData> = {
   accessor?: keyof T | ((row: T) => unknown);
   cell?: (row: T) => React.ReactNode;
   visible?: boolean;
+  enableSorting?: boolean;
+  meta?: any;
 };
 
 export type DataTableV2Sort = Array<{ id: string; desc: boolean }>;
@@ -49,6 +51,7 @@ export type DataTableV2Props<T extends RowData> = {
   page?: number;                         // 1-based (controlled)
   pageSize?: number;                     // controlled
   total?: number;                        // required pro server mode
+  pageCount?: number;                    // volitelné v server mode
   onPageChange?: (page: number) => void; // 1-based
   onPageSizeChange?: (size: number) => void;
   defaultPage?: number;                  // 1-based (uncontrolled init)
@@ -60,53 +63,33 @@ export type DataTableV2Props<T extends RowData> = {
   search?: string;                           // controlled
   onSearchChange?: (q: string) => void;
   defaultSearch?: string;                    // uncontrolled init
-  /**
-   * Debounce (v ms) pro změny vyhledávání. Default: 250 ms.
-   * Debounce probíhá v DataTableV2 a do onSearchChange se posílá až „ustálená“ hodnota.
-   */
   searchDebounceMs?: number;
-  /**
-   * Způsob zobrazení načítání:
-   * - 'auto' (default): skeleton při initial load, overlay při dalších loadech
-   * - 'overlay': vždy overlay
-   * - 'skeleton': vždy skeleton
-   */
   loadingMode?: 'auto' | 'overlay' | 'skeleton';
 
-  columnVisibility?: VisibilityState;        // controlled { [columnId]: boolean }
+  columnVisibility?: VisibilityState;
   onColumnVisibilityChange?: (v: VisibilityState) => void;
-  defaultColumnVisibility?: VisibilityState; // uncontrolled init
+  defaultColumnVisibility?: VisibilityState;
 
   density?: TableDensity;
   onDensityChange?: (d: TableDensity) => void;
   defaultDensity?: TableDensity;
 
-  showToolbar?: boolean; // default true
+  showToolbar?: boolean;
 
-  /** Toolbar: page size options for selector (PR 4.1) */
   onReset?: () => void;
-  pageSizeOptions?: number[]; // výběr velikosti stránky (default [5,10,20])
+  pageSizeOptions?: number[];
 
-  // Row actions (PR 5)
   rowActions?: (row: T) => React.ReactNode;
 
-  /** Vizuální varianta vzhledu tabulky */
-  variant?: 'surface' | 'plain'; // default: 'plain'
-
-  /** Volitelná třída na wrapperu tabulky */
+  variant?: 'surface' | 'plain';
   className?: string;
 
-  /**
-   * i18n namespaces, které mají používat mobilní karty (DataRowCard)
-   * Příklad: ['team', 'common'] nebo ['invoices', 'common']
-   * Pokud není uvedeno, použije se ['common'].
-   */
   i18nNamespaces?: string[];
 
   // --- Filters (controlled/uncontrolled) ---
-  filters?: Filters;                         // controlled
-  onFiltersChange?: (next: Filters) => void; // callback pro controlled režim
-  initialFilters?: Filters;                  // default pro uncontrolled
+  filters?: Filters;
+  onFiltersChange?: (next: Filters) => void;
+  initialFilters?: Filters;
 
   // --- NEW: volitelné options pro role filter v toolbaru ---
   roleOptions?: ToolbarRoleOption[];
@@ -143,6 +126,10 @@ function useControllableState<T>({
 }
 
 export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>) {
+  const isServer = props.enableClientPaging === false;
+  const warnedNoTotalRef = React.useRef(false);
+
+  // sloupce
   const tanColumns = React.useMemo<TSColumnDef<T>[]>(() => {
     return props.columns.map((c) => {
       const acc = c.accessor;
@@ -156,7 +143,8 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
         accessorFn,
         cell: ({ row, getValue }) => (c.cell ? c.cell(row.original as T) : String(getValue?.() ?? '')),
         enableHiding: true,
-        enableSorting: props.enableClientSort !== false,
+        enableSorting: c.enableSorting ?? true,   // ⬅ UI šipky zapnuté i v server módu
+        meta: c.meta,
       } as TSColumnDef<T>;
     });
   }, [props.columns, props.enableClientSort]);
@@ -178,12 +166,37 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
   const pageIndex = controlledPageIndex ?? internalPageIndex;
   const pageSize = controlledPageSize ?? internalPageSize;
 
-  // Page count: client ↔ server
-  const total =
-    props.enableClientPaging === false && typeof props.total === 'number'
-      ? props.total
-      : props.data.length;
-  const pageCount = Math.max(1, Math.ceil((total || 0) / (pageSize || 1)));
+  // Track: první dokončené načtení → teprve pak povol klampování
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
+  React.useEffect(() => {
+    if (!props.loading) setHasLoadedOnce(true);
+  }, [props.loading]);
+
+  // total (client vs server)
+  let total: number = props.data.length;
+  if (isServer) {
+    if (typeof props.total === 'number') {
+      total = props.total!;
+    } else {
+      if (process.env.NODE_ENV !== 'production' && !props.loading && !warnedNoTotalRef.current) {
+        console.warn('[DataTableV2] Server paging bez props.total – fallback na data.length (nepřesné).');
+        warnedNoTotalRef.current = true;
+      }
+      total = props.data.length;
+    }
+    if (process.env.NODE_ENV !== 'production' && props.page === 0) {
+      console.warn('[DataTableV2] Prop "page" je 1-based. Neposílej 0.');
+    }
+  }
+
+  // Stabilita pageCount:
+  // - dokud NEMÁME hasLoadedOnce (nebo běží loading), nebo je total neznámý (0 a prázdná stránka),
+  //   drž minimální pageCount tak, aby nikdy nebyl < (pageIndex+1) → žádný předčasný clamp.
+  const basePageCount = Math.max(1, Math.ceil(Math.max(0, total) / Math.max(1, pageSize)));
+  const totalLooksUnknown = isServer && (props.pageCount == null) && (total === 0) && (props.data.length === 0);
+  const isUncertain = isServer && (!hasLoadedOnce || props.loading || totalLooksUnknown);
+  const derivedPageCount = isUncertain ? Math.max(basePageCount, pageIndex + 1) : basePageCount;
+  const pageCount = props.pageCount || derivedPageCount;
 
   // ---- Search (PR4) ----
   const [internalSearch, setInternalSearch] = React.useState(props.defaultSearch ?? '');
@@ -213,7 +226,6 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     (key: string, value: FilterValue) =>
       setFilters((prev) => {
         const next = { ...prev, [key]: value };
-        // očista prázdných hodnot – menší payload/URL
         if (next[key] === '' || next[key] === null || next[key] === undefined) {
           delete next[key];
         }
@@ -231,8 +243,11 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
       sorting,
       pagination: { pageIndex, pageSize },
       columnVisibility: visibility,
-      // Filtry držíme mimo TanStack a používáme je v parent/server vrstvě.
     },
+    manualPagination: isServer,                         // server řídí stránkování
+    manualSorting: props.enableClientSort === false,    // server řídí řazení
+    autoResetPageIndex: false,                          // ⬅️ klíčové: žádné auto-0 po mountu/sortu
+    //autoResetSorting: false,                            // nedráždit resetem sortu    
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
       if (props.onSortChange) props.onSortChange(next as DataTableV2Sort);
@@ -246,17 +261,23 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     onPaginationChange: (updater) => {
       const prev = { pageIndex, pageSize };
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      if (next.pageIndex !== prev.pageIndex) {
-        props.onPageChange ? props.onPageChange(next.pageIndex + 1) : setInternalPageIndex(next.pageIndex);
+
+      const clampedIndex = Math.min(Math.max(0, next.pageIndex), Math.max(0, pageCount - 1));
+
+      if (clampedIndex !== prev.pageIndex) {
+        props.onPageChange ? props.onPageChange(clampedIndex + 1) : setInternalPageIndex(clampedIndex);
       }
       if (next.pageSize !== prev.pageSize) {
         props.onPageSizeChange ? props.onPageSizeChange(next.pageSize) : setInternalPageSize(next.pageSize);
+        const resetIndex = 0;
+        if (props.onPageChange) props.onPageChange(1);
+        else setInternalPageIndex(resetIndex);
       }
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: props.enableClientSort === false ? undefined : getSortedRowModel(),
-    getPaginationRowModel: props.enableClientPaging === false ? undefined : getPaginationRowModel(), // client-only
-    pageCount, // i pro server mode – TanStack ví o limitu
+    getPaginationRowModel: isServer ? undefined : getPaginationRowModel(),
+    pageCount,
   });
 
   const getRowKey = React.useCallback(
@@ -280,6 +301,17 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
 
   const densityClasses = densityMap[density];
 
+  // Guard clamp: povolit až po prvním dokončeném načtení a když už víme rozsah
+  React.useEffect(() => {
+    if (isServer && isUncertain) return;
+    const maxIndex = Math.max(0, pageCount - 1);
+    if (pageIndex > maxIndex) {
+      if (props.onPageChange) props.onPageChange(maxIndex + 1);
+      else table.setPageIndex(maxIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageCount, isServer, isUncertain]);
+
   // exposed helpers (1-based page)
   const api = {
     page: pageIndex + 1,
@@ -289,18 +321,13 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     setPage: (p: number) => table.setPageIndex(Math.max(0, p - 1)),
     setPageSize: (s: number) => {
       const size = Math.max(1, s);
-      // 1) nastavit velikost stránky
       table.setPageSize(size);
-      // 2) pro jistotu skočit na první stránku (0-based)
       table.setPageIndex(0);
-      // Pozn.: naše onPaginationChange zajistí zavolání
-      // props.onPageSizeChange(size) a props.onPageChange(1)
     },
     nextPage: () => table.nextPage(),
     prevPage: () => table.previousPage(),
     canNextPage: table.getCanNextPage(),
     canPrevPage: table.getCanPreviousPage(),
-    /** Přímý skok na stránku (1-based). Ořízne mimo rozsah 1..pageCount. */
     gotoPage: (p: number) => {
       const safe = Math.max(1, Math.min(p, pageCount));
       table.setPageIndex(safe - 1);
@@ -339,7 +366,7 @@ export function useDataTableV2Core<T extends RowData>(props: DataTableV2Props<T>
     resetAll,
     pageSizeOptions: props.pageSizeOptions ?? [5, 10, 20],
 
-    // Filters i „napřímo“ (mimo api), pokud se hodí v komponentě
+    // Filters i „napřímo“ (mimo api)
     filters,
     setFilter,
     resetFilters,

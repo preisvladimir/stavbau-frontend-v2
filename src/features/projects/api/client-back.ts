@@ -1,7 +1,7 @@
 // src/features/projects/api/client.ts
 import { api } from '@/lib/api/client';
 import { mapAndThrow } from '@/lib/api/problem';
-import { toPageResponse, type PageResponse } from '@/types/PageResponse';
+import { toPageResponse, type PageResponse } from '@/lib/api/types/PageResponse';
 import type {
   ProjectSummaryDto,
   ProjectDto,

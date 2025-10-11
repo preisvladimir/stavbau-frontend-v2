@@ -3,7 +3,7 @@ export { Button } from "./button";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
 export { Badge } from "./badge";
 export { Modal } from "./modal";
-export { EmptyState } from "./emptystate";
+export { EmptyState } from "./emptystate/emptystate";
 export { TabButton } from "./tabbutton";
 export { LinkButton } from "./linkbutton";
 export { ToastProvider, useToast } from "../toast/ToastProvider";

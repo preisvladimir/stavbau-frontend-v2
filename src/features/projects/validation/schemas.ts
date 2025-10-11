@@ -81,6 +81,8 @@ export type AnyProjectFormValues = {
   description?: string;
   customerId: string;
   projectManagerId?: string;
+  customerLabel?: string;
+  projectManagerLabel?: string;
   plannedStartDate?: string; // ISO YYYY-MM-DD
   plannedEndDate?: string;   // ISO YYYY-MM-DD
   currency?: string;

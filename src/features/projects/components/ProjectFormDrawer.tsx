@@ -6,12 +6,14 @@ import ProjectForm from './ProjectForm';
 import type { AnyProjectFormValues } from '../validation/schemas';
 import type { UUID } from '../api/types';
 import { getProject } from '../api/client';
+import type { AddressDto } from '@/types/common/address';
 
 export type ProjectFormDrawerProps = {
   i18nNamespaces?: string[];
   open: boolean;
   mode: 'create' | 'edit';
   projectId?: UUID | null;
+  companyId: UUID;
   titleKey?: string;
   submitting?: boolean;
   defaultValues?: Partial<AnyProjectFormValues>;
@@ -24,6 +26,7 @@ export function ProjectFormDrawer({
   open,
   mode,
   projectId,
+  companyId,
   titleKey,
   submitting,
   defaultValues,
@@ -41,29 +44,57 @@ export function ProjectFormDrawer({
   const [localError, setLocalError] = React.useState<string | null>(null);
 
   // Když máme projectId (edit), dotáhneme detail a prefillneme formulář
-  React.useEffect(() => {
-    if (!open || !projectId) return;
-    const ac = new AbortController();
-    getProject(projectId)
-      .then((p) =>
-        setPrefill({
-          name: p.name ?? '',
-          code: p.code ?? '',
-          description: p.description ?? '',
-          customerId: p.customerId ?? '',
-          projectManagerId: p.projectManagerId ?? '',
-          plannedStartDate: p.plannedStartDate ?? '',
-          plannedEndDate: p.plannedEndDate ?? '',
-          currency: p.currency ?? '',
-          vatMode: p.vatMode ?? '',
-        })
-      )
-      .catch((e: any) => {
-        // decentní hláška, formulář ponecháme s původními defaultValues
-        setLocalError(e?.response?.data?.detail || e?.message || 'Failed to load');
+React.useEffect(() => {
+  if (!open || !projectId) return;
+  const ac = new AbortController();
+
+  (async () => {
+    try {
+      const p = await getProject(companyId, projectId as UUID, { signal: ac.signal });
+
+      const normalizeAddress = (a?: AddressDto | null): AddressDto | undefined => {
+        if (!a) return undefined;
+        // null -> undefined, ať se zbytečně nepropsují prázdné hodnoty
+        const cleaned = Object.fromEntries(
+          Object.entries(a).map(([k, v]) => [k, v ?? undefined])
+        ) as AddressDto;
+
+        // pokud je vše prázdné, neposílej nic
+        const anyVal = Object.values(cleaned).some((v) =>
+          typeof v === 'string' ? v.trim().length > 0 : v != null
+        );
+        return anyVal ? cleaned : undefined;
+      };
+
+      setPrefill({
+        // klasika
+        name: p.name ?? '',
+        code: p.code ?? '',
+        description: p.description ?? '',
+        plannedStartDate: p.plannedStartDate ?? '',
+        plannedEndDate: p.plannedEndDate ?? '',
+        currency: p.currency ?? '',
+        vatMode: p.vatMode ?? '',
+        siteAddress: normalizeAddress(p.siteAddress),
+
+        // selecty – pošleme ID + i label, ať se hned zobrazí
+        customerId: p.customerId ?? '',
+        projectManagerId: p.projectManagerId ?? '',
+        // tyto dvě položky nejsou součástí validace; jen pro zobrazení
+        // (viz níže "valueLabel" u AsyncSearchSelect)
+        customerLabel: p.customerName ?? undefined,
+        projectManagerLabel: p.projectManagerName ?? undefined,
       });
-    return () => ac.abort();
-  }, [open, projectId]);
+    } catch (e: any) {
+      if (!ac.signal.aborted) {
+        setLocalError(e?.response?.data?.detail || e?.message || 'Failed to load');
+      }
+    }
+  })();
+
+  return () => ac.abort();
+}, [open, projectId, companyId]);
+
 
   // Po zavření resetuj lokální prefill (a chybovou hlášku)
   React.useEffect(() => {
@@ -98,6 +129,7 @@ export function ProjectFormDrawer({
           )}
 
           <ProjectForm
+            companyId={companyId}
             key={`${mode}-${projectId ?? 'new'}`}
             mode={mode}
             i18nNamespaces={i18nNamespaces}

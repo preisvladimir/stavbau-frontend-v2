@@ -5,15 +5,26 @@ import { FormDrawer } from '@/components/ui/stavbau-ui/drawer/form-drawer';
 import { CustomerForm, type CustomerFormValues } from './CustomerForm';
 import { getCustomer } from '../api/client';
 import { dtoToFormDefaults } from '../mappers';
+import type { UUID } from '../api/types';
 
 export type CustomerFormDrawerProps = {
   i18nNamespaces?: string[];
   open: boolean;
   mode: 'create' | 'edit';
-  id?: string | null;                 // když je mode === 'edit', očekáváme id
-  titleKey?: string;                  // volitelně vlastní klíč nadpisu
-  submitting?: boolean;               // řízeno zvenčí (např. stránkou)
+  /** ID zákazníka pro edit */
+  id?: UUID | string | null;
+  /** Tenant/company ID – potřebujeme pro GET detailu */
+  companyId: UUID | string;
+
+  /** Vlastní klíč titulku (jinak se použije výchozí podle mode) */
+  titleKey?: string;
+
+  /** Řízeno zvenku (stav ukládání na stránce) */
+  submitting?: boolean;
+
+  /** Volitelné výchozí hodnoty (např. při “create from …”) */
   defaultValues?: Partial<CustomerFormValues>;
+
   onClose: () => void;
   onSubmit: (values: CustomerFormValues) => void | Promise<void>;
 };
@@ -23,6 +34,7 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
   open,
   mode,
   id,
+  companyId,
   titleKey,
   submitting,
   defaultValues,
@@ -34,26 +46,26 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
   const title = titleKey
     ? t(titleKey)
     : mode === 'edit'
-    ? t('form.title.edit', { defaultValue: 'Upravit zákazníka' })
-    : t('form.title.create', { defaultValue: 'Nový zákazník' });
+      ? t('form.title.edit', { defaultValue: 'Upravit zákazníka' })
+      : t('form.title.create', { defaultValue: 'Nový zákazník' });
 
   const [prefill, setPrefill] = React.useState<Partial<CustomerFormValues> | undefined>(defaultValues);
   const [localError, setLocalError] = React.useState<string | null>(null);
 
-  // Při editu si dotáhneme detail a prefillneme formulář
+  // Při editu dotáhneme detail a prefillneme formulář
   React.useEffect(() => {
     if (!open || mode !== 'edit' || !id) return;
     const ac = new AbortController();
     setLocalError(null);
 
-    getCustomer(id, { signal: ac.signal })
-      .then((d) => setPrefill(dtoToFormDefaults(d)))
+    getCustomer(companyId, String(id), { signal: ac.signal })
+      .then((dto) => setPrefill(dtoToFormDefaults(dto)))
       .catch((e: any) => {
         setLocalError(e?.response?.data?.detail || e?.message || 'Failed to load');
       });
 
     return () => ac.abort();
-  }, [open, mode, id]);
+  }, [open, mode, id, companyId]);
 
   // Po zavření reset lokálního stavu
   React.useEffect(() => {
@@ -66,7 +78,7 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
   const safeOnSubmit = React.useCallback(
     (values: CustomerFormValues) => {
       setLocalError(null);
-      onSubmit(values);
+      return onSubmit(values);
     },
     [onSubmit]
   );
@@ -80,7 +92,7 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
       showFooter={false}
       form={
         <>
-          {/* (volitelné) lokální info/chyba nad formulářem */}
+          {/* nenutíme, jen decentní upozornění nad formulářem */}
           {localError && (
             <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               {localError}

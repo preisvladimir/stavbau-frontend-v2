@@ -11,6 +11,7 @@ import ScopeGuard from "@/features/auth/guards/ScopeGuard";
 import TeamPageV2 from "@/features/teamV2/pages/TeamPage";
 import CustomersPage from "@/features/customers/pages/CustomersPage";
 import ProjectsPage from "@/features/projects/pages/ProjectsPage";
+import RowActionsDemo from "@/pages/dev/RowActionsDemo";
 
 function RootWithProviders() {
   return (
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
             element: <AppLayout />,
             children: [
               { path: "dashboard", element: <DashboardPage /> },
+              { path: "rowactions", element: <RowActionsDemo /> },
               {
                 path: "team",
                 element: (

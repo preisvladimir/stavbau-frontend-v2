@@ -14,7 +14,7 @@ export { AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 export { Settings, Globe, Languages, Mail, Shield, Plus, Search, X, IdCard, Building2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 
 // Actions
-export { Pencil, User, Trash2, UserPlus } from "lucide-react";
+export {MoreVertical, Pencil, User, Trash2, UserPlus, Archive, RotateCcw, ArchiveRestore } from "lucide-react";
 
 // Density
 export { Rows2, Rows3, StretchVertical } from "lucide-react";

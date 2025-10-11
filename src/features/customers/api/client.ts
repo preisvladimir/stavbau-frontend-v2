@@ -1,70 +1,68 @@
 // src/features/customers/api/client.ts
 import { api } from '@/lib/api/client';
 import { mapAndThrow } from '@/lib/api/problem';
-import { toPageResponse, type PageResponse } from '@/types/PageResponse';
+import { toPageResponse, type PageResponse } from '@/lib/api/types/PageResponse';
+import { pagedLookupFetcher } from '@/lib/api/lookup';
 import type {
+  UUID,
   CustomerSummaryDto,
   CustomerDto,
   CreateCustomerRequest,
   UpdateCustomerRequest,
 } from './types';
-import { ALLOWED_SORT } from './types';
+import { sanitizeQ, isCanceled, langHeader, compact } from '@/lib/api/utils';
 import {
-  clamp,
-  toInt,
-  sanitizeQ,
-  isCanceled,
-  langHeader,
-  compact,
-  normalizeSort,
-} from '@/lib/api/utils';
-// ------------------------------------------------------
-// (helpers přesunuty do @/lib/api/utils)
-// ------------------------------------------------------
+  customersListUrl,
+  customerUrl,
+  customersLookupUrl,
+} from './customer-paths';
 
-// ------------------------------------------------------
-// Endpointy
-// ------------------------------------------------------
-const base = '/customers';
-const customerUrl = (id: string) => `${base}/${encodeURIComponent(String(id))}`;
+type IdLike = string | { id?: string } | { value?: string };
+
+function coerceId(id: IdLike): string {
+  if (typeof id === 'string') return id;
+  const v = (id as any)?.id ?? (id as any)?.value;
+  if (typeof v === 'string' && v.trim() !== '') return v;
+  throw new Error('Invalid customer id: expected string or {id}/{value} object');
+}
+
 
 // ------------------------------------------------------
 // Typy volání listingu
 // ------------------------------------------------------
-export type ListOptions = {
+export type ListCustomerParams = {
   q?: string;
   page?: number;
   size?: number;
-  sort?: string;        // např. "name,asc" | "ico,desc"
+  sort?: string | string[]; // např. "name,asc" | "ico,desc"
+  status?: string;
   signal?: AbortSignal;
   headers?: Record<string, string>;
-  cursor?: string;      // rezerva do budoucna
+  cursor?: string; // rezerva do budoucna
 };
 
-const normalizeSortLocal = (s?: string) => normalizeSort(s, ALLOWED_SORT);
-
 // ------------------------------------------------------
-// Listing — doporučený vstupní bod (PageResponse<CustomerSummaryDto>)
+// Listing — PageResponse<CustomerSummaryDto>
 // ------------------------------------------------------
 export async function listCustomerSummaries(
-  opts: ListOptions = {}
+  companyId: UUID | string,
+  params: ListCustomerParams = {}
 ): Promise<PageResponse<CustomerSummaryDto>> {
-  const rawPage = toInt(opts.page, 0);
-  const rawSize = toInt(opts.size, 20);
-  const page = clamp(rawPage, 0, 1_000_000);
-  const size = clamp(rawSize, 1, 100);
-  const q = sanitizeQ(opts.q);
-  const { signal, headers, cursor } = opts;
-  const sort = normalizeSortLocal(opts.sort);
+  const { q, page = 0, size = 10, sort = 'name,asc', signal } = params;
+  const finalSort = Array.isArray(sort) ? sort : [sort];
+
+  const sp = new URLSearchParams();
+  if (q != null) sp.set('q', sanitizeQ(q));
+  sp.set('page', String(Math.max(0, page)));
+  sp.set('size', String(Math.max(1, size)));
+  for (const s of finalSort) sp.append('sort', s);
 
   try {
-    const params = cursor ? { cursor, q, sort } : { q, page, size, sort };
-    const res = await api.get<any>(base, {
-      params,
+    const { data } = await api.get(`${customersListUrl(companyId)}?${sp.toString()}`, {
       signal,
-      headers: { ...langHeader(), ...headers },
+      headers: langHeader(),
     });
-    return toPageResponse<CustomerSummaryDto>(res.data);
+    return toPageResponse<CustomerSummaryDto>(data);
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
@@ -72,49 +70,25 @@ export async function listCustomerSummaries(
 }
 
 // ------------------------------------------------------
-// Backward compatibility alias (původní jméno)
+// Paged lookup fetcher pro AsyncSearchSelect
 // ------------------------------------------------------
-export async function listCustomers(params: ListOptions = {}) {
-  return listCustomerSummaries(params);
-}
-
-type CustomerSummary = { id: string; name?: string | null; ico?: string | null; email?: string | null };
-
-export async function searchCustomers(
-  q: string,
-  signal?: AbortSignal
-): Promise<{ value: string; label: string }[]> {
-  const params = new URLSearchParams();
-  params.set('page', '0');
-  params.set('size', '10');
-  params.set('sort', 'name,asc');
-  if (q?.trim()) params.set('q', q.trim());
-
-  const res = await api.get(`/customers?${params.toString()}`, {
-    signal,
-    headers: langHeader(),
-  });
-
-  // ✅ sjednocení Spring Page (content) vs. PageResponse (items)
-  const page = toPageResponse<CustomerSummary>(res.data);
-
-  return (page.items ?? []).map((c) => {
-    const base = c.name?.trim() || c.email?.trim() || String(c.id);
-    const label = c.ico?.trim() ? `${base} (${c.ico})` : base;
-    return { value: String(c.id), label };
-  });
-}
+export const pagedCustomerFetcher = (companyId: UUID | string) =>
+  pagedLookupFetcher(customersLookupUrl(companyId), 'name,asc');
 
 // ------------------------------------------------------
 // Detail
 // ------------------------------------------------------
-export async function getCustomer(id: string, opts?: { signal?: AbortSignal }) {
+export async function getCustomer(
+  companyId: UUID | string,
+  id: IdLike,
+  opts?: { signal?: AbortSignal }
+) {
   try {
-    const res = await api.get<CustomerDto>(customerUrl(id), {
-      signal: opts?.signal,
-      headers: langHeader(),
-    });
-    return res.data;
+    const { data } = await api.get<CustomerDto>(
+      customerUrl(companyId, coerceId(id)),
+      { signal: opts?.signal, headers: langHeader() }
+    );
+    return data;
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
@@ -124,23 +98,27 @@ export async function getCustomer(id: string, opts?: { signal?: AbortSignal }) {
 // ------------------------------------------------------
 // Create / Update / Delete
 // ------------------------------------------------------
-export async function createCustomer(body: CreateCustomerRequest) {
+export async function createCustomer(
+  companyId: UUID | string,
+  body: CreateCustomerRequest
+): Promise<void> {
   try {
     const sanitized = compact<CreateCustomerRequest>(body);
-    const res = await api.post<CustomerDto>(base, sanitized, {
-      headers: langHeader(),
-    });
-    return res.data; // 201 + body
+    await api.post<void>(customersListUrl(companyId), sanitized, { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);
   }
 }
 
-export async function updateCustomer(id: string, body: UpdateCustomerRequest) {
+export async function updateCustomer(
+  companyId: UUID | string,
+  id: string,
+  body: UpdateCustomerRequest
+) {
   try {
     const sanitized = compact<UpdateCustomerRequest>(body);
-    const res = await api.patch<CustomerDto>(customerUrl(id), sanitized, {
+    const res = await api.patch<CustomerDto>(customerUrl(companyId, id), sanitized, {
       headers: langHeader(),
     });
     return res.data;
@@ -150,9 +128,12 @@ export async function updateCustomer(id: string, body: UpdateCustomerRequest) {
   }
 }
 
-export async function deleteCustomer(id: string): Promise<void> {
+export async function deleteCustomer(
+  companyId: UUID | string,
+  id: string
+): Promise<void> {
   try {
-    await api.delete<void>(customerUrl(id), { headers: langHeader() });
+    await api.delete<void>(customerUrl(companyId, id), { headers: langHeader() });
   } catch (e) {
     if (isCanceled(e)) throw e;
     mapAndThrow(e);

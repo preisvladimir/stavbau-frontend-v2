@@ -18,6 +18,8 @@
     "forbidden": "K zobrazení týmu nemáte oprávnění.",
     "columns": {
       "name": "Jméno",
+      "firstname": "Jméno",
+      "lastname": "Příjmení",
       "email": "E-mail",
       "companyRole": "Firemní role",
       "phone": "Telefon",

@@ -51,7 +51,9 @@ export default function Sidebar() {
           <NavLink to="/app/dashboard" end className={getNavClass}>
             {t("nav.dashboard", { defaultValue: "Přehled" })}
           </NavLink>
-
+          <NavLink to="/app/rowactions" end className={getNavClass}>
+            {t("nav.dashboard2", { defaultValue: "Test Row Actions" })}
+          </NavLink>
           {canReadProjects && (
             <NavLink to="/app/projects" className={getNavClass}>
               {t("nav.projects", { defaultValue: "Projekty" })}

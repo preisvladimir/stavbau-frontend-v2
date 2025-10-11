@@ -1,9 +1,9 @@
 // src/features/projects/api/types.ts
-import type { PageResponse } from "@/types/PageResponse";
+import type { PageResponse } from "@/lib/api/types/PageResponse";
 import { type AddressDto } from '@/types/common/address';
 
 export type UUID = string;
-
+export type ProjectFilters = { status?: string };
 // Enums — strojové hodnoty, label přijde z BE (statusLabel)
 export type ProjectStatus =
   | "PLANNED"
@@ -24,25 +24,36 @@ export type ProjectSummaryDto = {
   id: UUID;
   code: string;
   name: string;
+  nameLocalized?: string;
   status: ProjectStatus;
   statusLabel?: string;
+  createdAt?: string;
+  archivedAt?: string;
   customerId: UUID;
+  customerName?: string;
   projectManagerId?: UUID;
+  projectManagerName?: string;
 };
 
 export type ProjectDto = {
   id: UUID;
   code: string;
   name: string;
+  nameLocalized?: string;
   description?: string;
+  descriptionLocalized?: string;
   status: ProjectStatus;
   statusLabel?: string;
   customerId: UUID;
+  customerName?: string;
   projectManagerId?: UUID;
+  projectManagerName?: string;
   plannedStartDate?: string; // ISO YYYY-MM-DD
   plannedEndDate?: string;   // ISO
   actualStartDate?: string;  // ISO
   actualEndDate?: string;    // ISO
+  createdAt?: string;
+  archivedAt?: string;
   currency?: string;
   vatMode?: string;
   siteAddress?: AddressDto;

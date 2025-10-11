@@ -10,7 +10,7 @@ import {
 } from './datatable-v2-core';
 import { cn } from '@/lib/utils/cn';
 import { SearchInput } from '@/components/ui/stavbau-ui/searchinput';
-import { EmptyState } from '@/components/ui/stavbau-ui/emptystate';
+import { EmptyState } from '@/components/ui/stavbau-ui/emptystate/emptystate';
 import { Select } from '@/components/ui/stavbau-ui/select';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { DensitySelect } from '@/components/ui/stavbau-ui/datatable/density-select';
@@ -524,12 +524,16 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
           </div>
 
           <nav className="inline-flex items-center gap-1" aria-label={tt('datatable.pagination', { defaultValue: 'Stránkování' })}>
+            <Button size="sm" variant="outline" onClick={() => api.gotoPage(1)} disabled={api.page === 1}>
+              1⏮
+            </Button>
             <Button
               size="sm"
               variant="outline"
               leftIcon={<ChevronLeft className="h-4 w-4" />}
               onClick={() => api.prevPage()}
               disabled={!api.canPrevPage}
+              aria-disabled={!api.canPrevPage}
               ariaLabel={tt('datatable.prev', { defaultValue: 'Předchozí stránka' })}
               aria-controls={tableId}
             />
@@ -558,10 +562,10 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
                       key={p}
                       size="sm"
                       variant={p === cur ? 'outlinegreen' : 'outline'}
-                      onClick={() => api.gotoPage(p)}
+                      onClick={() => p !== cur && api.gotoPage(p)}
+                      disabled={p === cur}
                       aria-current={p === cur ? 'page' : undefined}
-                      aria-label={tt('datatable.pageN', { defaultValue: 'Stránka {{n}}', n: p })}
-                    >
+                      aria-label={tt('datatable.pageN', { defaultValue: 'Stránka {{n}}', n: p })}>
                       {p}
                     </Button>
                   )
@@ -577,6 +581,9 @@ export function DataTableV2<T>(props: DataTableV2Props<T>) {
               ariaLabel={tt('datatable.next', { defaultValue: 'Další stránka' })}
               aria-controls={tableId}
             />
+            <Button size="sm" variant="outline" onClick={() => api.gotoPage(api.pageCount)} disabled={api.page === api.pageCount}>
+              ⏭{api.pageCount}
+            </Button>
           </nav>
         </div>
       )}

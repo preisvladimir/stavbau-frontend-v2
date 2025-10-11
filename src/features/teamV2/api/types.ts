@@ -1,6 +1,5 @@
 // src/features/team/api/types.ts
 // Team feature DTOs and API helpers
-
 import type {
   CompanyRoleName,
   ProjectRoleName,
@@ -8,13 +7,14 @@ import type {
 } from "@/types/common/rbac";
 
 // Standardní stránkovaná odpověď (FE kontrakt)
-export { type PageResponse } from "@/types/PageResponse";
+export { type PageResponse } from '@/lib/api/types/PageResponse';
 
 export type { CompanyRoleName };
 
 // --- Primitives & aliases ---
 export type UUID = string;
 export type ISODateString = string; // ISO-8601 string (e.g. 2025-09-29T08:15:30Z)
+export type TeamFilters = { role?: string; status?: string };
 
 export const ALLOWED_SORT = new Set([
   'id',

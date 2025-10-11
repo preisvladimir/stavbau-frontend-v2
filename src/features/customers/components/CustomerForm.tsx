@@ -2,36 +2,27 @@
 import * as React from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
-import { Collapse } from "@/components/ui/stavbau-ui/collapse";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
+import { Collapse } from "@/components/ui/stavbau-ui/collapse";
+import { Button } from '@/components/ui/stavbau-ui/button';
+import { Pencil, ChevronDown, ChevronUp } from "@/components/icons";
 import { isValidICO, isValidCZDic } from '@/lib/utils/patterns';
 import { cn } from '@/lib/utils/cn';
 import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocomplete';
-import type { AddressDto } from '@/types/common/address';
 import type { AddressSuggestion } from '@/lib/api/geo';
-import { Button } from '@/components/ui/stavbau-ui/button';
-import { Pencil, ChevronDown, ChevronUp } from "@/components/icons";
+import type { AddressDto } from '@/types/common/address';
 
-// --- Validation schema (inline, MVP) ---
+// --- Validation schema ---
 const schema = z.object({
   type: z.enum(['ORGANIZATION', 'PERSON'], { message: 'Zvolte typ' }),
   name: z.string().min(1, 'Zadejte název').max(160),
-  ico: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || isValidICO(v), 'Neplatné IČO'),
-  dic: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || isValidCZDic(v), 'Neplatné DIČ (očekává se CZ…)'),
+  ico: z.string().trim().optional().refine((v) => !v || isValidICO(v), 'Neplatné IČO'),
+  dic: z.string().trim().optional().refine((v) => !v || isValidCZDic(v), 'Neplatné DIČ (očekává se CZ…)'),
   email: z
-    .string() // ✅ chybělo
-    .email('Neplatný e-mail')
+    .union([z.string().email('Neplatný e-mail'), z.literal('')])
     .optional()
-    .or(z.literal('').transform(() => undefined)),
+    .transform((v) => (v === '' ? undefined : v)),
   phone: z.string().max(40).optional(),
   billingAddress: z
     .object({
@@ -64,6 +55,7 @@ export type CustomerFormProps = {
   onCancel: () => void;
   /** Po úspěšném submitu vyresetovat formulář (default: true pro create, false pro edit) */
   resetAfterSubmit?: boolean;
+  className?: string;
 };
 
 export const CustomerForm: React.FC<CustomerFormProps> = ({
@@ -75,12 +67,12 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   onCancel,
   resetAfterSubmit,
   className,
-}: CustomerFormProps & { className?: string }) => {
+}) => {
   const { t } = useTranslation(i18nNamespaces ?? ['customers', 'common']);
   const resolver = zodResolver(schema) as unknown as Resolver<CustomerFormValues>;
   const shouldReset = resetAfterSubmit ?? (mode === 'create');
 
-  // sjednocené defaulty
+  // sjednocené defaulty (držíme i pro reset po submitu)
   const defaultValuesResolved = React.useMemo<CustomerFormValues>(
     () => ({
       type: 'ORGANIZATION',
@@ -109,6 +101,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     mode: 'onBlur',
   });
 
+  // přenastavení zvenčí
   React.useEffect(() => {
     reset(defaultValuesResolved);
   }, [defaultValuesResolved, reset]);
@@ -120,7 +113,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       formatted: nn(addr.formatted),
       street: nn(addr.street),
       houseNumber: nn(addr.houseNumber),
-      orientationNumber: nn(addr.houseNumber), // ✅ oprava
+      orientationNumber: nn(addr.houseNumber), // ✅ správně: bereme orientationNumber
       city: nn(addr.municipality),
       cityPart: nn(addr.municipalityPart),
       postalCode: nn(addr.zip),
@@ -144,26 +137,47 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const [manualOpen, setManualOpen] = React.useState(false);
 
   return (
-    <form onSubmit={handleSubmit(onSubmitInternal)} className={cn('flex flex-col gap-4', className)} noValidate>
+    <form
+      onSubmit={handleSubmit(onSubmitInternal)}
+      className={cn('flex flex-col gap-4', className)}
+      noValidate
+    >
       {/* Name */}
       <label className="flex flex-col gap-1">
-        <span className="text-sm">{t('form.name', { defaultValue: 'Název' })}</span>
-        <input className="rounded-md border px-3 py-2" autoComplete="off" disabled={disabled} {...register('name')} />
-        {errors.name && <span className="text-xs text-red-600">{t(errors.name.message as string)}</span>}
+        <span className="text-sm">{t('form.name.label', { defaultValue: 'Název' })}</span>
+        <input
+          className="rounded-md border px-3 py-2"
+          autoComplete="off"
+          disabled={disabled}
+          {...register('name')}
+        />
+        {errors.name && (
+          <span className="text-xs text-red-600">
+            {t(errors.name.message as string, { defaultValue: 'Zadejte název' })}
+          </span>
+        )}
       </label>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* ICO */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.ico', { defaultValue: 'IČO' })}</span>
-          <input className="rounded-md border px-3 py-2 font-mono" disabled={disabled} {...register('ico')} />
+          <span className="text-sm">{t('form.ico.label', { defaultValue: 'IČO' })}</span>
+          <input
+            className="rounded-md border px-3 py-2 font-mono"
+            disabled={disabled}
+            {...register('ico')}
+          />
           {errors.ico && <span className="text-xs text-red-600">{t(errors.ico.message as string)}</span>}
         </label>
 
         {/* DIC */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.dic', { defaultValue: 'DIČ' })}</span>
-          <input className="rounded-md border px-3 py-2 font-mono" disabled={disabled} {...register('dic')} />
+          <span className="text-sm">{t('form.dic.label', { defaultValue: 'DIČ' })}</span>
+          <input
+            className="rounded-md border px-3 py-2 font-mono"
+            disabled={disabled}
+            {...register('dic')}
+          />
           {errors.dic && <span className="text-xs text-red-600">{t(errors.dic.message as string)}</span>}
         </label>
       </div>
@@ -171,63 +185,95 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Email */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.email', { defaultValue: 'E-mail' })}</span>
-          <input className="rounded-md border px-3 py-2" autoComplete="email" disabled={disabled} {...register('email')} />
-          {errors.email && <span className="text-xs text-red-600">{t(errors.email.message as string)}</span>}
+          <span className="text-sm">{t('form.email.label', { defaultValue: 'E-mail' })}</span>
+          <input
+            className="rounded-md border px-3 py-2"
+            autoComplete="email"
+            disabled={disabled}
+            {...register('email')}
+          />
+          {errors.email && (
+            <span className="text-xs text-red-600">{t(errors.email.message as string)}</span>
+          )}
         </label>
 
         {/* Phone */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.phone', { defaultValue: 'Telefon' })}</span>
-          <input className="rounded-md border px-3 py-2" autoComplete="tel" disabled={disabled} {...register('phone')} />
-          {errors.phone && <span className="text-xs text-red-600">{t(errors.phone.message as string)}</span>}
+          <span className="text-sm">{t('form.phone.label', { defaultValue: 'Telefon' })}</span>
+          <input
+            className="rounded-md border px-3 py-2"
+            autoComplete="tel"
+            disabled={disabled}
+            {...register('phone')}
+          />
+          {errors.phone && (
+            <span className="text-xs text-red-600">{t(errors.phone.message as string)}</span>
+          )}
         </label>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Type */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.type', { defaultValue: 'Typ' })}</span>
+          <span className="text-sm">{t('form.type.label', { defaultValue: 'Typ' })}</span>
           <select className="rounded-md border px-3 py-2" disabled={disabled} {...register('type')}>
-            <option value="ORGANIZATION">{t('form.types.organization', { defaultValue: 'Firma/organizace' })}</option>
-            <option value="PERSON">{t('form.types.person', { defaultValue: 'Osoba' })}</option>
+            <option value="ORGANIZATION">
+              {t('form.types.organization', { defaultValue: 'Firma/organizace' })}
+            </option>
+            <option value="PERSON">
+              {t('form.types.person', { defaultValue: 'Osoba' })}
+            </option>
           </select>
-          {errors.type && <span className="text-xs text-red-600">{t(errors.type.message as string)}</span>}
+          {errors.type && (
+            <span className="text-xs text-red-600">{t(errors.type.message as string)}</span>
+          )}
         </label>
 
         {/* Default payment terms */}
         <label className="flex flex-col gap-1">
-          <span className="text-sm">{t('form.defaultPaymentTermsDays', { defaultValue: 'Splatnost (dny)' })}</span>
-          <input type="number" min={0} className="rounded-md border px-3 py-2" disabled={disabled} {...register('defaultPaymentTermsDays')} />
+          <span className="text-sm">
+            {t('form.defaultPaymentTermsDays.label', { defaultValue: 'Splatnost (dny)' })}
+          </span>
+          <input
+            type="number"
+            min={0}
+            className="rounded-md border px-3 py-2"
+            disabled={disabled}
+            {...register('defaultPaymentTermsDays')}
+          />
           {errors.defaultPaymentTermsDays && (
-            <span className="text-xs text-red-600">{t(errors.defaultPaymentTermsDays.message as string)}</span>
+            <span className="text-xs text-red-600">
+              {t(errors.defaultPaymentTermsDays.message as string)}
+            </span>
           )}
         </label>
       </div>
 
-      {/* GEO Autocomplete + (toggle) manuální editace adresy */}
+      {/* Adresa – GEO autocomplete + volitelná ruční úprava */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm">{t('form.address', { defaultValue: 'Adresa' })}</span>
+          <span className="text-sm">{t('form.address.label', { defaultValue: 'Adresa' })}</span>
           <Button
             type="button"
-            className="btn btn-ghost btn-xs"
+            variant="ghost"
+            size="sm"
             onClick={() => setManualOpen((v) => !v)}
             disabled={disabled}
             aria-expanded={manualOpen}
             aria-controls="manual-address-editor"
-            leftIcon = {<Pencil size={16} />}
-            rightIcon = {manualOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           >
-            {manualOpen
-              ? (t('form.hideManual', { defaultValue: 'Skrýt ruční úpravu' }) as string)
-              : (t('form.editManual', { defaultValue: 'Upravit ručně' }) as string)}
+            <span className="inline-flex items-center gap-1">
+              <Pencil size={16} />
+              {manualOpen
+                ? (t('form.hideManual', { defaultValue: 'Skrýt ruční úpravu' }) as string)
+                : (t('form.editManual', { defaultValue: 'Upravit ručně' }) as string)}
+              {manualOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </span>
           </Button>
         </div>
 
         <AddressAutocomplete onSelect={onAddressPick} />
 
-        {/* ⬇ collapse místo podmíněného renderu */}
         <Collapse open={manualOpen} id="manual-address-editor" className="mt-2">
           <div className="space-y-2">
             <input
@@ -287,8 +333,16 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 
       {/* Notes */}
       <label className="flex flex-col gap-1">
-        <span className="text-sm">{t('form.notes', { defaultValue: 'Poznámka' })}</span>
-        <textarea className="rounded-md border px-3 py-2" rows={4} disabled={disabled} {...register('notes')} />
+        <span className="text-sm">{t('form.notes.label', { defaultValue: 'Poznámka' })}</span>
+        <textarea
+          className="rounded-md border px-3 py-2"
+          rows={4}
+          disabled={disabled}
+          {...register('notes')}
+        />
+        {errors.notes && (
+          <span className="text-xs text-red-600">{t(errors.notes.message as string)}</span>
+        )}
       </label>
 
       <div className="mt-2 flex justify-end gap-2">

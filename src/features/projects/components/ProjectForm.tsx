@@ -5,12 +5,15 @@ import { type Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import AsyncSearchSelect from '@/components/ui/stavbau-ui/AsyncSearchSelect';
-import { searchCustomers } from '@/features/customers/api/client';
-import { searchTeamMembers } from '@/features/teamV2/api/client'; // ← očekáván obdobný helper
 import { useRequiredCompanyId } from "@/features/auth/hooks/useCompanyId";
 import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocomplete';
 import type { AddressDto } from '@/types/common/address';
 import type { AddressSuggestion } from '@/lib/api/geo';
+import type { UUID } from '../api/types';
+
+import type { FetchOptions } from '@/components/ui/stavbau-ui/AsyncSearchSelect';
+import { customersService } from '@/features/customers/api/customers-service';
+import { teamService } from '@/features/teamV2/api/team-service';
 
 import {
   CreateProjectSchema,
@@ -19,6 +22,7 @@ import {
 } from '../validation/schemas';
 
 export type ProjectFormProps = {
+  companyId: UUID;
   mode: 'create' | 'edit';
   i18nNamespaces?: string[];
   defaultValues?: Partial<AnyProjectFormValues>;
@@ -38,16 +42,27 @@ export function ProjectForm({
   onCancel,
   resetAfterSubmit,
 }: ProjectFormProps) {
-  const { t } = useTranslation(i18nNamespaces ?? ['projects', 'common']);
 
+  const { t } = useTranslation(i18nNamespaces ?? ['projects', 'common']);
+  const companyId = useRequiredCompanyId();
   const schema = mode === 'create' ? CreateProjectSchema : UpdateProjectSchema;
   const shouldReset = resetAfterSubmit ?? (mode === 'create');
+
+  const customers = React.useMemo(() => customersService(companyId), [companyId]);
+  const team = React.useMemo(() => teamService(companyId), [companyId]);
+
+  const fetchCustomers: FetchOptions = ({ q, page, size, signal }) =>
+    customers.pagedLookupFetcher()(q ?? '', page ?? 0, size ?? 10, signal);
+
+  const fetchPMs: FetchOptions = ({ q, page, size, signal }) =>
+    team.pagedLookupFetcher()(q ?? '', page ?? 0, size ?? 10, signal);
+
 
   // jednotné výchozí hodnoty – použijeme je i při resetu po submitu
   const defaultValuesResolved = React.useMemo<AnyProjectFormValues>(
     () => ({
       name: '',
-     // code: '',
+      // code: '',
       description: '',
       customerId: '',
       projectManagerId: '',
@@ -90,10 +105,13 @@ export function ProjectForm({
 
   const disabled = submitting || isSubmitting;
 
+  const initialCustomerLabel = (defaultValues as any)?.customerLabel as string | undefined;
+  const initialPmLabel = (defaultValues as any)?.projectManagerLabel as string | undefined;
+
   // RHF hodnoty → promítneme do AsyncSearchSelect (null = nevybráno)
   const customerIdValue = watch('customerId') || '';
   const pmIdValue = watch('projectManagerId') || '';
-  const companyId  = useRequiredCompanyId();
+
 
   // GEO → AddressDto (typed) pro siteAddress
   const onSiteAddressPick = React.useCallback((addr: AddressSuggestion) => {
@@ -114,6 +132,7 @@ export function ProjectForm({
     setValue('siteAddress', dto, { shouldDirty: true, shouldValidate: false });
   }, [setValue]);
 
+  // controlled hodnota (UUID nebo null)
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmitInternal)} noValidate>
@@ -142,10 +161,16 @@ export function ProjectForm({
           <span className="text-sm">{t('form.customer.label', { defaultValue: 'Zákazník' })}</span>
           <AsyncSearchSelect
             value={customerIdValue || null}
+            valueLabel={initialCustomerLabel}                 // ← tady
             onChange={(val) => setValue('customerId', val ?? '')}
-            fetchOptions={searchCustomers}
-            placeholder={t('form.customer.placeholder', { defaultValue: 'Vyhledej zákazníka…' })}
-            disabled={disabled}
+            fetchOptions={fetchCustomers}
+            pageSize={10}
+            minChars={1}
+            labels={{
+              placeholder: t('form.customer.placeholder', { defaultValue: 'Vyhledej zákazníka…' }),
+              loadMore: t('common.loadMore', { defaultValue: 'Načíst další' }),
+              clear: t('common.clear', { defaultValue: 'Vymazat výběr' }),
+            }}
           />
           {/* skryté RHF pole (kvůli zod/schema a easy submitu) */}
           <input type="hidden" {...register('customerId', { setValueAs: (v) => (v === '' ? '' : String(v)) })} />
@@ -163,10 +188,16 @@ export function ProjectForm({
           <span className="text-sm">{t('form.projectManager.label', { defaultValue: 'Projektový manažer' })}</span>
           <AsyncSearchSelect
             value={pmIdValue || null}
+            valueLabel={initialPmLabel}                       // ← tady
             onChange={(val) => setValue('projectManagerId', val ?? '')}
-            fetchOptions={(q, signal) => searchTeamMembers(companyId, q, signal)}
-            placeholder={t('form.projectManager.placeholder', { defaultValue: 'Vyhledej člena týmu…' })}
-            disabled={disabled}
+            fetchOptions={fetchPMs}
+            pageSize={10}
+            minChars={1}
+            labels={{
+              placeholder: t('form.team.placeholder', { defaultValue: 'Vyhledej zaměstnance…' }),
+              loadMore: t('common.loadMore', { defaultValue: 'Načíst další' }),
+              clear: t('common.clear', { defaultValue: 'Vymazat výběr' }),
+            }}
           />
           <input
             type="hidden"
@@ -178,58 +209,58 @@ export function ProjectForm({
         </label>
       </div>
 
-    {/* Adresa stavby (siteAddress) */}
-    <div className="flex flex-col gap-2">
-      <span className="text-sm">{t('form.address', { defaultValue: 'Adresa' })}</span>
-      <AddressAutocomplete onSelect={onSiteAddressPick} />
-      <input
-        className="rounded-md border px-3 py-2"
-        placeholder={t('form.addressFormatted', { defaultValue: 'Adresa (formatted)' }) as string}
-        disabled={disabled}
-        {...register('siteAddress.formatted')}
-      />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      {/* Adresa stavby (siteAddress) */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm">{t('form.address', { defaultValue: 'Adresa' })}</span>
+        <AddressAutocomplete onSelect={onSiteAddressPick} />
         <input
           className="rounded-md border px-3 py-2"
-          placeholder={t('form.street', { defaultValue: 'Ulice' }) as string}
+          placeholder={t('form.addressFormatted', { defaultValue: 'Adresa (formatted)' }) as string}
           disabled={disabled}
-          {...register('siteAddress.street')}
+          {...register('siteAddress.formatted')}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.houseNumber', { defaultValue: 'Číslo popisné' }) as string}
-          disabled={disabled}
-          {...register('siteAddress.houseNumber')}
-        />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.orientationNumber', { defaultValue: 'Číslo orientační' }) as string}
-          disabled={disabled}
-          {...register('siteAddress.orientationNumber')}
-        />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.street', { defaultValue: 'Ulice' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.street')}
+          />
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.houseNumber', { defaultValue: 'Číslo popisné' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.houseNumber')}
+          />
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.orientationNumber', { defaultValue: 'Číslo orientační' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.orientationNumber')}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.city', { defaultValue: 'Město' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.city')}
+          />
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.postalCode', { defaultValue: 'PSČ' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.postalCode')}
+          />
+          <input
+            className="rounded-md border px-3 py-2"
+            placeholder={t('form.countryCode', { defaultValue: 'Země (ISO2)' }) as string}
+            disabled={disabled}
+            {...register('siteAddress.countryCode')}
+          />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.city', { defaultValue: 'Město' }) as string}
-          disabled={disabled}
-          {...register('siteAddress.city')}
-        />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.postalCode', { defaultValue: 'PSČ' }) as string}
-          disabled={disabled}
-          {...register('siteAddress.postalCode')}
-        />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder={t('form.countryCode', { defaultValue: 'Země (ISO2)' }) as string}
-          disabled={disabled}
-          {...register('siteAddress.countryCode')}
-        />
-      </div>
-    </div>
-+
+      +
 
       {/* Dates */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -2,6 +2,8 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
+import ProjectDetailHeader from './ProjectDetailHeader';
+import AddressBlock from '@/components/common/AddressBlock';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
 import type { ProjectDto, UUID } from '../api/types';
@@ -11,212 +13,194 @@ import { PROJECT_SCOPES } from '@/features/projects/const/scopes';
 
 export type ProjectDetailDrawerProps = {
   open: boolean;
+  companyId: UUID;
   projectId: UUID | null;
   onClose: () => void;
   onEdit?: () => void;
-  /** preferovaná akce (soft delete) */
   onArchive?: (id: UUID) => Promise<void> | void;
-  /** volitelně i hard delete */
+  onUnarchive?: (id: UUID) => Promise<void> | void;
   onDelete?: (id: UUID) => Promise<void> | void;
-  /** Rychlý render před fetchem */
   prefill?: Partial<ProjectDto>;
-  /** Vlastní i18n namespace(y) – default: ['projects'] */
   i18nNamespaces?: string[];
 };
 
 export function ProjectDetailDrawer({
   open,
+  companyId,
   projectId,
   onClose,
   onEdit,
   onArchive,
+  onUnarchive,
   onDelete,
   prefill,
-  i18nNamespaces = ['projects'],
+  i18nNamespaces = ['projects', 'common'],
 }: ProjectDetailDrawerProps) {
   const { t } = useTranslation(i18nNamespaces);
+
   const [loading, setLoading] = React.useState(false);
-  const [data, setData] = React.useState<ProjectDto | null>(prefill ? (prefill as ProjectDto) : null);
+  const [data, setData] = React.useState<ProjectDto | null>(
+    prefill ? (prefill as ProjectDto) : null
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [confirmMode, setConfirmMode] = React.useState<'archive' | 'delete'>('archive');
+  const [confirmMode, setConfirmMode] = React.useState<'archive' | 'unarchive' | 'delete'>('archive');
+
+  // ---- fetch detail ----
+  const fetchDetail = React.useCallback(
+    (signal?: AbortSignal) =>
+      getProject(companyId, projectId as UUID, { signal })
+        .then((d) => setData(d))
+        .catch((e: any) => {
+          setError(e?.response?.data?.detail || e?.message || 'Failed to load');
+          // prefill může zůstat jako last-known
+        })
+        .finally(() => {
+          if (!signal?.aborted) setLoading(false);
+        }),
+    [companyId, projectId]
+  );
 
   React.useEffect(() => {
     if (!open || !projectId) return;
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-    getProject(projectId)
-      .then((d) => setData(d))
-      .catch((e: any) => {
-        // fallback na prefill; chybu zobrazíme decentně nahoře
-        setData(prefill ? (prefill as ProjectDto) : null);
-        setError(e?.response?.data?.detail || e?.message || 'Failed to load');
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
-      });
+    void fetchDetail(ac.signal);
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, projectId]);
+  }, [open, projectId, fetchDetail]);
 
-  // --- Helpers ---
+  // ---- helpers ----
+  const textOrDash = (v?: React.ReactNode) => (v == null || v === '' ? '—' : v);
+
   const safeDate = (v?: string | number | Date): string =>
     v ? new Date(v).toLocaleDateString?.() || String(v) : '—';
 
-  const initials = (label?: string): string => {
-    const src = (label ?? 'P').trim();
-    if (!src) return 'P';
-    const parts = src.split(/\s+/).filter(Boolean);
-    const first = parts[0]?.[0] ?? src[0];
-    const last = parts.length > 1 ? parts[parts.length - 1][0] : parts[0]?.[1] ?? '';
-    return (first + (last || '')).toUpperCase();
-  };
 
-  const statusBadge = (status?: string | null, statusLabel?: string | null) => {
-    if (!status && !statusLabel) return null;
-    const label = statusLabel ?? status ?? '—';
-    const s = status ?? '';
-    const className =
-      s === 'IN_PROGRESS'
-        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-        : s === 'PLANNED'
-          ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200'
-          : s === 'ON_HOLD'
-            ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-            : s === 'DONE'
-              ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
-              : s === 'ARCHIVED'
-                ? 'bg-gray-50 text-gray-500 ring-1 ring-gray-200'
-                : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
-    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${className}`}>{label}</span>;
-  };
+  const showUnarchive = data?.status === 'ARCHIVED' && !!onUnarchive;
+  const showArchive = data?.status !== 'ARCHIVED' && !!onArchive;
 
-  const handleArchive = async () => {
-    if (!data?.id || !onArchive) return;
-    await onArchive(data.id as UUID);
+  const displayDescription = data?.descriptionLocalized?.trim()
+    ? (data?.descriptionLocalized as string)
+    : (data?.description ?? '');
+
+  // ---- actions ----
+  const handleConfirm = async () => {
+    if (!data?.id) return;
+    if (confirmMode === 'archive' && onArchive) await onArchive(data.id as UUID);
+    if (confirmMode === 'unarchive' && onUnarchive) await onUnarchive(data.id as UUID);
+    if (confirmMode === 'delete' && onDelete) await onDelete(data.id as UUID);
     setConfirmOpen(false);
     onClose();
   };
 
-  const handleDelete = async () => {
-    if (!data?.id || !onDelete) return;
-    await onDelete(data.id as UUID);
-    setConfirmOpen(false);
-    onClose();
-  };
+  const headerActions = (
+    <>
+      <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+        {onEdit && (
+          <Button variant="outline" size="sm" onClick={onEdit} disabled={loading}>
+            {t('detail.actions.edit', { defaultValue: 'Upravit' })}
+          </Button>
+        )}
+      </ScopeGuard>
+      <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+        {showArchive && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setConfirmMode('archive');
+              setConfirmOpen(true);
+            }}
+            disabled={loading}
+          >
+            {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
+          </Button>
+        )}
+        {showUnarchive && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setConfirmMode('unarchive');
+              setConfirmOpen(true);
+            }}
+            disabled={loading}
+          >
+            {t('detail.actions.unarchive', { defaultValue: 'Obnovit' })}
+          </Button>
+        )}
+      </ScopeGuard>
+      <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+        {onDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              setConfirmMode('delete');
+              setConfirmOpen(true);
+            }}
+            disabled={loading}
+          >
+            {t('detail.actions.delete', { defaultValue: 'Smazat' })}
+          </Button>
+        )}
+      </ScopeGuard>
+    </>
+  );
 
   return (
     <DetailDrawer
       open={open}
       onClose={onClose}
       title={t('detail.title', { defaultValue: 'Detail projektu' })}
-      headerRight={
-        <>
-          <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
-            {onEdit && (
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                {t('detail.actions.edit')}
-              </Button>
-            )}
-          </ScopeGuard>
-          <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
-            {onArchive && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setConfirmMode('archive');
-                  setConfirmOpen(true);
-                }}
-              >
-                {t('detail.actions.archive')}
-              </Button>
-            )}
-          </ScopeGuard>
-          <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
-            {onDelete && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  setConfirmMode('delete');
-                  setConfirmOpen(true);
-                }}
-              >
-                {t('detail.actions.delete')}
-              </Button>
-            )}
-          </ScopeGuard>
-        </>
-      }
+      headerRight={headerActions}
     >
-      {/* Error banner (není blocking – můžeme mít prefill) */}
+      {/* Error banner + Retry */}
       {!loading && error && (
-        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {t('error', { defaultValue: 'Chyba načtení.' })}{' '}
-          {process.env.NODE_ENV !== 'production' ? `(${error})` : null}
+        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex items-center gap-3">
+          <span>
+            {t('error', { defaultValue: 'Chyba načtení.' })}{' '}
+            {process.env.NODE_ENV !== 'production' ? `(${error})` : null}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const ac = new AbortController();
+              setLoading(true);
+              setError(null);
+              void fetchDetail(ac.signal);
+            }}
+          >
+            {t('retry', { defaultValue: 'Zkusit znovu' })}
+          </Button>
         </div>
       )}
 
       {/* Obsah */}
       <div className="flex flex-col gap-4 p-6">
         {/* Header panel */}
-        <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-            {loading ? (
-              <div className="h-14 w-14 animate-pulse rounded-full bg-gray-200" />
-            ) : (
-              <span className="text-lg font-semibold text-gray-600">
-                {initials(data?.code || data?.name || 'P')}
-              </span>
-            )}
-          </div>
-
-          {/* Title primary info */}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-semibold">
-                {loading ? <span className="inline-block h-5 w-48 animate-pulse rounded bg-gray-200" /> : (data?.name ?? '—')}
-              </h2>
-              {!loading && statusBadge(data?.status, data?.statusLabel)}
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-              <span className="opacity-70">{t('detail.code', { defaultValue: 'Kód' })}:</span>
-              {loading ? (
-                <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" />
-              ) : (
-                <span className="font-medium">{data?.code ?? '—'}</span>
-              )}
-            </div>
-          </div>
-        </div>
-
+        <ProjectDetailHeader
+          loading={loading}
+          name={data?.name}
+          nameLocalized={(data as any)?.nameLocalized}
+          code={data?.code}
+          status={data?.status}
+          statusLabel={data?.statusLabel}
+        />
         {/* Cards grid */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Plán & skutečnost */}
+          {/* Harmonogram */}
           <div className="rounded-xl border p-4">
             <div className="mb-2 text-sm font-medium">
               {t('detail.schedule.title', { defaultValue: 'Harmonogram' })}
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.plannedStartDate', { defaultValue: 'Plán. začátek' })}</div>
-                <div>{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : safeDate(data?.plannedStartDate)}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.plannedEndDate', { defaultValue: 'Plán. konec' })}</div>
-                <div>{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : safeDate(data?.plannedEndDate)}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.actualStartDate', { defaultValue: 'Skut. začátek' })}</div>
-                <div>{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : safeDate(data?.actualStartDate)}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.actualEndDate', { defaultValue: 'Skut. konec' })}</div>
-                <div>{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : safeDate(data?.actualEndDate)}</div>
-              </div>
+              <Field label={t('detail.plannedStartDate', { defaultValue: 'Plán. začátek' })} value={loading ? null : safeDate(data?.plannedStartDate)} />
+              <Field label={t('detail.plannedEndDate', { defaultValue: 'Plán. konec' })} value={loading ? null : safeDate(data?.plannedEndDate)} />
+              <Field label={t('detail.actualStartDate', { defaultValue: 'Skut. začátek' })} value={loading ? null : safeDate(data?.actualStartDate)} />
+              <Field label={t('detail.actualEndDate', { defaultValue: 'Skut. konec' })} value={loading ? null : safeDate(data?.actualEndDate)} />
             </div>
           </div>
 
@@ -226,20 +210,55 @@ export function ProjectDetailDrawer({
               {t('detail.parties.title', { defaultValue: 'Zákazník & PM' })}
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="opacity-70">{t('detail.customer', { defaultValue: 'Zákazník' })}</span>
-                <span className="font-medium">{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : (data?.customerId ?? '—')}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="opacity-70">{t('detail.projectManager', { defaultValue: 'Projektový manažer' })}</span>
-                <span className="font-medium">{loading ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" /> : (data?.projectManagerId ?? '—')}</span>
-              </div>
+              <CopyRow
+                loading={loading}
+                label={t('detail.customer', { defaultValue: 'Zákazník' })}
+                value={data?.customerName || data?.customerId}
+              />
+              <CopyRow
+                loading={loading}
+                label={t('detail.projectManager', { defaultValue: 'Projektový manažer' })}
+                value={data?.projectManagerName || data?.projectManagerId}
+              />
             </div>
+          </div>
+
+          {/* Adresa stavby */}
+                <AddressBlock
+                  title={t('detail.address.title', { defaultValue: 'Adresa stavby' })}
+                  address={data?.siteAddress}
+                  loading={loading}
+                  showSource
+                  showMapLink
+                  compact
+                />
+          
+
+          {/* Finance / parametry */}
+          <div className="rounded-xl border p-4">
+            <div className="mb-2 text-sm font-medium">
+              {t('detail.params.title', { defaultValue: 'Parametry' })}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Field label={t('detail.currency', { defaultValue: 'Měna' })} value={loading ? null : textOrDash(data?.currency)} />
+              <Field label={t('detail.vatMode', { defaultValue: 'DPH režim' })} value={loading ? null : textOrDash(data?.vatMode)} />
+            </div>
+            {!!(data as any)?.tags?.length && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(data as any).tags.map((tag: string) => (
+                  <span key={tag} className="rounded-full bg-gray-50 px-2 py-0.5 text-xs ring-1 ring-gray-200">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Popis */}
           <div className="rounded-xl border p-4 md:col-span-2">
-            <div className="mb-2 text-sm font-medium">{t('detail.description', { defaultValue: 'Popis' })}</div>
+            <div className="mb-2 text-sm font-medium">
+              {t('detail.description', { defaultValue: 'Popis' })}
+            </div>
             <div className="text-sm text-gray-700">
               {loading ? (
                 <div className="space-y-2">
@@ -247,8 +266,8 @@ export function ProjectDetailDrawer({
                   <div className="h-4 w-full max-w-[460px] animate-pulse rounded bg-gray-200" />
                   <div className="h-4 w-full max-w-[380px] animate-pulse rounded bg-gray-200" />
                 </div>
-              ) : data?.description ? (
-                <p className="whitespace-pre-wrap">{data.description}</p>
+              ) : displayDescription ? (
+                <p className="whitespace-pre-wrap">{displayDescription}</p>
               ) : (
                 '—'
               )}
@@ -256,69 +275,139 @@ export function ProjectDetailDrawer({
           </div>
         </div>
 
-        {/* Footer actions (duplicitně pro pohodlí uživatele) */}
-        {(onEdit || onArchive || onDelete) && (
+        {/* Footer actions */}
+        {(onEdit || onArchive || onUnarchive || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-             <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
-             {onEdit && (
-               <Button variant="outline" onClick={onEdit}>
-                 {t('detail.actions.edit')}
-               </Button>
-             )}
-           </ScopeGuard>
-           <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
-             {onArchive && (
-               <Button
-                 variant="secondary"
-                 onClick={() => {
-                   setConfirmMode('archive');
-                   setConfirmOpen(true);
-                 }}
-               >
-                 {t('detail.actions.archive')}
-               </Button>
-             )}
-           </ScopeGuard>
-           <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
-             {onDelete && (
-               <Button
-                 variant="destructive"
-                 onClick={() => {
-                   setConfirmMode('delete');
-                   setConfirmOpen(true);
-                 }}
-               >
-                 {t('detail.actions.delete')}
-               </Button>
-             )}
-           </ScopeGuard>
+            <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+              {onEdit && (
+                <Button variant="outline" onClick={onEdit} disabled={loading}>
+                  {t('detail.actions.edit', { defaultValue: 'Upravit' })}
+                </Button>
+              )}
+            </ScopeGuard>
+            <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+              {showArchive && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setConfirmMode('archive');
+                    setConfirmOpen(true);
+                  }}
+                  disabled={loading}
+                >
+                  {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
+                </Button>
+              )}
+              {showUnarchive && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setConfirmMode('unarchive');
+                    setConfirmOpen(true);
+                  }}
+                  disabled={loading}
+                >
+                  {t('detail.actions.unarchive', { defaultValue: 'Obnovit' })}
+                </Button>
+              )}
+            </ScopeGuard>
+            <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+              {onDelete && (
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setConfirmMode('delete');
+                    setConfirmOpen(true);
+                  }}
+                  disabled={loading}
+                >
+                  {t('detail.actions.delete', { defaultValue: 'Smazat' })}
+                </Button>
+              )}
+            </ScopeGuard>
           </div>
         )}
       </div>
 
-      {/* Confirm (Archive/Delete) */}
+      {/* Confirm (Archive/Unarchive/Delete) */}
       <ConfirmModal
         open={confirmOpen}
         title={
           confirmMode === 'archive'
             ? t('detail.archiveConfirm.title', { defaultValue: 'Archivovat projekt?' })
-            : t('detail.deleteConfirm.title', { defaultValue: 'Smazat projekt?' })
+            : confirmMode === 'unarchive'
+              ? t('detail.unarchiveConfirm.title', { defaultValue: 'Obnovit projekt?' })
+              : t('detail.deleteConfirm.title', { defaultValue: 'Smazat projekt?' })
         }
         description={
           confirmMode === 'archive'
             ? t('detail.archiveConfirm.desc', { defaultValue: 'Projekt bude skryt z hlavního výpisu.' })
-            : t('detail.deleteConfirm.desc', { defaultValue: 'Tato akce je nevratná.' })
+            : confirmMode === 'unarchive'
+              ? t('detail.unarchiveConfirm.desc', { defaultValue: 'Projekt bude opět viditelný v hlavním výpisu.' })
+              : t('detail.deleteConfirm.desc', { defaultValue: 'Tato akce je nevratná.' })
         }
         confirmLabel={
           confirmMode === 'archive'
             ? t('detail.archiveConfirm.confirm', { defaultValue: 'Archivovat' })
-            : t('detail.deleteConfirm.confirm', { defaultValue: 'Smazat' })
+            : confirmMode === 'unarchive'
+              ? t('detail.unarchiveConfirm.confirm', { defaultValue: 'Obnovit' })
+              : t('detail.deleteConfirm.confirm', { defaultValue: 'Smazat' })
         }
         cancelLabel={t('detail.deleteConfirm.cancel', { defaultValue: 'Zrušit' })}
-        onConfirm={confirmMode === 'archive' ? handleArchive : handleDelete}
+        onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
       />
     </DetailDrawer>
+  );
+}
+
+function Field({ label, value }: { label: React.ReactNode; value: React.ReactNode | null }) {
+  return (
+    <div className="space-y-1">
+      <div className="opacity-70">{label}</div>
+      <div className="min-h-[1.25rem]">
+        {value === null ? (
+          <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" />
+        ) : (
+          <span className="font-medium">{value || '—'}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CopyRow({
+  loading,
+  label,
+  value,
+}: {
+  loading: boolean;
+  label: React.ReactNode;
+  value?: string | null;
+}) {
+  const dash = '—';
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="opacity-70">{label}</span>
+      <div className="flex items-center gap-2">
+        {loading ? (
+          <span className="inline-block h-4 w-28 animate-pulse rounded bg-gray-200" />
+        ) : (
+          <span className="font-medium truncate max-w-[220px]" title={value ?? dash}>
+            {value ?? dash}
+          </span>
+        )}
+        {!loading && value && (
+          <button
+            type="button"
+            className="text-xs underline decoration-gray-300 underline-offset-2 hover:opacity-80"
+            onClick={() => navigator.clipboard?.writeText(value)}
+          >
+            Copy
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
