@@ -1,62 +1,29 @@
 // src/features/customers/components/CustomerForm.tsx
 import * as React from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { Collapse } from "@/components/ui/stavbau-ui/collapse";
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { Pencil, ChevronDown, ChevronUp } from "@/components/icons";
-import { isValidICO, isValidCZDic } from '@/lib/utils/patterns';
 import { cn } from '@/lib/utils/cn';
+import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
+import type { CustomerFormValues } from '../validation/schemas';
 import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocomplete';
 import type { AddressSuggestion } from '@/lib/api/geo';
 import type { AddressDto } from '@/types/common/address';
 
-// --- Validation schema ---
-const schema = z.object({
-  type: z.enum(['ORGANIZATION', 'PERSON'], { message: 'Zvolte typ' }),
-  name: z.string().min(1, 'Zadejte název').max(160),
-  ico: z.string().trim().optional().refine((v) => !v || isValidICO(v), 'Neplatné IČO'),
-  dic: z.string().trim().optional().refine((v) => !v || isValidCZDic(v), 'Neplatné DIČ (očekává se CZ…)'),
-  email: z
-    .union([z.string().email('Neplatný e-mail'), z.literal('')])
-    .optional()
-    .transform((v) => (v === '' ? undefined : v)),
-  phone: z.string().max(40).optional(),
-  billingAddress: z
-    .object({
-      formatted: z.string().optional(),
-      street: z.string().optional(),
-      houseNumber: z.string().optional(),
-      orientationNumber: z.string().optional(),
-      city: z.string().optional(),
-      cityPart: z.string().optional(),
-      postalCode: z.string().optional(),
-      countryCode: z.string().optional(),
-      latitude: z.number().optional(),
-      longitude: z.number().optional(),
-      source: z.enum(['USER', 'ARES', 'GEO', 'IMPORT']).optional(),
-    })
-    .partial()
-    .optional(),
-  defaultPaymentTermsDays: z.coerce.number().int().min(0).max(365).optional(),
-  notes: z.string().max(1000).optional(),
-});
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
-export type FormValues = z.infer<typeof schema>;
+import { customerSchema, type CustomerFormValues as FormValues } from '../validation/schemas';
 
-export type FormProps = {
-  mode: 'create' | 'edit';
-  i18nNamespaces?: string[];
-  defaultValues?: Partial<FormValues>;
-  submitting?: boolean;
-  onSubmit: (values: FormValues) => Promise<void> | void;
-  onCancel: () => void;
-  /** Po úspěšném submitu vyresetovat formulář (default: true pro create, false pro edit) */
-  resetAfterSubmit?: boolean;
-  className?: string;
+type CustomersSpecificProps = {
+  /** Rodič může poslat text chyby – pošleme ji do globálního FeedbackProvideru pro zvolený scope */
+  serverError?: string | null;
 };
+
+export type FormProps = ExtendFormProps<CustomerFormValues, 'create' | 'edit', CustomersSpecificProps>;
 
 export const Form: React.FC<FormProps> = ({
   mode,
@@ -67,10 +34,29 @@ export const Form: React.FC<FormProps> = ({
   onCancel,
   resetAfterSubmit,
   className,
+  serverError,
+  //loading = false, // zachováno kvůli kompatibilitě; na zobrazení chyby nepoužíváme
+  onClear,
+  onDirtyChange,       // ✅ sjednoceno s TeamForm
+  autoFocus = true,    // ✅ sjednoceno s TeamForm
 }) => {
   const { t } = useTranslation(i18nNamespaces ?? ['customers', 'common']);
-  const resolver = zodResolver(schema) as unknown as Resolver<FormValues>;
+  const resolver = zodResolver(customerSchema) as unknown as Resolver<FormValues>;
   const shouldReset = resetAfterSubmit ?? (mode === 'create');
+
+  const feedback = useFeedback();
+  const STATUS_SCOPE = 'customers.form';
+
+  // Pokud přijde serverError z rodiče, pošli jej do FeedbackProvideru (inline pro tento scope)
+  React.useEffect(() => {
+    if (!serverError) return;
+    feedback.show({
+      severity: 'error',
+      title: t('detail.errors.generic', { defaultValue: 'Došlo k chybě' }),
+      description: serverError,
+      scope: STATUS_SCOPE,
+    });
+  }, [serverError, feedback, t]);
 
   // sjednocené defaulty (držíme i pro reset po submitu)
   const defaultValuesResolved = React.useMemo<FormValues>(
@@ -93,18 +79,36 @@ export const Form: React.FC<FormProps> = ({
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
     reset,
+    setFocus,
   } = useForm<FormValues>({
     resolver,
     defaultValues: defaultValuesResolved,
-    mode: 'onBlur',
+    mode: 'onTouched',        // ✅ stejně jako TeamForm
+    reValidateMode: 'onChange',
   });
 
   // přenastavení zvenčí
   React.useEffect(() => {
-    reset(defaultValuesResolved);
+    reset(defaultValuesResolved, { keepDirty: false });
   }, [defaultValuesResolved, reset]);
+
+  // hlášení dirty změn rodiči (✅ jako TeamForm)
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // autofocus + při chybách fokus na první invalid (✅ jako TeamForm)
+  React.useEffect(() => {
+    if (!autoFocus) return;
+    const errKeys = Object.keys(errors);
+    if (errKeys.length > 0) {
+      setFocus(errKeys[0] as any);
+      return;
+    }
+    if (mode === 'create') setFocus('name');
+  }, [errors, autoFocus, mode, setFocus]);
 
   // GEO → AddressDto (typed)
   const onAddressPick = (addr: AddressSuggestion) => {
@@ -113,7 +117,7 @@ export const Form: React.FC<FormProps> = ({
       formatted: nn(addr.formatted),
       street: nn(addr.street),
       houseNumber: nn(addr.houseNumber),
-      orientationNumber: nn(addr.houseNumber), // ✅ správně: bereme orientationNumber
+      orientationNumber: nn((addr as any).orientationNumber ?? addr.houseNumber),
       city: nn(addr.municipality),
       cityPart: nn(addr.municipalityPart),
       postalCode: nn(addr.zip),
@@ -128,7 +132,7 @@ export const Form: React.FC<FormProps> = ({
   const onSubmitInternal = React.useCallback(
     async (vals: FormValues) => {
       await onSubmit(vals);
-      if (shouldReset) reset(defaultValuesResolved);
+      if (shouldReset) reset(defaultValuesResolved, { keepDirty: false });
     },
     [onSubmit, shouldReset, reset, defaultValuesResolved]
   );
@@ -142,6 +146,9 @@ export const Form: React.FC<FormProps> = ({
       className={cn('flex flex-col gap-4', className)}
       noValidate
     >
+      {/* Globální inline status pro tento formulář (schová se přes onClear z rodiče) */}
+      <InlineStatus scope={STATUS_SCOPE} onClear={onClear} />
+
       {/* Name */}
       <label className="flex flex-col gap-1">
         <span className="text-sm">{t('form.name.label', { defaultValue: 'Název' })}</span>
@@ -192,7 +199,7 @@ export const Form: React.FC<FormProps> = ({
             disabled={disabled}
             {...register('email')}
           />
-          {errors.email && (
+        {errors.email && (
             <span className="text-xs text-red-600">{t(errors.email.message as string)}</span>
           )}
         </label>

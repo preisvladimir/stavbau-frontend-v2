@@ -178,5 +178,21 @@
     "DISABLED": "Disabled",
     "CREATED": "Created",
     "REMOVED": "Removed"
+  },
+  "stats": {
+    "title": "Team Statistics",
+    "updatedHint": "Updates automatically",
+    "owners": "Owners",
+    "active": "Active",
+    "invited": "Invited",
+    "disabled": "Disabled",
+    "archived": "Archived",
+    "total": "Total",
+    "byRole": "By Role",
+    "page": {
+      "title": "Team Statistics",
+      "autorefreshOn": "Auto-refresh enabled",
+      "autorefreshOff": "Auto-refresh disabled"
+    }
   }
 }

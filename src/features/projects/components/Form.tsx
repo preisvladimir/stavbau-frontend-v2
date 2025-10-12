@@ -1,8 +1,9 @@
-// src/features/projects/components/ProjectForm.tsx
+// src/features/projects/components/Form.tsx  (nebo .../ProjectForm.tsx podle tvé struktury)
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
 import { Button } from '@/components/ui/stavbau-ui/button';
 import AsyncSearchSelect from '@/components/ui/stavbau-ui/AsyncSearchSelect';
 import { useRequiredCompanyId } from "@/features/auth/hooks/useCompanyId";
@@ -11,6 +12,7 @@ import type { AddressDto } from '@/types/common/address';
 import type { AddressSuggestion } from '@/lib/api/geo';
 import type { UUID } from '../api/types';
 
+import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
 import type { FetchOptions } from '@/components/ui/stavbau-ui/AsyncSearchSelect';
 import { customersService } from '@/features/customers/api/customers-service';
 import { teamService } from '@/features/teamV2/api/team-service';
@@ -21,7 +23,13 @@ import {
   type AnyProjectFormValues,
 } from '../validation/schemas';
 
-export type FormProps = {
+import { toApiProblem } from "@/lib/api/problem";
+import { applyApiErrorsToForm } from "@/lib/forms/applyApiErrorsToForm";
+
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
+
+export type ProjectFormProps = {
   companyId: UUID;
   mode: 'create' | 'edit';
   i18nNamespaces?: string[];
@@ -33,6 +41,13 @@ export type FormProps = {
   resetAfterSubmit?: boolean;
 };
 
+type ProjectSpecificProps = {
+  companyId?: UUID;
+  serverError?: string | null;
+};
+
+export type FormProps = ExtendFormProps<AnyProjectFormValues, 'create' | 'edit', ProjectSpecificProps>;
+
 export function Form({
   mode,
   i18nNamespaces,
@@ -41,6 +56,11 @@ export function Form({
   onSubmit,
   onCancel,
   resetAfterSubmit,
+  serverError,
+  //loading = false, // ponecháno kvůli signatuře; nezobrazujeme s ním chyby
+  onClear,
+  onDirtyChange,
+  autoFocus = true,
 }: FormProps) {
 
   const { t } = useTranslation(i18nNamespaces ?? ['projects', 'common']);
@@ -57,12 +77,25 @@ export function Form({
   const fetchPMs: FetchOptions = ({ q, page, size, signal }) =>
     team.pagedLookupFetcher()(q ?? '', page ?? 0, size ?? 10, signal);
 
+  // ✅ globální feedback
+  const feedback = useFeedback();
+  const STATUS_SCOPE = 'projects.form';
 
-  // jednotné výchozí hodnoty – použijeme je i při resetu po submitu
+  // Pokud přijde serverError od rodiče, pošli jej do inline statusu pro tento scope
+  React.useEffect(() => {
+    if (!serverError) return;
+    feedback.show({
+      severity: 'error',
+      title: t('detail.errors.generic', { defaultValue: 'Došlo k chybě' }),
+      description: serverError,
+      scope: STATUS_SCOPE,
+    });
+  }, [serverError, feedback, t]);
+
+  // výchozí hodnoty (použité i při resetu po submitu)
   const defaultValuesResolved = React.useMemo<AnyProjectFormValues>(
     () => ({
       name: '',
-      // code: '',
       description: '',
       customerId: '',
       projectManagerId: '',
@@ -79,28 +112,102 @@ export function Form({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
     reset,
     setValue,
     watch,
+    setError,
+    setFocus,
   } = useForm<AnyProjectFormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<AnyProjectFormValues>,
     defaultValues: defaultValuesResolved,
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
   });
 
   // přenastavení zvenčí (změna defaultValues)
   React.useEffect(() => {
-    reset(defaultValuesResolved);
+    reset(defaultValuesResolved, { keepDirty: false });
   }, [defaultValuesResolved, reset]);
+
+  // hlášení dirty změn rodiči
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // autofocus: první chyba, jinak v create -> name
+  React.useEffect(() => {
+    if (!autoFocus) return;
+    const keys = Object.keys(errors);
+    if (keys.length > 0) {
+      setFocus(keys[0] as any);
+      return;
+    }
+    if (mode === 'create') setFocus('name');
+  }, [errors, autoFocus, mode, setFocus]);
 
   const onSubmitInternal = React.useCallback(
     async (vals: AnyProjectFormValues) => {
-      await onSubmit(vals);
-      if (shouldReset) {
-        reset(defaultValuesResolved);
+      try {
+        await onSubmit(vals);
+        if (shouldReset) {
+          reset(defaultValuesResolved, { keepDirty: false });
+        }
+      } catch (err) {
+        const p = toApiProblem(err);
+
+        // 422 → mapuj field chyby do RHF (bez toastu)
+        if (p.status === 422 && p.errors) {
+          const { applied, unknown } = applyApiErrorsToForm<AnyProjectFormValues>(p, setError);
+
+          // fokus na první chybné pole
+          const first = Object.keys(p.errors ?? {})[0];
+          if (first) setFocus(first as any);
+
+          // fallback, pokud BE nedodal konkrétní field chyby
+          if (!applied && (p.detail || unknown)) {
+            feedback.show({
+              severity: 'error',
+              title: t('validation.failed', { defaultValue: 'Neplatná data' }),
+              description: p.detail || unknown,
+              scope: STATUS_SCOPE,
+            });
+          }
+          return;
+        }
+
+        // 409 – konflikt
+        if (p.status === 409) {
+          feedback.show({
+            severity: 'warning',
+            title: t('errors.conflict.title', { defaultValue: 'Konflikt' }),
+            description: p.detail ?? t('errors.conflict.desc', { defaultValue: 'Záznam byl mezitím změněn.' }),
+            scope: STATUS_SCOPE,
+          });
+          return;
+        }
+
+        // 403 – většinou řeší globální guard; fallback inline
+        if (p.status === 403) {
+          feedback.show({
+            severity: 'error',
+            title: t('errors.forbidden', { defaultValue: 'Přístup zamítnut' }),
+            description: p.detail ?? t('errors.rbac.forbidden', { defaultValue: 'Nemáte oprávnění provést tuto akci.' }),
+            scope: STATUS_SCOPE,
+          });
+          return;
+        }
+
+        // 400/404/5xx – obecný fallback
+        feedback.show({
+          severity: 'error',
+          title: t('errors.generic', { defaultValue: 'Chyba' }),
+          description: p.detail ?? t('errors.tryAgain', { defaultValue: 'Nepodařilo se uložit. Zkuste to prosím znovu.' }),
+          scope: STATUS_SCOPE,
+        });
       }
     },
-    [onSubmit, shouldReset, reset, defaultValuesResolved]
+    [onSubmit, shouldReset, reset, defaultValuesResolved, setError, setFocus, feedback, t]
   );
 
   const disabled = submitting || isSubmitting;
@@ -108,19 +215,18 @@ export function Form({
   const initialCustomerLabel = (defaultValues as any)?.customerLabel as string | undefined;
   const initialPmLabel = (defaultValues as any)?.projectManagerLabel as string | undefined;
 
-  // RHF hodnoty → promítneme do AsyncSearchSelect (null = nevybráno)
+  // RHF hodnoty → AsyncSearchSelect (null = nevybráno)
   const customerIdValue = watch('customerId') || '';
   const pmIdValue = watch('projectManagerId') || '';
 
-
-  // GEO → AddressDto (typed) pro siteAddress
+  // GEO → AddressDto pro siteAddress
   const onSiteAddressPick = React.useCallback((addr: AddressSuggestion) => {
     const nn = <T,>(v: T | null | undefined) => (v ?? undefined);
     const dto: AddressDto = {
       formatted: nn(addr.formatted),
       street: nn(addr.street),
       houseNumber: nn(addr.houseNumber),
-      orientationNumber: nn(addr.houseNumber),
+      orientationNumber: nn((addr as any).orientationNumber ?? addr.houseNumber),
       city: nn(addr.municipality),
       cityPart: nn(addr.municipalityPart),
       postalCode: nn(addr.zip),
@@ -132,10 +238,11 @@ export function Form({
     setValue('siteAddress', dto, { shouldDirty: true, shouldValidate: false });
   }, [setValue]);
 
-  // controlled hodnota (UUID nebo null)
-
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmitInternal)} noValidate>
+      {/* ✅ Globální inline status pro tento formulář; schová se přes onClear z rodiče */}
+      <InlineStatus scope={STATUS_SCOPE} onClear={onClear} />
+
       {/* Name */}
       <label className="flex flex-col gap-1">
         <span className="text-sm">{t('form.name.label', { defaultValue: 'Název' })}</span>
@@ -161,7 +268,7 @@ export function Form({
           <span className="text-sm">{t('form.customer.label', { defaultValue: 'Zákazník' })}</span>
           <AsyncSearchSelect
             value={customerIdValue || null}
-            valueLabel={initialCustomerLabel}                 // ← tady
+            valueLabel={initialCustomerLabel}
             onChange={(val) => setValue('customerId', val ?? '')}
             fetchOptions={fetchCustomers}
             pageSize={10}
@@ -172,7 +279,7 @@ export function Form({
               clear: t('common.clear', { defaultValue: 'Vymazat výběr' }),
             }}
           />
-          {/* skryté RHF pole (kvůli zod/schema a easy submitu) */}
+          {/* skryté RHF pole pro zod/schema */}
           <input type="hidden" {...register('customerId', { setValueAs: (v) => (v === '' ? '' : String(v)) })} />
           {errors.customerId && (
             <span className="text-xs text-red-600">
@@ -188,7 +295,7 @@ export function Form({
           <span className="text-sm">{t('form.projectManager.label', { defaultValue: 'Projektový manažer' })}</span>
           <AsyncSearchSelect
             value={pmIdValue || null}
-            valueLabel={initialPmLabel}                       // ← tady
+            valueLabel={initialPmLabel}
             onChange={(val) => setValue('projectManagerId', val ?? '')}
             fetchOptions={fetchPMs}
             pageSize={10}
@@ -260,7 +367,6 @@ export function Form({
           />
         </div>
       </div>
-      +
 
       {/* Dates */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

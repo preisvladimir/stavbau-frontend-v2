@@ -6,72 +6,103 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { CreateMemberSchema, UpdateMemberSchema, type AnyTeamFormValues } from '../validation/schemas';
 import { VISIBLE_ROLES, type CompanyRoleName } from '@/types/common/rbac';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
+import { toApiProblem } from "@/lib/api/problem";
+import { applyApiErrorsToForm } from "@/lib/forms/applyApiErrorsToForm";
+import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
 
-export type TeamFormProps = {
-  mode: 'create' | 'edit';
-  i18nNamespaces?: string[];
-  defaultValues?: Partial<AnyTeamFormValues>;
-  submitting?: boolean;
-  onSubmit: (values: AnyTeamFormValues) => Promise<void> | void;
-  onCancel: () => void;
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
+type TeamSpecificProps = {
   /** Zamkne výběr company role (např. poslední OWNER) */
   lockCompanyRole?: boolean;
   /** i18n klíč proč je zamčeno (default: errors.lastOwner) */
   lockReasonKey?: string;
-
-  /** Po úspěšném submitu vyresetovat formulář (default: true pro create, false pro edit) */
-  resetAfterSubmit?: boolean;
-
-  /** Volitelný banner s chybou ze serveru (řízení rodičem/CrudDrawer) */
-  serverError?: string | null;
-
-  /** Oznámení rodiči o změně "dirty" stavu (pro disable zavření, apod.) */
-  onDirtyChange?: (dirty: boolean) => void;
-
-  /** Autofocus na první pole (nebo první invalid) – default true */
-  autoFocus?: boolean;
-
-  /** V edit módu je e-mail obvykle neměnný – vypnuto lze povolit */
+  /** V edit módu je e-mail obvykle neměnný – vypnuto lze povolit (jen v 'edit' větvi dává smysl) */
   emailEditableInEdit?: boolean;
+
+  /** Volitelný server error (z rodiče) – zobrazíme inline přes FeedbackProvider */
+  serverError?: string | null;
+  /** Pokud inline status pochází přímo z formuláře, rodič nám může předat clear handler */
+  loading?: boolean;         // kvůli kompatibilitě signatur; zde ho nevyužíváme k zobrazování chyb
+  onClear?: () => void;      // pošleme do <InlineStatus ... />
 };
 
-export function Form({
-  mode,
-  i18nNamespaces,
-  defaultValues,
-  submitting,
-  onSubmit,
-  onCancel,
-  lockCompanyRole = false,
-  lockReasonKey = 'errors.lastOwner',
-  resetAfterSubmit,
-  serverError = null,
-  onDirtyChange,
-  autoFocus = true,
-  emailEditableInEdit = false,
-}: TeamFormProps) {
+type TeamFormPropsCreate = ExtendFormProps<
+  AnyTeamFormValues,
+  'create',
+  Omit<TeamSpecificProps, 'emailEditableInEdit'>
+>;
+type TeamFormPropsEdit = ExtendFormProps<
+  AnyTeamFormValues,
+  'edit',
+  TeamSpecificProps
+>;
+export type TeamFormProps = TeamFormPropsCreate | TeamFormPropsEdit;
+
+export function Form(props: TeamFormProps) {
+  const {
+    mode,
+    i18nNamespaces,
+    defaultValues,
+    submitting,
+    onSubmit,
+    onCancel,
+    resetAfterSubmit,
+    serverError = null,
+    onDirtyChange,
+    autoFocus = true,
+    onClear,         // ✅ nově přijímáme
+    // loading,      // ponecháno kvůli signatuře
+  } = props;
+
+  // edit-only props (narrowing)
+  const lockCompanyRole =
+    mode === 'edit' ? props.lockCompanyRole ?? false : false;
+  const lockReasonKey =
+    mode === 'edit' ? props.lockReasonKey ?? 'errors.lastOwner' : 'errors.lastOwner';
+  const emailEditableInEdit =
+    mode === 'edit' ? props.emailEditableInEdit ?? false : false;
+
   const { t } = useTranslation(i18nNamespaces ?? ['team', 'common']);
-  const roleLabel = (r: CompanyRoleName | string) => t(`roles.${r}`, { defaultValue: String(r) });
+  const roleLabel = (r: CompanyRoleName | string) =>
+    t(`roles.${r}`, { defaultValue: String(r) });
 
   const schema = mode === 'create' ? CreateMemberSchema : UpdateMemberSchema;
-  const shouldReset = resetAfterSubmit ?? (mode === 'create');
+  const shouldReset = resetAfterSubmit ?? ([mode === 'create']);
 
-  // Jednotné výchozí hodnoty – použijeme je i při resetu po submitu
-  const defaultValuesResolved = React.useMemo<AnyTeamFormValues>(() => ({
-    email: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    companyRole: null,     // důležité pro RHF, ať není undefined
-    role: 'VIEWER',
-    sendInvite: mode === 'create',  // create: true, edit: obvykle ignorováno
-    marketing: false,
-    termsAccepted: false,
-    ...(defaultValues as Partial<AnyTeamFormValues>),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [JSON.stringify(defaultValues), mode]); // stringified dep: stabilní reset při změně obsahu
+  // ✅ globální feedback
+  const feedback = useFeedback();
+  const STATUS_SCOPE = 'team.form';
+
+  // pokud přijde serverError z rodiče, přepošleme ho do inline statusu
+  React.useEffect(() => {
+    if (!serverError) return;
+    feedback.show({
+      severity: 'error',
+      title: t('detail.errors.generic', { defaultValue: 'Došlo k chybě' }),
+      description: serverError,
+      scope: STATUS_SCOPE,
+    });
+  }, [serverError, feedback, t]);
+
+  // výchozí hodnoty – používáme i při resetu
+  const defaultValuesResolved = React.useMemo<AnyTeamFormValues>(
+    () => ({
+      email: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
+      companyRole: null,
+      role: 'VIEWER',
+      sendInvite: mode === 'create',
+      marketing: false,
+      termsAccepted: false,
+      ...(defaultValues as Partial<AnyTeamFormValues>),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }),
+    [JSON.stringify(defaultValues), mode]
+  );
 
   const {
     register,
@@ -80,7 +111,6 @@ export function Form({
     reset,
     setFocus,
     setError,
-    watch,
   } = useForm<AnyTeamFormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<AnyTeamFormValues>,
     defaultValues: defaultValuesResolved,
@@ -88,60 +118,94 @@ export function Form({
     reValidateMode: 'onChange',
   });
 
-  // přenastavení zvenčí (změna defaultValues)
   React.useEffect(() => {
     reset(defaultValuesResolved, { keepDirty: false });
   }, [defaultValuesResolved, reset]);
 
-  // hlášení dirty změn rodiči
   React.useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  // autofocus po montáži / při chybách
   React.useEffect(() => {
     if (!autoFocus) return;
-    // Při chybách fokus na první invalid
     const errKeys = Object.keys(errors);
     if (errKeys.length > 0) {
       setFocus(errKeys[0] as any);
       return;
     }
-    // Jinak v create módu fokus na e-mail
     if (mode === 'create') setFocus('email');
   }, [errors, autoFocus, mode, setFocus]);
 
-  // Volitelný serverError → mapovat na RHF nebo zobrazit banner – zvolíme banner + možnost doplnit RHF error
-  React.useEffect(() => {
-    if (!serverError) return;
-    // Pokud chceš např. promítnout server error na konkrétní pole:
-    // setError('email', { type: 'server', message: serverError });
-  }, [serverError, setError]);
+  const onSubmitInternal = React.useCallback(
+    async (vals: AnyTeamFormValues) => {
+      try {
+        await onSubmit(vals);
+        if (shouldReset) {
+          reset(defaultValuesResolved, { keepDirty: false });
+        }
+      } catch (err) {
+        const p = toApiProblem(err);
 
-  const onSubmitInternal = React.useCallback(async (vals: AnyTeamFormValues) => {
-    await onSubmit(vals);
-    if (shouldReset) {
-      reset(defaultValuesResolved, { keepDirty: false });
-    }
-  }, [onSubmit, shouldReset, reset, defaultValuesResolved]);
+        // 422 → mapujeme field chyby do RHF
+        if (p.status === 422 && p.errors) {
+          const { applied, unknown } = applyApiErrorsToForm<AnyTeamFormValues>(p, setError);
+
+          const first = Object.keys(p.errors ?? {})[0];
+          if (first) setFocus(first as any);
+
+          // pokud BE neposlal konkrétní field chyby, ukaž inline fallback
+          if (!applied && (p.detail || unknown)) {
+            feedback.show({
+              severity: 'error',
+              title: t('validation.failed', { defaultValue: 'Neplatná data' }),
+              description: p.detail || unknown,
+              scope: STATUS_SCOPE,
+            });
+          }
+          return;
+        }
+
+        // 409 – konflikt (např. duplicitní e-mail)
+        if (p.status === 409) {
+          feedback.show({
+            severity: 'warning',
+            title: t('errors.conflict.title', { defaultValue: 'Konflikt' }),
+            description: p.detail ?? t('errors.conflict.desc', { defaultValue: 'Záznam byl mezitím změněn.' }),
+            scope: STATUS_SCOPE,
+          });
+          return;
+        }
+
+        // 403 – práva (fallback)
+        if (p.status === 403) {
+          feedback.show({
+            severity: 'error',
+            title: t('errors.forbidden', { defaultValue: 'Přístup zamítnut' }),
+            description: p.detail ?? t('errors.rbac.forbidden', { defaultValue: 'Nemáte oprávnění provést tuto akci.' }),
+            scope: STATUS_SCOPE,
+          });
+          return;
+        }
+
+        // 400/404/5xx – generický fallback
+        feedback.show({
+          severity: 'error',
+          title: t('errors.generic', { defaultValue: 'Chyba' }),
+          description: p.detail ?? t('errors.tryAgain', { defaultValue: 'Nepodařilo se uložit. Zkuste to prosím znovu.' }),
+          scope: STATUS_SCOPE,
+        });
+      }
+    },
+    [onSubmit, shouldReset, reset, defaultValuesResolved, setError, setFocus, feedback, t]
+  );
 
   const disabled = submitting || isSubmitting;
   const emailDisabled = mode === 'edit' && !emailEditableInEdit ? true : disabled;
 
-  // a11y helper
-  const errText = (msg?: string) => (msg ? t(msg) : undefined);
-
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmitInternal)} noValidate>
-      {/* Server error banner (neblokující) */}
-      {serverError && (
-              <LoadErrorStatus
-               // loading={loading}
-                error={serverError}
-              //  onClear={clearError}
-                i18nNamespaces={i18nNamespaces}
-              />
-      )}
+      {/* ✅ Globální inline status pro formulář teamu */}
+      <InlineStatus scope={STATUS_SCOPE} onClear={onClear} />
 
       {/* Email */}
       <label className="flex flex-col gap-1">
@@ -175,7 +239,9 @@ export function Form({
             {...register('firstName')}
           />
           {errors.firstName && (
-            <span id="err-firstname" className="text-xs text-red-600">{t(errors.firstName.message as string)}</span>
+            <span id="err-firstname" className="text-xs text-red-600">
+              {t(errors.firstName.message as string)}
+            </span>
           )}
         </label>
         <label className="flex flex-col gap-1">
@@ -189,7 +255,9 @@ export function Form({
             {...register('lastName')}
           />
           {errors.lastName && (
-            <span id="err-lastname" className="text-xs text-red-600">{t(errors.lastName.message as string)}</span>
+            <span id="err-lastname" className="text-xs text-red-600">
+              {t(errors.lastName.message as string)}
+            </span>
           )}
         </label>
       </div>
@@ -207,7 +275,9 @@ export function Form({
           {...register('phone')}
         />
         {errors.phone && (
-          <span id="err-phone" className="text-xs text-red-600">{t(errors.phone.message as string)}</span>
+          <span id="err-phone" className="text-xs text-red-600">
+            {t(errors.phone.message as string)}
+          </span>
         )}
       </label>
 
@@ -233,7 +303,9 @@ export function Form({
           ))}
         </select>
         {errors.companyRole && (
-          <span id="err-companyRole" className="text-xs text-red-600">{t(errors.companyRole.message as string)}</span>
+          <span id="err-companyRole" className="text-xs text-red-600">
+            {t(errors.companyRole.message as string)}
+          </span>
         )}
         {lockCompanyRole && !errors.companyRole && (
           <span className="text-xs text-amber-700">

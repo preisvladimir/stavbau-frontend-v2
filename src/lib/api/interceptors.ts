@@ -1,6 +1,8 @@
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import i18n from '@/i18n';
 import { tokenManager } from '@/lib/api/tokenManager';
+import { toApiProblem } from '@/lib/api/problem';
+import { toast } from "@/ui/toast";
 
 // ---- Axios module augmentation (interní flagy) -----------------------------
 declare module 'axios' {
@@ -79,22 +81,34 @@ export function withInterceptors(instance: AxiosInstance): AxiosInstance {
     async (error: AxiosError) => {
       const { response, config } = error;
       if (!response || !config) return Promise.reject(error);
+      const status = response?.status;
+      const problem = toApiProblem(error);
 
       // 403 – předat na hook a odmítnout
-      if (response.status === 403) {
-        tokenManager.onForbidden?.(response);
+      if (status === 403) {
+        tokenManager.onForbidden?.(problem);
         return Promise.reject(error);
       }
 
       // 429 – oznámit; (retry dle Retry-After lze přidat později)
-      if (response.status === 429) {
-        tokenManager.onRateLimit?.(response);
+      if (status === 429) {
+        tokenManager.onRateLimit?.(problem);
+        return Promise.reject(error);
+      }
+
+      // 5xx – můžeš mít vlastní default handler/telemetrii
+      if (status >= 500) {
+        toast.show({
+          variant: "error",
+          title: "Chyba serveru",
+          description: "Došlo k neočekávané chybě. Zkuste to prosím znovu.",
+        });
         return Promise.reject(error);
       }
 
       // 401 – zkuste refresh (pouze 1× a ne pro refresh endpoint)
       const cfg = config as InternalAxiosRequestConfig;
-      if (response.status === 401 && !cfg._skipRefresh && !cfg._retried) {
+      if (status === 401 && !cfg._skipRefresh && !cfg._retried) {
         cfg._retried = true;
 
         // Pokud refresh už běží, zařaď se do fronty

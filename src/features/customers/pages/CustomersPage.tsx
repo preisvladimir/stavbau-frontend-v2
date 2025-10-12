@@ -25,21 +25,24 @@ import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/dat
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
 import { Button } from '@/components/ui/stavbau-ui/button';
-import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer'; // ← náš orchestrátor
+import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer';
 
 // --- Feature UI (prezentační, bez fetch) ---
 import { Detail } from '../components/Detail';
-import { Form, type FormValues } from '../components/Form';
+import { Form } from '../components/Form';
+import type { CustomerFormValues as FormValues } from '../validation/schemas';
 
 // --- Mappers ---
-import { dtoToFormDefaults } from '../mappers';
+import { dtoToFormDefaults, formToCreateBody, formToUpdateBody } from '../mappers/mappers';
 
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 import { UserPlus, Plus, Mail, User as UserIcon } from '@/components/icons';
+
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
 export default function CustomersPage() {
   const { setFab } = useFab();
@@ -48,6 +51,8 @@ export default function CustomersPage() {
 
   const companyId = useRequiredCompanyId();
   const customers = React.useMemo(() => customersService(companyId), [companyId]);
+
+  const feedback = useFeedback();
 
   // ---------------------------------------------------------------------------
   // Server-side řízení tabulky
@@ -61,7 +66,13 @@ export default function CustomersPage() {
   );
 
   const {
-    data, loading, error, clearError, q, sort, size,
+    data,
+    loading,
+    //error,
+    clearError,
+    q,
+    sort,
+    size,
     page1, total, onSearchChange, onSortChange, onPageChange, onPageSizeChange,
     refreshList, refreshAfterMutation,
   } = useServerTableState<CustomerSummaryDto, CustomerFilters>({
@@ -74,7 +85,10 @@ export default function CustomersPage() {
       filters: { status: '' },
     },
     onError: (e) => {
-      if (process.env.NODE_ENV !== 'production') console.debug('[CustomersPage] load error', e);
+      feedback.showError(e, {
+        scope: 'customers.list',
+        title: t('errors.loadFailed', { defaultValue: 'Načtení selhalo' }),
+      });
     },
   });
 
@@ -85,40 +99,52 @@ export default function CustomersPage() {
     id: routeId, isNew, isDetail, isEdit, openNew, openDetail, openEdit, closeOverlays,
   } = useOverlayRouting({ module: 'customers' });
 
-  // Prefill ze seznamu (rychlý náhled)
-  const selectedCustomer = React.useMemo(
-    () => (routeId ? data.items.find((i) => String(i.id) === routeId) ?? null : null),
-    [data.items, routeId]
-  );
-
   // ---------------------------------------------------------------------------
-  // CRUD handlery
+  // CRUD handlery – přes FeedbackProvider (toast bez scope)
   // ---------------------------------------------------------------------------
   const handleCreate = React.useCallback(
     async (values: FormValues) => {
-      await customers.create(values as any);
+      await customers.create(formToCreateBody(values));
       closeOverlays();
       await refreshAfterMutation();
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.created.title', { defaultValue: 'Zákazník vytvořen' }),
+      });
     },
-    [customers, closeOverlays, refreshAfterMutation]
+    [customers, closeOverlays, refreshAfterMutation, feedback, t]
   );
 
   const handleEdit = React.useCallback(
     async (values: FormValues, id: UUID) => {
-      await customers.update(id, values as any);
+      await customers.update(id, formToUpdateBody(values));
       closeOverlays();
       await refreshList();
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.updated.title', { defaultValue: 'Uloženo' }),
+      });
     },
-    [customers, closeOverlays, refreshList]
+    [customers, closeOverlays, refreshList, feedback, t]
   );
 
   const handleDelete = React.useCallback(
     async (id: UUID | string) => {
-      await customers.remove(id as UUID);
-      closeOverlays();
-      await refreshList();
+      try {
+        await customers.remove(id as UUID);
+        closeOverlays();
+        await refreshList();
+        feedback.show({
+          severity: 'success',
+          title: t('toasts.deleted.title', { defaultValue: 'Smazáno' }),
+        });
+      } catch (e) {
+        // 403 se v showError ignoruje; ostatní projdou jako toast error
+        feedback.showError(e);
+        throw e;
+      }
     },
-    [customers, closeOverlays, refreshList]
+    [customers, closeOverlays, refreshList, feedback, t]
   );
 
   // ---------------------------------------------------------------------------
@@ -161,7 +187,7 @@ export default function CustomersPage() {
       ),
       enableSorting: false,
       meta: { stbMobile: { priority: 99, mobileHidden: true } },
-    },    
+    },
     {
       id: 'name',
       header: t('columns.name', { defaultValue: 'Název' }),
@@ -219,16 +245,23 @@ export default function CustomersPage() {
           subtitle={t('subtitle', { defaultValue: 'Správa zákazníků' })}
           actions={
             <ScopeGuard anyOf={[CUSTOMERS_SCOPES.CREATE, CUSTOMERS_SCOPES.RW]}>
-              <Button type="button" variant="primary" onClick={openNew} disabled={loading}
+              <Button
+                type="button"
+                variant="primary"
+                onClick={openNew}
+                disabled={loading}
                 ariaLabel={t('actions.newCustomer', { defaultValue: 'Nový zákazník' }) as string}
-                leftIcon={<UserPlus size={16} />} className="shrink-0 whitespace-nowrap">
+                leftIcon={<UserPlus size={16} />}
+                className="shrink-0 whitespace-nowrap"
+              >
                 <span>{t('actions.newCustomer', { defaultValue: 'Nový zákazník' })}</span>
               </Button>
             </ScopeGuard>
           }
         />
 
-        <LoadErrorStatus loading={loading} error={error} onClear={clearError} i18nNamespaces={i18nNamespaces} />
+        {/* Globální inline status pro LIST scope */}
+        <InlineStatus scope="customers.list" onClear={clearError} />
 
         <StbEntityTable<CustomerSummaryDto>
           i18nNamespaces={i18nNamespaces}
@@ -260,16 +293,26 @@ export default function CustomersPage() {
               i18nNamespaces={i18nNamespaces}
               menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
               actions={[
-                { kind: 'detail', onClick: () => openDetail(c.id as UUID) },
+                { kind: 'detail', onClick: () => openDetail(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.READ, CUSTOMERS_SCOPES.RW] },
                 { kind: 'edit', onClick: () => openEdit(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.UPDATE, CUSTOMERS_SCOPES.RW] },
-                { kind: 'delete', onClick: () => handleDelete(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.DELETE, CUSTOMERS_SCOPES.RW], confirm: {} },
+                {
+                  kind: 'delete',
+                  onClick: () => handleDelete(c.id as UUID),
+                  scopesAnyOf: [CUSTOMERS_SCOPES.DELETE, CUSTOMERS_SCOPES.RW],
+                  confirm: {
+                    title: t('list.confirm.delete.title', { defaultValue: 'Smazat zákazníka?' }),
+                    description: t('list.confirm.delete.desc', { defaultValue: 'Tato akce je nevratná.' }),
+                    confirmLabel: t('common:delete', { defaultValue: 'Smazat' }),
+                    cancelLabel: t('common:cancel', { defaultValue: 'Zrušit' }),
+                  },
+                },
               ]}
             />
           )}
           emptyContent={emptyNode}
         />
 
-        {/* --- JEDEN orchestrátor pro detail/create/edit --- */}
+        {/* --- Orchestrátor detail/create/edit --- */}
         <CrudDrawer<CustomerSummaryDto, FormValues>
           isDetail={isDetail && !isEdit}
           isNew={isNew}
@@ -282,28 +325,20 @@ export default function CustomersPage() {
             edit: t('form.title.edit', { defaultValue: 'Upravit zákazníka' }),
           }}
           listItems={data.items}
-
-          // fetch detail (autorita) – využijeme customers service
           fetchDetail={(id, opts) => customers.get?.(String(id), opts as any)}
-
-          // map detail -> form defaults
-          mapDetailToFormDefaults={(dto) => dtoToFormDefaults(dto as any)}
-
-          // DETAIL (prezentační komponenta)
-          renderDetail={({ id, data, loading, error, onDelete }) => (
+          mapDetailToFormDefaults={(dto) => dtoToFormDefaults(dto as CustomerDto)}
+          renderDetail={({ data, loading, error, onDelete }) => (
             <Detail
               i18nNamespaces={i18nNamespaces}
               open
               onClose={closeOverlays}
               onEdit={() => openEdit(routeId as UUID)}
-              onDelete={(x) => void onDelete?.(String(x) as UUID)}
+              onDelete={(x) => void onDelete?.(String(x))}
               data={data as any}
               loading={loading}
               error={error ?? null}
             />
           )}
-
-          // CREATE (form bez fetch)
           renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <Form
               mode="create"
@@ -315,8 +350,6 @@ export default function CustomersPage() {
               resetAfterSubmit
             />
           )}
-
-          // EDIT (form s defaulty z mapDetailToFormDefaults)
           renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <Form
               mode="edit"
@@ -327,7 +360,6 @@ export default function CustomersPage() {
               onCancel={onCancel}
             />
           )}
-
           onCreate={async (vals) => { await handleCreate(vals); }}
           onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
           onDelete={async (id) => { await handleDelete(id as UUID); }}

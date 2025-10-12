@@ -1,7 +1,7 @@
 // src/features/projects/const/scopes.ts
 // Central place to reference Projects scopes without scattering string literals
 export const PROJECT_SCOPES = {
-  RW: 'projects:rw',
+  WRITE: 'projects:write',
   READ: 'projects:read',
   CREATE: 'projects:create',
   UPDATE: 'projects:update',

@@ -6,6 +6,7 @@ export const TEAM_SCOPES = {
     ADD: 'team:add',
     UPDATE: 'team:update',
     REMOVE: 'team:remove',
+    DELETE: 'team:remove',
     UPDATE_ROLE: 'team:update_role',
 } as const;
 

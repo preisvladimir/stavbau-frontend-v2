@@ -180,5 +180,21 @@
     "DISABLED": "Deaktivován",
     "CREATED": "Vytvořen",
     "REMOVED": "Odebrán"
+  },
+    "stats": {
+    "title": "Statistiky týmu",
+    "updatedHint": "Aktualizuje se automaticky",
+    "owners": "Vlastníci",
+    "active": "Aktivní",
+    "invited": "Pozvaní",
+    "disabled": "Deaktivovaní",
+    "archived": "Archivovaní",
+    "total": "Celkem",
+    "byRole": "Podle role",
+    "page": {
+      "title": "Statistiky týmu",
+      "autorefreshOn": "Auto-refresh zapnut",
+      "autorefreshOff": "Auto-refresh vypnut"
+    }
   }
 }

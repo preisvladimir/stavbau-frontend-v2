@@ -1,5 +1,4 @@
 // src/components/ui/stavbau-ui/feedback/LoadErrorStatus.tsx
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils/cn';
 

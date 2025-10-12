@@ -2,17 +2,19 @@ import axios, { AxiosError } from "axios";
 
 export type ApiProblem = {
   status: number;
+  type?: string;
   title?: string;
   detail?: string;
   code?: string;
   errors?: Record<string, unknown>;
+  requiredScopes?: string[];
+  traceId?: string;
 };
 
 export class ApiError extends Error {
   problem: ApiProblem;
   constructor(problem: ApiProblem) {
-    super(problem.title || problem.detail || "API error");
-    this.name = "ApiError";
+    super(problem.detail || problem.title || "API error");
     this.problem = problem;
   }
 }
@@ -25,14 +27,19 @@ export function toApiProblem(err: unknown): ApiProblem {
     const data = ax.response?.data;
 
     if (data && typeof data === "object") {
+      const fieldErrors = (data as any).errors ?? (data as any).fieldErrors;
       return {
         status,
+        type: (data as any).type,
         title: data.title ?? ax.message ?? ax.code,
         detail: data.detail ?? data.message,
         code: data.code,
-        errors: (data as any).errors, // pole field errors (pokud BE posílá)
+        errors: fieldErrors, // sjednoceně 'errors'
+        requiredScopes: (data as any).requiredScopes,
+        traceId: (data as any).traceId,
       };
     }
+
     return {
       status,
       title: ax.message ?? "HTTP error",

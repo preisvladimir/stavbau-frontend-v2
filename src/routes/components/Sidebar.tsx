@@ -65,6 +65,9 @@ export default function Sidebar() {
               {t("nav.team", { defaultValue: "Tým" })}
             </NavLink>
           )}
+            <NavLink to="/app/teamstats" className={getNavClass}>
+              {t("nav.teamstats", { defaultValue: "Statistiky Týmu" })}
+            </NavLink>
 
           {canReadCustomers && (
             <NavLink to="/app/customers" className={getNavClass}>

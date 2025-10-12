@@ -5,6 +5,7 @@ import type {
   MemberDto,
   CreateMemberRequest,
   UpdateMemberProfileRequest,
+  MembersStatsDto,
 } from './types';
 
 import { createRestService } from '@/lib/api/restService';
@@ -20,6 +21,7 @@ import {
   memberUnarchiveUrl as unarchive,
   memberProfileUrl,
   memberRoleUrl,
+  membersStatsUrl,
 } from './team-paths';
 
 export type TeamFilters = { role?: string; status?: string };
@@ -105,6 +107,18 @@ export const teamService = (companyId: UUID | string) => {
           signal: opts?.signal,
           headers: langHeader(),
         });
+      } catch (e) {
+        if (isCanceled(e)) throw e;
+        mapAndThrow(e);
+      }
+    },
+    async stats(opts?: { signal?: AbortSignal }): Promise<MembersStatsDto> {
+      try {
+        const { data } = await api.get<MembersStatsDto>(membersStatsUrl(cid), {
+          signal: opts?.signal,
+          headers: langHeader(),
+        });
+        return data;
       } catch (e) {
         if (isCanceled(e)) throw e;
         mapAndThrow(e);

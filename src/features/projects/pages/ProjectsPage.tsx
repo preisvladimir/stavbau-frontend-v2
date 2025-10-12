@@ -19,7 +19,6 @@ import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/dat
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
 import { Button } from '@/components/ui/stavbau-ui/button';
 
 // --- RBAC / guards ---
@@ -31,10 +30,21 @@ import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 import { Plus } from '@/components/icons';
 
-import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer'; // orchestrátor
+// --- Drawer orchestrátor & stránky ---
+import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer';
 import Detail from '../components/Detail';
 import { Form } from '../components/Form';
+
+// --- Mappers / form types ---
 import type { AnyProjectFormValues } from '../validation/schemas';
+import {
+  dtoToFormDefaults,
+  formToCreateBody,
+  formToUpdateBody,
+} from '../mappers/ProjectsMappers';
+
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
 export default function ProjectsPage() {
   const { setFab } = useFab();
@@ -43,6 +53,10 @@ export default function ProjectsPage() {
 
   const companyId = useRequiredCompanyId();
   const projectSvc = React.useMemo(() => projectsService(companyId), [companyId]);
+
+  // Jedna scope pro stránku (list)
+  const feedback = useFeedback();
+  const scope = 'projects.list';
 
   // ---------------------------------------------------------------------------
   // Server-side řízení tabulky
@@ -74,7 +88,7 @@ export default function ProjectsPage() {
   const {
     data,
     loading,
-    error,
+    //error,
     clearError,
     q,
     sort,
@@ -91,16 +105,16 @@ export default function ProjectsPage() {
     fetcher,
     defaults: {
       q: '',
-      page: 0, // interně 0-based, hook vystavuje i page1 (1-based) pro UI
+      page: 0,
       size: 10,
       sort: [{ id: 'name', desc: false }],
       filters: { status: '' },
     },
     onError: (e) => {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.debug('[ProjectsPage] load error', e);
-      }
+      feedback.showError(e, {
+        scope,
+        title: t('errors.loadFailed', { defaultValue: 'Načtení selhalo' }),
+      });
     },
   });
 
@@ -111,33 +125,57 @@ export default function ProjectsPage() {
     useOverlayRouting({ module: 'projects' });
 
   // ---------------------------------------------------------------------------
-  // CRUD handlery
+  // CRUD handlery – přes feedback.show()
   // ---------------------------------------------------------------------------
   const handleCreate = React.useCallback(
-    async (values: Partial<ProjectDto>) => {
-      await projectSvc.create(values as any);
+    async (values: AnyProjectFormValues) => {
+      await projectSvc.create(formToCreateBody(values));
       closeOverlays();
       await refreshAfterMutation(); // po create skoč na 1. stránku
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.created.title', { defaultValue: 'Projekt vytvořen' }),
+        scope,
+      });
     },
-    [projectSvc, closeOverlays, refreshAfterMutation]
+    [projectSvc, closeOverlays, refreshAfterMutation, feedback, scope, t]
   );
 
   const handleEdit = React.useCallback(
-    async (values: Partial<ProjectDto>, id: UUID) => {
-      await projectSvc.update(id, values as any);
+    async (values: AnyProjectFormValues, id: UUID) => {
+      await projectSvc.update(id, formToUpdateBody(values));
       closeOverlays();
       await refreshList();
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.updated.title', { defaultValue: 'Uloženo' }),
+        scope,
+      });
     },
-    [projectSvc, closeOverlays, refreshList]
+    [projectSvc, closeOverlays, refreshList, feedback, scope, t]
   );
 
   const handleArchive = React.useCallback(
     async (id: UUID) => {
-      await projectSvc.archive(id);
-      closeOverlays();
-      await refreshList();
+      try {
+        await projectSvc.archive(id);
+        closeOverlays();
+        await refreshList();
+        feedback.show({
+          severity: 'success',
+          title: t('toasts.archived.title', { defaultValue: 'Archivováno' }),
+          scope,
+        });
+      } catch (e) {
+        // 403 typicky zachytí globální guard; showError jej tiše ignoruje/transformuje
+        feedback.showError(e, {
+          scope,
+          title: t('errors.archiveFailed', { defaultValue: 'Archivace selhala' }),
+        });
+        throw e;
+      }
     },
-    [projectSvc, closeOverlays, refreshList]
+    [projectSvc, refreshList, closeOverlays, feedback, scope, t]
   );
 
   // ---------------------------------------------------------------------------
@@ -148,7 +186,7 @@ export default function ProjectsPage() {
       q={q}
       i18nNamespaces={i18nNamespaces}
       onClearSearch={() => onSearchChange('')}
-      requiredScopesAnyOf={[PROJECT_SCOPES.RW, PROJECT_SCOPES.CREATE]}
+      requiredScopesAnyOf={[PROJECT_SCOPES.WRITE, PROJECT_SCOPES.CREATE]}
       emptyAction={
         <Button leftIcon={<Plus size={16} />} onClick={openNew}>
           {t('list.actions.new', { defaultValue: 'Nový projekt' })}
@@ -169,14 +207,8 @@ export default function ProjectsPage() {
     return () => setFab(null);
   }, [setFab, t, openNew]);
 
-  // Vybraný projekt (pro rychlý prefill do formu/detailu)
-  const selectedItem = React.useMemo<ProjectSummaryDto | null>(
-    () => (routeId ? data.items.find((i) => String(i.id) === routeId) ?? null : null),
-    [data.items, routeId]
-  );
-
   // ---------------------------------------------------------------------------
-  // Sloupce tabulky (původně v ProjectsTable) – nyní lokálně pro StbEntityTable
+  // Sloupce tabulky
   // ---------------------------------------------------------------------------
   const columns = React.useMemo<DataTableV2Column<ProjectSummaryDto>[]>(() => [
     { id: 'createdAt', header: t('columns.createdAt', { defaultValue: 'Vytvořeno' }), accessor: (p) => p.createdAt, sortable: true, width: 140 },
@@ -212,13 +244,8 @@ export default function ProjectsPage() {
           }
         />
 
-        {/* Status */}
-        <LoadErrorStatus
-          loading={loading}
-          error={error}
-          onClear={clearError}
-          i18nNamespaces={i18nNamespaces}
-        />
+        {/* Globální inline status pro tuto stránku */}
+        <InlineStatus scope={scope} onClear={clearError} />
 
         {/* Tabulka projektů (server-side řízená) – StbEntityTable */}
         <StbEntityTable<ProjectSummaryDto>
@@ -265,10 +292,13 @@ export default function ProjectsPage() {
                   kind: 'archive',
                   onClick: () => handleArchive(m.id as UUID),
                   scopesAnyOf: [PROJECT_SCOPES.ARCHIVE],
-                  confirm: {},
+                  confirm: {
+                    title: t('list.confirm.archive.title', { defaultValue: 'Archivovat projekt?' }),
+                    description: t('list.confirm.archive.desc', { defaultValue: 'Projekt bude skryt z hlavního výpisu.' }),
+                    confirmLabel: t('common:archive', { defaultValue: 'Archivovat' }),
+                    cancelLabel: t('common:cancel', { defaultValue: 'Zrušit' }),
+                  },
                 },
-                // případně delete:
-                // { kind: 'delete', onClick: () => projectSvc.remove(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.DELETE], confirm: {} },
               ]}
             />
           )}
@@ -276,99 +306,75 @@ export default function ProjectsPage() {
           // empty state
           emptyContent={emptyNode}
         />
-<CrudDrawer<ProjectSummaryDto, AnyProjectFormValues>
-  isDetail={isDetail && !isEdit}
-  isNew={isNew}
-  isEdit={!!isEdit}
-  entityId={isDetail || isEdit ? (routeId as UUID) : null}
-  onClose={closeOverlays}
-  titles={{
-    detail: t('detail.title', { defaultValue: 'Detail projektu' }),
-    create: t('form.title.create', { defaultValue: 'Nový projekt' }),
-    edit: t('form.title.edit', { defaultValue: 'Upravit projekt' }),
-  }}
 
-  // rychlý prefill ze seznamu
-  listItems={data.items}
+        <CrudDrawer<ProjectSummaryDto, AnyProjectFormValues>
+          isDetail={isDetail && !isEdit}
+          isNew={isNew}
+          isEdit={!!isEdit}
+          entityId={isDetail || isEdit ? (routeId as UUID) : null}
+          onClose={closeOverlays}
+          titles={{
+            detail: t('detail.title', { defaultValue: 'Detail projektu' }),
+            create: t('form.title.create', { defaultValue: 'Nový projekt' }),
+            edit: t('form.title.edit', { defaultValue: 'Upravit projekt' }),
+          }}
 
-  // autoritativní fetch detailu
-  fetchDetail={(id, opts) => projectSvc.get?.(String(id), opts as any)}
+          // rychlý prefill ze seznamu
+          listItems={data.items}
 
-  // map detail -> form defaults (stejné jako ve stávajícím ProjectFormDrawer)
-  mapDetailToFormDefaults={(p) => {
-    const normalizeAddress = (a?: any) => {
-      if (!a) return undefined;
-      const cleaned = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v ?? undefined]));
-      const anyVal = Object.values(cleaned).some((v: any) =>
-        typeof v === 'string' ? v.trim().length > 0 : v != null
-      );
-      return anyVal ? (cleaned as any) : undefined;
-    };
-    return {
-      name: p?.name ?? '',
-      code: p?.code ?? '',
-      description: p?.description ?? '',
-      plannedStartDate: p?.plannedStartDate ?? '',
-      plannedEndDate: p?.plannedEndDate ?? '',
-      currency: p?.currency ?? '',
-      vatMode: p?.vatMode ?? '',
-      siteAddress: normalizeAddress(p?.siteAddress),
-      customerId: p?.customerId ?? '',
-      projectManagerId: p?.projectManagerId ?? '',
-      // nevalidované "label" hodnoty pro AsyncSearchSelect:
-      customerLabel: p?.customerName ?? undefined,
-      projectManagerLabel: p?.projectManagerName ?? undefined,
-    } as Partial<AnyProjectFormValues>;
-  }}
+          // autoritativní fetch detailu
+          fetchDetail={(id, opts) => projectSvc.get?.(String(id), opts as any)}
 
-  // DETAIL – prezentace nad StbDrawer, žádný fetch v komponentě
-  renderDetail={({ data, loading, error }) => (
-    <Detail
-      i18nNamespaces={i18nNamespaces}
-      open
-      onClose={closeOverlays}
-      onEdit={() => openEdit(routeId as UUID)}
-      onArchive={(id) => void handleArchive(id as UUID)}
-      // onUnarchive? pokud přidáš endpoint
-      data={data as any}
-      loading={loading}
-      error={error ?? null}
-    />
-  )}
+          mapDetailToFormDefaults={(dto) => dtoToFormDefaults(dto as ProjectDto)}
 
-  // CREATE
-  renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
-    <Form
-    companyId={companyId}
-      mode="create"
-      i18nNamespaces={i18nNamespaces}
-      defaultValues={defaultValues}
-      submitting={submitting}
-      onSubmit={onSubmit}
-      onCancel={onCancel}
-      resetAfterSubmit
-    />
-  )}
+          // DETAIL – prezentace nad StbDrawer, žádný fetch v komponentě
+          renderDetail={({ data, loading, error }) => (
+            <Detail
+              i18nNamespaces={i18nNamespaces}
+              open
+              onClose={closeOverlays}
+              onEdit={() => openEdit(routeId as UUID)}
+              onArchive={(id) => void handleArchive(id as UUID)}
+              // onUnarchive? pokud přidáš endpoint
+              data={data as any}
+              loading={loading}
+              error={error ?? null}
+            />
+          )}
 
-  // EDIT
-  renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
-    <Form
-      companyId={companyId}
-      mode="edit"
-      i18nNamespaces={i18nNamespaces}
-      defaultValues={defaultValues}
-      submitting={submitting}
-      onSubmit={onSubmit}
-      onCancel={onCancel}
-    />
-  )}
+          // CREATE
+          renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+            <Form
+              companyId={companyId}
+              mode="create"
+              i18nNamespaces={i18nNamespaces}
+              defaultValues={defaultValues}
+              submitting={submitting}
+              onSubmit={onSubmit}
+              onCancel={onCancel}
+              resetAfterSubmit
+            />
+          )}
 
-  // akce
-  onCreate={async (vals) => { await handleCreate(vals); }}
-  onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
-  onDelete={async (id) => { /* volitelné – pokud přidáš delete */ }}
-  afterMutate={refreshList}
-/>
+          // EDIT
+          renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
+            <Form
+              companyId={companyId}
+              mode="edit"
+              i18nNamespaces={i18nNamespaces}
+              defaultValues={defaultValues}
+              submitting={submitting}
+              onSubmit={onSubmit}
+              onCancel={onCancel}
+            />
+          )}
+
+          // akce
+          onCreate={async (vals) => { await handleCreate(vals); }}
+          onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
+          onDelete={async (_id) => { /* volitelné – pokud přidáš delete */ }}
+          afterMutate={refreshList}
+        />
       </div>
     </div>
   );

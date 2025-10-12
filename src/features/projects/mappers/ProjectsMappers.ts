@@ -1,34 +1,41 @@
-import type { ProjectDto, CreateProjectRequest, UpdateProjectRequest, ProjectSummaryDto } from "../api/types";
-import type { AnyProjectFormValues } from "../validation/schemas";
-import { trimToUndef } from "@/lib/utils/strings";
-import { normalizeAddressDto } from "@/lib/utils/address";
+// src/features/projects/mappers/ProjectsMappers.ts
+import type { ProjectDto, CreateProjectRequest, UpdateProjectRequest } from '../api/types';
+import type { AnyProjectFormValues } from '../validation/schemas';
 
-// ————————————————————————————————————————————————
-// Projekty: drobné normalizace payloadu
-// ————————————————————————————————————————————————
+import { trimToUndef } from '@/lib/utils/strings';
+import { normalizeAddressDto } from '@/lib/utils/address';
 
-// Fallback: pokud statusLabel není vyplněn, použijeme status (strojovou hodnotu)
-export function normalizeProjectSummary(p: ProjectSummaryDto): ProjectSummaryDto {
+// --- DTO -> Form defaults --------------------------------------------------
+
+/** DTO → Form defaults (edit) */
+export function dtoToFormDefaults(p: Partial<ProjectDto>): Partial<AnyProjectFormValues> {
   return {
-    ...p,
-    statusLabel: p.statusLabel ?? p.status,
+    name: p?.name ?? '',
+    code: p?.code ?? '',
+    description: p?.description ?? '',
+    plannedStartDate: p?.plannedStartDate ?? '',
+    plannedEndDate: p?.plannedEndDate ?? '',
+    currency: p?.currency ?? '',
+    vatMode: p?.vatMode ?? '',
+    siteAddress: normalizeAddressDto(p?.siteAddress as any), // prázdné → undefined
+    customerId: p?.customerId ?? '',
+    projectManagerId: p?.projectManagerId ?? '',
+    // labely pro AsyncSearchSelect (pomocné nevalidované hodnoty)
+    customerLabel: p?.customerName ?? undefined,
+    projectManagerLabel: p?.projectManagerName ?? undefined,
   };
 }
 
-export function normalizeProject(p: ProjectDto): ProjectDto {
-  return {
-    ...p,
-    statusLabel: p.statusLabel ?? p.status,
-  };
-}
+// --- Form -> API bodies ----------------------------------------------------
 
-/** Form → Create payload (undefined = neposílat) */
+/** Form → Create body (typově přesně CreateProjectRequest) */
 export function formToCreateBody(v: AnyProjectFormValues): CreateProjectRequest {
   return {
-    //code: trimToUndef(v.code),
-    name: v.name, // required ve schématu
+    name: v.name.trim(),                  // povinné
+    customerId: v.customerId,             // povinné (string) – hlídá schema
+    // volitelná pole:
+    code: trimToUndef((v as any).code),
     description: trimToUndef(v.description),
-    customerId: v.customerId, // required ve schématu
     projectManagerId: trimToUndef(v.projectManagerId),
     plannedStartDate: trimToUndef(v.plannedStartDate),
     plannedEndDate: trimToUndef(v.plannedEndDate),
@@ -38,48 +45,19 @@ export function formToCreateBody(v: AnyProjectFormValues): CreateProjectRequest 
   };
 }
 
-/** Form → Update payload (PATCH sémantika: undefined = beze změny) */
+/** Form → Update body (typově přesně UpdateProjectRequest) */
 export function formToUpdateBody(v: AnyProjectFormValues): UpdateProjectRequest {
   return {
-   // code: trimToUndef(v.code),
+    // na update bývá většina polí volitelná
     name: trimToUndef(v.name),
+    code: trimToUndef((v as any).code),
     description: trimToUndef(v.description),
-    customerId: trimToUndef(v.customerId),
+    customerId: trimToUndef(v.customerId),             // pokud je API umožní měnit
     projectManagerId: trimToUndef(v.projectManagerId),
     plannedStartDate: trimToUndef(v.plannedStartDate),
-    plannedEndDate: trimToUndef(v.plannedEndDate), currency: trimToUndef(v.currency),
+    plannedEndDate: trimToUndef(v.plannedEndDate),
+    currency: trimToUndef(v.currency),
     vatMode: trimToUndef(v.vatMode),
     siteAddress: normalizeAddressDto(v.siteAddress as any),
-  };
-}
-
-/** DTO → defaultValues do formuláře (pro edit) */
-export function dtoToFormDefaults(d?: ProjectDto): Partial<AnyProjectFormValues> | undefined {
-  if (!d) return undefined;
-  return {
-    code: d.code ?? "",
-    name: d.name ?? "",
-    description: d.description ?? undefined,
-    customerId: d.customerId ?? "",
-    projectManagerId: d.projectManagerId ?? "",
-    plannedStartDate: d.plannedStartDate ?? undefined,
-    plannedEndDate: d.plannedEndDate ?? undefined,
-    currency: d.currency ?? undefined,
-    vatMode: d.vatMode ?? undefined,
-    siteAddress: d.siteAddress
-      ? {
-        formatted: d.siteAddress.formatted ?? undefined,
-        street: d.siteAddress.street ?? undefined,
-        houseNumber: d.siteAddress.houseNumber ?? undefined,
-        orientationNumber: d.siteAddress.orientationNumber ?? undefined,
-        city: d.siteAddress.city ?? undefined,
-        cityPart: d.siteAddress.cityPart ?? undefined,
-        postalCode: d.siteAddress.postalCode ?? undefined,
-        countryCode: d.siteAddress.countryCode ?? undefined,
-        latitude: d.siteAddress.latitude,
-        longitude: d.siteAddress.longitude,
-        source: d.siteAddress.source,
-      }
-      : undefined,
   };
 }

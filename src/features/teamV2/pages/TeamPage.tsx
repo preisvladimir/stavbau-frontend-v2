@@ -1,5 +1,4 @@
 // src/features/team/pages/TeamPage.tsx
-
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +9,8 @@ import { useServerTableState } from '@/lib/hooks/useServerTableState';
 import { useFab } from '@/components/layout';
 
 // --- RBAC / guards ---
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
+import { ScopeGuard, sc } from '@/rbac';
+//import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 import { TEAM_SCOPES } from '../const/scopes';
 import { useRoleOptions } from '@/features/rbac/hooks/useRoleOptions';
 
@@ -32,14 +32,15 @@ import { Form as TeamForm } from '../components/Form';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
-import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
 import { Button } from '@/components/ui/stavbau-ui/button';
 
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
-import { Mail, Shield, User as UserIcon } from '@/components/icons';
-import { UserPlus, Plus } from '@/components/icons';
+import { Mail, Shield, User as UserIcon, UserPlus, Plus } from '@/components/icons';
+
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
 export default function TeamPage() {
   const { setFab } = useFab();
@@ -49,6 +50,10 @@ export default function TeamPage() {
   const companyId = useRequiredCompanyId();
   const team = React.useMemo(() => teamService(companyId), [companyId]);
 
+  // Jedna scope pro stránku (list)
+  const feedback = useFeedback();
+  const scope = 'team.list';
+
   // Lokalizované role do filtru tabulky
   const roleOptions = useRoleOptions({ exclude: ['SUPERADMIN'], withAll: false });
 
@@ -56,33 +61,15 @@ export default function TeamPage() {
   // Server-side řízení tabulky
   // ---------------------------------------------------------------------------
   const fetcher = React.useCallback(
-    ({
-      q,
-      page,
-      size,
-      sort,
-      filters,
-    }: {
-      q?: string;
-      page?: number;
-      size?: number;
-      sort?: string | string[];
-      filters?: TeamFilters;
-    }) =>
-      team.list({
-        q,
-        page,
-        size,
-        sort,
-        filters, // wrapper si sám převede role/status přes filtersToQuery
-      }),
+    ({ q, page, size, sort, filters }: { q?: string; page?: number; size?: number; sort?: string | string[]; filters?: TeamFilters; }) =>
+      team.list({ q, page, size, sort, filters }),
     [team]
   );
 
   const {
     data,
     loading,
-    error,
+    //error,
     clearError,
     q,
     sort,
@@ -107,10 +94,7 @@ export default function TeamPage() {
       filters: { role: '', status: '' },
     },
     onError: (e) => {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.debug('[TeamPage] load error', e);
-      }
+      feedback.showError(e, { scope, title: t('errors.loadFailed', { defaultValue: 'Načtení selhalo' }) });
     },
   });
 
@@ -129,8 +113,13 @@ export default function TeamPage() {
       await team.create(formToCreateBody(values));
       closeOverlays();
       await refreshAfterMutation(); // po create skoč na 1. stránku
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.created.title', { defaultValue: 'Člen přidán' }),
+        scope,
+      });
     },
-    [team, closeOverlays, refreshAfterMutation]
+    [team, closeOverlays, refreshAfterMutation, feedback, scope, t]
   );
 
   // --- EDIT ---
@@ -154,25 +143,42 @@ export default function TeamPage() {
         await team.updateProfile(id, profile);
       }
       if (!profileChanged && (!newRole || newRole === prevRole)) {
-        // nic se nemění → jen zavřít
         closeOverlays();
         return;
       }
 
       await refreshList();
       closeOverlays();
+      feedback.show({
+        severity: 'success',
+        title: t('toasts.updated.title', { defaultValue: 'Uloženo' }),
+        scope,
+      });
     },
-    [team, editingMember, refreshList, closeOverlays]
+    [team, editingMember, refreshList, closeOverlays, feedback, scope, t]
   );
 
   // --- DELETE (hard delete) ---
   const handleDelete = React.useCallback(
     async (id: UUID) => {
-      await team.remove(id);
-      closeOverlays();
-      await refreshList();
+      try {
+        await team.remove(id);
+        await refreshList();
+        feedback.show({
+          severity: 'success',
+          title: t('toasts.deleted.title', { defaultValue: 'Smazáno' }),
+          scope,
+        });
+      } catch (e) {
+        // 403 řeší globální guard – showError jej sama tiše ignoruje
+        feedback.showError(e, {
+          scope,
+          title: t('errors.deleteFailed', { defaultValue: 'Nelze smazat' }),
+        });
+        throw e;
+      }
     },
-    [team, closeOverlays, refreshList]
+    [team, refreshList, feedback, scope, t]
   );
 
   // --- Empty state node ---
@@ -201,7 +207,7 @@ export default function TeamPage() {
   }, [setFab, t, openNew]);
 
   // ---------------------------------------------------------------------------
-  // Sloupce tabulky (původně v TeamTable) – nyní lokálně pro StbEntityTable
+  // Sloupce tabulky
   // ---------------------------------------------------------------------------
   const columns = React.useMemo<DataTableV2Column<MemberSummaryDto>[]>(() => [
     {
@@ -216,7 +222,6 @@ export default function TeamPage() {
       enableSorting: false,
       meta: { stbMobile: { priority: 99, mobileHidden: true } },
     },
-    // lastName (sort klíč) + firstName vedle
     {
       id: 'lastName',
       header: t('list.columns.lastname'),
@@ -235,7 +240,6 @@ export default function TeamPage() {
       ),
       meta: { stbMobile: { isTitle: true, priority: 0, label: t('list.columns.name') } },
     },
-    // email (aliased allowlist klíč 'user.email')
     {
       id: 'user.email',
       header: t('list.columns.email'),
@@ -248,7 +252,6 @@ export default function TeamPage() {
       ),
       meta: { stbMobile: { isSubtitle: true, priority: 1, label: t('list.columns.email') } },
     },
-    // role (bez řazení)
     {
       id: 'role',
       header: t('list.columns.companyRole'),
@@ -269,12 +272,12 @@ export default function TeamPage() {
   return (
     <div className="p-4">
       <div className={cn(sbContainer)}>
-        {/* Table Header */}
+        {/* Header */}
         <TableHeader
           title={t('title', { defaultValue: 'Tým' })}
           subtitle={t('subtitle', { defaultValue: 'Správa členů a rolí' })}
           actions={
-            <ScopeGuard anyOf={[TEAM_SCOPES.WRITE, TEAM_SCOPES.ADD]}>
+            <ScopeGuard anyOf={[sc.team.write, sc.team.add]}>
               <Button
                 type="button"
                 variant="primary"
@@ -290,24 +293,16 @@ export default function TeamPage() {
           }
         />
 
-        {/* Status */}
-        <LoadErrorStatus
-          loading={loading}
-          error={error}
-          onClear={clearError}
-          i18nNamespaces={i18nNamespaces}
-        />
+        {/* Globální inline status pro tuto stránku */}
+        <InlineStatus scope={scope}  onClear={clearError}/>
 
-        {/* TABLE – StbEntityTable (1-based page) */}
+        {/* Tabulka */}
         <StbEntityTable<MemberSummaryDto>
-          // i18n / vzhled
           i18nNamespaces={i18nNamespaces}
           className="mt-2"
           variant="surface"
           defaultDensity="cozy"
           pageSizeOptions={[5, 10, 20]}
-
-          // data & řízení (server-side; 1-based)
           data={data.items}
           loading={loading}
           page={page1}
@@ -318,16 +313,10 @@ export default function TeamPage() {
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
           onSortChange={onSortChange}
-
-          // vyhledávání
           search={q}
           onSearchChange={onSearchChange}
-
-          // sloupce
           columns={columns}
           keyField={(m) => String(m.id)}
-
-          // interakce s řádky
           onRowClick={(m) => openDetail(m.id as UUID)}
           rowActions={(m) => (
             <RowActions
@@ -340,55 +329,53 @@ export default function TeamPage() {
               actions={[
                 { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.READ] },
                 { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.UPDATE] },
-                // { kind: 'archive', onClick: async () => {/* await team.archive(m.id as UUID) */}, scopesAnyOf: [TEAM_SCOPES.ARCHIVE], confirm: {} },
-                { kind: 'delete', onClick: () => handleDelete(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.REMOVE], confirm: {} },
+                {
+                  kind: 'delete',
+                  onClick: () => handleDelete(m.id as UUID),
+                  scopesAnyOf: [TEAM_SCOPES.REMOVE],
+                  confirm: {
+                    title: t('list.confirm.delete.title', { defaultValue: 'Smazat člena?' }),
+                    description: t('list.confirm.delete.desc', { defaultValue: 'Tato akce je nevratná.' }),
+                    confirmLabel: t('common:delete', { defaultValue: 'Smazat' }),
+                    cancelLabel: t('common:cancel', { defaultValue: 'Zrušit' }),
+                  },
+                },
               ]}
             />
           )}
-
-          // řízené filtry + options pro role (toolbar)
           filters={filters}
           onFiltersChange={onFiltersChange}
           roleOptions={roleOptions}
-
-          // prázdný stav
           emptyContent={emptyNode}
         />
 
+        {/* Orchestrátor Drawer */}
         <CrudDrawer<MemberSummaryDto, AnyTeamFormValues>
-          // režimy (z useOverlayRouting)
           isDetail={isDetail && !isEdit}
           isNew={isNew}
           isEdit={!!isEdit}
           entityId={isDetail || isEdit ? (routeId as UUID) : null}
           onClose={closeOverlays}
-
-          // UI
           titles={{
             detail: t('detail.title', { defaultValue: 'Detail člena' }),
             create: t('form.title.create', { defaultValue: 'Nový člen' }),
             edit: t('form.title.edit', { defaultValue: 'Upravit člena' }),
           }}
-
-          // data & prefill
           listItems={data.items}
-          fetchDetail={(id, opts) => team.get(id as any, opts)}   // stejný vzor jako dnes
+          fetchDetail={(id, opts) => team.get(id as any, opts)}
           mapDetailToFormDefaults={(m) => ({
             email: m.email,
             firstName: m.firstName ?? '',
             lastName: m.lastName ?? '',
-            phone: m.phone ?? '',
+            phone: (m as any).phone ?? '',
             role: (m as any).role ?? (m as any).companyRole ?? null,
             companyRole: (m as any).companyRole ?? (m as any).role ?? null,
             sendInvite: false,
           })}
-
-          // DETAIL (slot)
-          renderDetail={({ id, data, loading, error, onDelete }) => (
+          renderDetail={({ data, loading, error, onDelete }) => (
             <TeamDetail
               i18nNamespaces={i18nNamespaces}
               open
-              prefill={undefined}             // už není třeba – data přichází z orchestrátoru
               data={data as any}
               loading={loading}
               error={error ?? null}
@@ -397,8 +384,6 @@ export default function TeamPage() {
               onDelete={(x) => void onDelete?.(String(x))}
             />
           )}
-
-          // CREATE (slot)
           renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <TeamForm
               mode="create"
@@ -410,8 +395,6 @@ export default function TeamPage() {
               resetAfterSubmit
             />
           )}
-
-          // EDIT (slot) + last OWNER guard může zůstat ve formu (TeamFormDrawer pattern)
           renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <TeamForm
               mode="edit"
@@ -422,10 +405,7 @@ export default function TeamPage() {
               onCancel={onCancel}
             />
           )}
-
-          // akce
           onCreate={async (vals) => { await handleCreate(vals); }}
-          beforeEditSubmit={(vals, { id }) => { /* volitelně extra guard */ }}
           onEdit={async (vals, id) => { await handleEdit(vals, id as UUID); }}
           onDelete={async (id) => { await handleDelete(id as UUID); }}
           afterMutate={refreshList}

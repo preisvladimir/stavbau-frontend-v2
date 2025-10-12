@@ -1,81 +1,64 @@
-// src/features/projects/components/ProjectDetailDrawer.tsx
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
-import ProjectDetailHeader from './ProjectDetailHeader';
+import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
 import AddressBlock from '@/components/common/AddressBlock';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
-import type { ProjectDto, UUID } from '../api/types';
-import { getProject } from '../api/client';
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 import { PROJECT_SCOPES } from '@/features/projects/const/scopes';
+import type { ProjectDto, UUID } from '../api/types';
 
-export type ProjectDetailDrawerProps = {
+import { toast } from '@/components/ui/stavbau-ui/toast';
+import { toApiProblem } from '@/lib/api/problem';
+import LoadErrorStatus from '@/components/ui/stavbau-ui/feedback/LoadErrorStatus';
+
+export type ProjectDetailProps = {
+  i18nNamespaces?: string[];
   open: boolean;
-  companyId: UUID;
-  projectId: UUID | null;
   onClose: () => void;
   onEdit?: () => void;
   onArchive?: (id: UUID) => Promise<void> | void;
   onUnarchive?: (id: UUID) => Promise<void> | void;
   onDelete?: (id: UUID) => Promise<void> | void;
-  prefill?: Partial<ProjectDto>;
-  i18nNamespaces?: string[];
+
+  /** Data a stav dodává orchestrace (CrudDrawer) */
+  data?: Partial<ProjectDto> | null;
+  loading?: boolean;
+  error?: string | null;
+  /** Volitelné: callback po úspěšné destruktivní akci (na refresh listu apod.) */
+  onMutated?: () => void;
 };
 
-export function ProjectDetailDrawer({
+export default function Detail({
+  i18nNamespaces = ['projects', 'common'],
   open,
-  companyId,
-  projectId,
   onClose,
   onEdit,
   onArchive,
   onUnarchive,
   onDelete,
-  prefill,
-  i18nNamespaces = ['projects', 'common'],
-}: ProjectDetailDrawerProps) {
+  data,
+  loading,
+  error,
+  onMutated,
+}: ProjectDetailProps) {
   const { t } = useTranslation(i18nNamespaces);
-
-  const [loading, setLoading] = React.useState(false);
-  const [data, setData] = React.useState<ProjectDto | null>(
-    prefill ? (prefill as ProjectDto) : null
-  );
-  const [error, setError] = React.useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmMode, setConfirmMode] = React.useState<'archive' | 'unarchive' | 'delete'>('archive');
+  const [busy, setBusy] = React.useState(false);
 
-  // ---- fetch detail ----
-  const fetchDetail = React.useCallback(
-    (signal?: AbortSignal) =>
-      getProject(companyId, projectId as UUID, { signal })
-        .then((d) => setData(d))
-        .catch((e: any) => {
-          setError(e?.response?.data?.detail || e?.message || 'Failed to load');
-          // prefill může zůstat jako last-known
-        })
-        .finally(() => {
-          if (!signal?.aborted) setLoading(false);
-        }),
-    [companyId, projectId]
-  );
-
+  // Při zavření šuplíku resetneme stav potvrzovacího modalu
   React.useEffect(() => {
-    if (!open || !projectId) return;
-    const ac = new AbortController();
-    setLoading(true);
-    setError(null);
-    void fetchDetail(ac.signal);
-    return () => ac.abort();
-  }, [open, projectId, fetchDetail]);
+    if (!open) {
+      setConfirmOpen(false);
+      setBusy(false);
+    }
+  }, [open]);
 
-  // ---- helpers ----
   const textOrDash = (v?: React.ReactNode) => (v == null || v === '' ? '—' : v);
-
   const safeDate = (v?: string | number | Date): string =>
-    v ? new Date(v).toLocaleDateString?.() || String(v) : '—';
-
+    v ? new Date(v).toLocaleDateString() : '—';
 
   const showUnarchive = data?.status === 'ARCHIVED' && !!onUnarchive;
   const showArchive = data?.status !== 'ARCHIVED' && !!onArchive;
@@ -84,21 +67,74 @@ export function ProjectDetailDrawer({
     ? (data?.descriptionLocalized as string)
     : (data?.description ?? '');
 
-  // ---- actions ----
   const handleConfirm = async () => {
     if (!data?.id) return;
-    if (confirmMode === 'archive' && onArchive) await onArchive(data.id as UUID);
-    if (confirmMode === 'unarchive' && onUnarchive) await onUnarchive(data.id as UUID);
-    if (confirmMode === 'delete' && onDelete) await onDelete(data.id as UUID);
-    setConfirmOpen(false);
-    onClose();
+    const id = data.id as UUID;
+
+    try {
+      setBusy(true);
+
+      if (confirmMode === 'archive' && onArchive) {
+        await onArchive(id);
+        toast.show({
+          variant: 'success',
+          title: t('detail.toasts.archived.title', { defaultValue: 'Archivováno' }),
+          description: data?.name ?? id,
+        });
+      }
+
+      if (confirmMode === 'unarchive' && onUnarchive) {
+        await onUnarchive(id);
+        toast.show({
+          variant: 'success',
+          title: t('detail.toasts.unarchived.title', { defaultValue: 'Obnoveno z archivu' }),
+          description: data?.name ?? id,
+        });
+      }
+
+      if (confirmMode === 'delete' && onDelete) {
+        await onDelete(id);
+        toast.show({
+          variant: 'success',
+          title: t('detail.toasts.deleted.title', { defaultValue: 'Smazáno' }),
+          description: data?.name ?? id,
+        });
+      }
+
+      setConfirmOpen(false);
+      onClose();
+      onMutated?.();
+    } catch (err) {
+      const p = toApiProblem(err);
+
+      // 403 řeší globální onForbidden → zde jen tichý návrat (nebo můžeš přidat fallback)
+      if (p.status === 403) {
+        setConfirmOpen(false);
+        return;
+      }
+
+      const fallbackTitle =
+        confirmMode === 'delete'
+          ? t('detail.errors.delete.title', { defaultValue: 'Nelze smazat' })
+          : confirmMode === 'archive'
+            ? t('detail.errors.archive.title', { defaultValue: 'Nelze archivovat' })
+            : t('detail.errors.unarchive.title', { defaultValue: 'Nelze obnovit' });
+
+      toast.show({
+        variant: 'error',
+        title: fallbackTitle,
+        description: p.detail ?? t('errors.tryAgain', { defaultValue: 'Zkuste to prosím znovu.' }),
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const headerActions = (
     <>
       <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
         {onEdit && (
-          <Button variant="outline" size="sm" onClick={onEdit} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onEdit} disabled={!!loading || busy}>
             {t('detail.actions.edit', { defaultValue: 'Upravit' })}
           </Button>
         )}
@@ -108,11 +144,8 @@ export function ProjectDetailDrawer({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setConfirmMode('archive');
-              setConfirmOpen(true);
-            }}
-            disabled={loading}
+            onClick={() => { setConfirmMode('archive'); setConfirmOpen(true); }}
+            disabled={!!loading || busy}
           >
             {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
           </Button>
@@ -121,11 +154,8 @@ export function ProjectDetailDrawer({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setConfirmMode('unarchive');
-              setConfirmOpen(true);
-            }}
-            disabled={loading}
+            onClick={() => { setConfirmMode('unarchive'); setConfirmOpen(true); }}
+            disabled={!!loading || busy}
           >
             {t('detail.actions.unarchive', { defaultValue: 'Obnovit' })}
           </Button>
@@ -136,11 +166,8 @@ export function ProjectDetailDrawer({
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => {
-              setConfirmMode('delete');
-              setConfirmOpen(true);
-            }}
-            disabled={loading}
+            onClick={() => { setConfirmMode('delete'); setConfirmOpen(true); }}
+            disabled={!!loading || busy}
           >
             {t('detail.actions.delete', { defaultValue: 'Smazat' })}
           </Button>
@@ -156,46 +183,46 @@ export function ProjectDetailDrawer({
       title={t('detail.title', { defaultValue: 'Detail projektu' })}
       headerRight={headerActions}
     >
-      {/* Error banner + Retry */}
-      {!loading && error && (
-        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex items-center gap-3">
-          <span>
-            {t('error', { defaultValue: 'Chyba načtení.' })}{' '}
-            {process.env.NODE_ENV !== 'production' ? `(${error})` : null}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const ac = new AbortController();
-              setLoading(true);
-              setError(null);
-              void fetchDetail(ac.signal);
-            }}
-          >
-            {t('retry', { defaultValue: 'Zkusit znovu' })}
-          </Button>
-        </div>
-      )}
-
-      {/* Obsah */}
       <div className="flex flex-col gap-4 p-6">
-        {/* Header panel */}
-        <ProjectDetailHeader
-          loading={loading}
-          name={data?.name}
-          nameLocalized={(data as any)?.nameLocalized}
-          code={data?.code}
-          status={data?.status}
-          statusLabel={data?.statusLabel}
+        {!!error && (
+          <LoadErrorStatus
+            loading={!!loading}
+            error={error}
+            onClear={onClose}
+            i18nNamespaces={i18nNamespaces}
+          />
+        )}
+
+        <EntityHeader
+          loading={!!loading}
+          title={data?.name ?? ''}
+          titleLocalized={(data as any)?.nameLocalized ?? ''}
+          code={data?.code ?? undefined}
+          badges={[
+            data?.status || data?.statusLabel
+              ? {
+                  label: data?.statusLabel ?? data?.status ?? '—',
+                  tone:
+                    data?.status === 'IN_PROGRESS' ? 'success'
+                      : data?.status === 'PLANNED' ? 'info'
+                        : data?.status === 'ON_HOLD' ? 'warning'
+                          : data?.status === 'ARCHIVED' ? 'muted'
+                            : 'neutral',
+                }
+              : undefined,
+          ].filter(Boolean) as any}
+          meta={[
+            { label: t('detail.customer', { defaultValue: 'Zákazník' }), value: data?.customerName || data?.customerId },
+            { label: t('detail.projectManager', { defaultValue: 'Projektový manažer' }), value: data?.projectManagerName || data?.projectManagerId },
+          ]}
+          metaLayout="stack"
+          avatar={{ initialsFrom: data?.name || data?.code || 'P' }}
         />
-        {/* Cards grid */}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Harmonogram */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">
-              {t('detail.schedule.title', { defaultValue: 'Harmonogram' })}
-            </div>
+            <div className="mb-2 text-sm font-medium">{t('detail.schedule.title', { defaultValue: 'Harmonogram' })}</div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label={t('detail.plannedStartDate', { defaultValue: 'Plán. začátek' })} value={loading ? null : safeDate(data?.plannedStartDate)} />
               <Field label={t('detail.plannedEndDate', { defaultValue: 'Plán. konec' })} value={loading ? null : safeDate(data?.plannedEndDate)} />
@@ -206,39 +233,26 @@ export function ProjectDetailDrawer({
 
           {/* Zákazník & PM */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">
-              {t('detail.parties.title', { defaultValue: 'Zákazník & PM' })}
-            </div>
+            <div className="mb-2 text-sm font-medium">{t('detail.parties.title', { defaultValue: 'Zákazník & PM' })}</div>
             <div className="space-y-2 text-sm">
-              <CopyRow
-                loading={loading}
-                label={t('detail.customer', { defaultValue: 'Zákazník' })}
-                value={data?.customerName || data?.customerId}
-              />
-              <CopyRow
-                loading={loading}
-                label={t('detail.projectManager', { defaultValue: 'Projektový manažer' })}
-                value={data?.projectManagerName || data?.projectManagerId}
-              />
+              <CopyRow loading={!!loading} label={t('detail.customer', { defaultValue: 'Zákazník' })} value={data?.customerName || data?.customerId} />
+              <CopyRow loading={!!loading} label={t('detail.projectManager', { defaultValue: 'Projektový manažer' })} value={data?.projectManagerName || data?.projectManagerId} />
             </div>
           </div>
 
           {/* Adresa stavby */}
-                <AddressBlock
-                  title={t('detail.address.title', { defaultValue: 'Adresa stavby' })}
-                  address={data?.siteAddress}
-                  loading={loading}
-                  showSource
-                  showMapLink
-                  compact
-                />
-          
+          <AddressBlock
+            title={t('detail.address.title', { defaultValue: 'Adresa stavby' })}
+            address={data?.siteAddress}
+            loading={!!loading}
+            showSource
+            showMapLink
+            compact
+          />
 
-          {/* Finance / parametry */}
+          {/* Parametry */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">
-              {t('detail.params.title', { defaultValue: 'Parametry' })}
-            </div>
+            <div className="mb-2 text-sm font-medium">{t('detail.params.title', { defaultValue: 'Parametry' })}</div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label={t('detail.currency', { defaultValue: 'Měna' })} value={loading ? null : textOrDash(data?.currency)} />
               <Field label={t('detail.vatMode', { defaultValue: 'DPH režim' })} value={loading ? null : textOrDash(data?.vatMode)} />
@@ -256,9 +270,7 @@ export function ProjectDetailDrawer({
 
           {/* Popis */}
           <div className="rounded-xl border p-4 md:col-span-2">
-            <div className="mb-2 text-sm font-medium">
-              {t('detail.description', { defaultValue: 'Popis' })}
-            </div>
+            <div className="mb-2 text-sm font-medium">{t('detail.description', { defaultValue: 'Popis' })}</div>
             <div className="text-sm text-gray-700">
               {loading ? (
                 <div className="space-y-2">
@@ -275,52 +287,30 @@ export function ProjectDetailDrawer({
           </div>
         </div>
 
-        {/* Footer actions */}
         {(onEdit || onArchive || onUnarchive || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
             <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
               {onEdit && (
-                <Button variant="outline" onClick={onEdit} disabled={loading}>
+                <Button variant="outline" onClick={onEdit} disabled={!!loading || busy}>
                   {t('detail.actions.edit', { defaultValue: 'Upravit' })}
                 </Button>
               )}
             </ScopeGuard>
             <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
               {showArchive && (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setConfirmMode('archive');
-                    setConfirmOpen(true);
-                  }}
-                  disabled={loading}
-                >
+                <Button variant="secondary" onClick={() => { setConfirmMode('archive'); setConfirmOpen(true); }} disabled={!!loading || busy}>
                   {t('detail.actions.archive', { defaultValue: 'Archivovat' })}
                 </Button>
               )}
               {showUnarchive && (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setConfirmMode('unarchive');
-                    setConfirmOpen(true);
-                  }}
-                  disabled={loading}
-                >
+                <Button variant="secondary" onClick={() => { setConfirmMode('unarchive'); setConfirmOpen(true); }} disabled={!!loading || busy}>
                   {t('detail.actions.unarchive', { defaultValue: 'Obnovit' })}
                 </Button>
               )}
             </ScopeGuard>
             <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
               {onDelete && (
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setConfirmMode('delete');
-                    setConfirmOpen(true);
-                  }}
-                  disabled={loading}
-                >
+                <Button variant="destructive" onClick={() => { setConfirmMode('delete'); setConfirmOpen(true); }} disabled={!!loading || busy}>
                   {t('detail.actions.delete', { defaultValue: 'Smazat' })}
                 </Button>
               )}
@@ -329,7 +319,6 @@ export function ProjectDetailDrawer({
         )}
       </div>
 
-      {/* Confirm (Archive/Unarchive/Delete) */}
       <ConfirmModal
         open={confirmOpen}
         title={
@@ -356,6 +345,11 @@ export function ProjectDetailDrawer({
         cancelLabel={t('detail.deleteConfirm.cancel', { defaultValue: 'Zrušit' })}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
+        // Politiky zavírání při běhu akce
+        disableOutsideClose={busy}
+        disableEscapeClose={busy}
+        confirmDisabled={false}
+        closeOnConfirm={false}
       />
     </DetailDrawer>
   );
@@ -376,15 +370,7 @@ function Field({ label, value }: { label: React.ReactNode; value: React.ReactNod
   );
 }
 
-function CopyRow({
-  loading,
-  label,
-  value,
-}: {
-  loading: boolean;
-  label: React.ReactNode;
-  value?: string | null;
-}) {
+function CopyRow({ loading, label, value }: { loading: boolean; label: React.ReactNode; value?: string | null }) {
   const dash = '—';
   return (
     <div className="flex items-center justify-between gap-3">
@@ -393,7 +379,7 @@ function CopyRow({
         {loading ? (
           <span className="inline-block h-4 w-28 animate-pulse rounded bg-gray-200" />
         ) : (
-          <span className="font-medium truncate max-w-[220px]" title={value ?? dash}>
+          <span className="max-w-[220px] truncate font-medium" title={value ?? dash}>
             {value ?? dash}
           </span>
         )}
@@ -410,5 +396,3 @@ function CopyRow({
     </div>
   );
 }
-
-export default ProjectDetailDrawer;

@@ -1,37 +1,29 @@
-// src/features/team/components/TeamDetailDrawer.tsx
+// src/features/team/components/TeamDetail.tsx
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
-import { Mail, Phone, Shield, Clock, Copy } from '@/components/icons';
+import { Mail, Phone, Shield, Clock } from '@/components/icons';
+import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
+import ScopeGuard from '@/features/auth/guards/ScopeGuard';
+import { TEAM_SCOPES } from '@/features/teamV2/const/scopes';
+import { toApiProblem } from '@/lib/api/problem';
 import type { MemberDto, UUID } from '../api/types';
-import { getMember } from '../api/client'; // volitelné – pouze pro kompat fetch
+
+// --- Globální feedback (toast/inline rozhodování) ---
+import { InlineStatus, useFeedback } from '@/ui/feedback';
 
 export type DetailProps = {
-  /** Ovládání otevření/zavření (řídí rodič / CrudDrawer) */
   open: boolean;
   onClose: () => void;
-
-  /** Akce z rodiče */
   onEdit?: () => void;
   onDelete?: (id: UUID) => Promise<void> | void;
-
-  /** Data (primární režim) – posílá rodič nebo CrudDrawer */
   data?: Partial<MemberDto> | null;
   loading?: boolean;
   error?: string | null;
-
-  /** Kompat: pokud potřebuješ, umí si dotáhnout detail sám (nedoporučeno do budoucna) */
-  allowInternalFetch?: boolean; // default: false
-  companyId?: UUID;             // potřebné pro kompat fetch
-  memberId?: UUID | null;       // ID pro kompat fetch
-
-  /** Rychlý render před fetchi (fallback, bude vyřazeno) */
-  prefill?: Partial<MemberDto>;
-
-  /** i18n */
   i18nNamespaces?: string[];
+  onMutated?: () => void;
 };
 
 export function Detail({
@@ -39,212 +31,212 @@ export function Detail({
   onClose,
   onEdit,
   onDelete,
-
-  // primární data
   data,
   loading,
+  i18nNamespaces = ['team', 'common'],
+  onMutated,
   error,
-
-  // kompat fetch (volitelné)
-  allowInternalFetch = false,
-  companyId,
-  memberId,
-
-  // fallback
-  prefill,
-
-  i18nNamespaces = ['team'],
 }: DetailProps) {
   const { t } = useTranslation(i18nNamespaces);
-
-  // ---- Lokální kompat vrstvy ----
-  const [localLoading, setLocalLoading] = React.useState(false);
-  const [localData, setLocalData] = React.useState<Partial<MemberDto> | null>(prefill ?? null);
-  const [localError, setLocalError] = React.useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
 
-  // Pokud je zapnutý kompat fetch a zároveň nejsou dodána externí data, zkusíme dotáhnout detail.
+  const feedback = useFeedback();
+  const SCOPE = 'team.detail';
+
+  // reset confirm/busy + inline clear při zavření
   React.useEffect(() => {
-    if (!open || !allowInternalFetch || !companyId || !memberId) {
-      // reset interní vrstvy při zavření
-      if (!open) {
-        setLocalLoading(false);
-        setLocalError(null);
-        setLocalData(prefill ?? null);
-      }
-      return;
+    if (!open) {
+      setConfirmOpen(false);
+      setBusy(false);
+      feedback.clear(SCOPE);
     }
+  }, [open, feedback]);
 
-    // pokud rodič poslal data, nepřekrýváme je interním fetchem
-    if (data || loading) return;
-
-    const ac = new AbortController();
-    setLocalLoading(true);
-    setLocalError(null);
-
-    getMember(companyId, memberId, { signal: ac.signal })
-      .then((d) => setLocalData(d))
-      .catch((e: any) => {
-        setLocalData(prefill ?? null);
-        setLocalError(e?.response?.data?.detail || e?.message || 'Failed to load');
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setLocalLoading(false);
+  // přeneseme vstupní error do inline statusu
+  React.useEffect(() => {
+    if (!open) return;
+    if (error) {
+      feedback.show({
+        severity: 'error',
+        title: t('errors.loadFailed', { defaultValue: 'Detail se nepodařilo načíst.' }),
+        description: error,
+        scope: SCOPE,
       });
-
-    return () => ac.abort();
-  }, [open, allowInternalFetch, companyId, memberId, data, loading, prefill]);
-
-  // ---- Odvození efektivního stavu (externí > interní) ----
-  const effLoading = !!loading || localLoading;
-  const effError = error ?? localError ?? null;
-  const effData = (data ?? localData ?? prefill ?? null) as Partial<MemberDto> | null;
+    }
+  }, [open, error, feedback, t]);
 
   // ---- Helpers ----
-  const handleDelete = async () => {
-    if (!effData?.id || !onDelete) return;
-    await onDelete(effData.id as UUID);
-    setConfirmOpen(false);
-    onClose();
-  };
-
   const safeDate = (v?: string | number | Date): string =>
     v ? new Date(v).toLocaleString?.() || String(v) : '—';
 
   const fullName = (m?: Partial<MemberDto> | null): string => {
     if (!m) return '';
     const composed = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
-    return composed || m.email || '—';
-  };
-
-  const initials = (label: string): string => {
-    const parts = label.trim().split(/\s+/).filter(Boolean);
-    const first = parts[0]?.[0] ?? '';
-    const last = parts[parts.length - 1]?.[0] ?? '';
-    return (first + last).toUpperCase() || (label[0] || '?').toUpperCase();
-  };
-
-  const copyToClipboard = async (text?: string | null) => {
-    if (!text) return;
-    try {
-      await navigator.clipboard?.writeText(text);
-    } catch {
-      /* no-op */
-    }
+    return composed || (m as any).name || m.email || '—';
   };
 
   const roleLabel = (r?: string | null) => (r ? t(`roles.${r}`, { defaultValue: r }) : '—');
 
-  const statusBadge = (status?: string | null) => {
-    if (!status) return null;
-    const label = t(`badges.${status}`, { defaultValue: status });
-    const className =
-      status === 'ACTIVE'
-        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-        : status === 'INVITED'
-        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-        : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200';
-    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${className}`}>{label}</span>;
-  };
-
   const Skeleton = ({ className = '' }: { className?: string }) => (
     <div className={`animate-pulse rounded-md bg-gray-100 ${className}`} />
   );
+
+  const handleDelete = async () => {
+    if (!data?.id || !onDelete) return;
+    const id = data.id as UUID;
+
+    try {
+      setBusy(true);
+      await onDelete(id);
+
+      // úspěch → toast (bez scope)
+      feedback.show({
+        severity: 'success',
+        title: t('detail.toasts.deleted.title', { defaultValue: 'Člen smazán' }),
+        description: fullName(data) || id,
+      });
+
+      setConfirmOpen(false);
+      onClose();
+      onMutated?.();
+    } catch (err) {
+      const p = toApiProblem(err);
+
+      // 403 obvykle řeší globální guard – jen tiše zavřeme confirm
+      if (p.status === 403) {
+        setConfirmOpen(false);
+        return;
+      }
+
+      // ostatní chyby → inline ve scope detailu
+      feedback.show({
+        severity: 'error',
+        title: t('detail.errors.delete.title', { defaultValue: 'Nelze smazat' }),
+        description: p.detail ?? t('errors.tryAgain', { defaultValue: 'Zkuste to prosím znovu.' }),
+        scope: SCOPE,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const headerActions = (
+    <>
+      <ScopeGuard anyOf={[TEAM_SCOPES.UPDATE]}>
+        {onEdit && (
+          <Button variant="outline" size="sm" onClick={onEdit} disabled={!!loading || busy}>
+            {t('detail.actions.edit', { defaultValue: 'Upravit' })}
+          </Button>
+        )}
+      </ScopeGuard>
+      <ScopeGuard anyOf={[TEAM_SCOPES.DELETE]}>
+        {onDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+            disabled={!!loading || busy}
+          >
+            {t('detail.actions.delete', { defaultValue: 'Smazat' })}
+          </Button>
+        )}
+      </ScopeGuard>
+    </>
+  );
+
+  // Fallback: bez dat + chyba – ponecháme i lokální červený box, ale nad něj dáme InlineStatus
+  if (!loading && !data && error) {
+    return (
+      <DetailDrawer
+        open={open}
+        onClose={onClose}
+        title={t('detail.title', { defaultValue: 'Detail člena' })}
+        headerRight={headerActions}
+      >
+        <div className="p-6">
+          <InlineStatus scope={SCOPE} />
+          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="text-sm font-medium text-red-800">
+              {t('errors.loadFailed', { defaultValue: 'Detail se nepodařilo načíst.' })}
+            </div>
+            <div className="mt-1 text-sm text-red-700">{error}</div>
+          </div>
+        </div>
+      </DetailDrawer>
+    );
+  }
 
   return (
     <DetailDrawer
       open={open}
       onClose={onClose}
       title={t('detail.title', { defaultValue: 'Detail člena' })}
-      headerRight={
-        <>
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              {t('detail.actions.edit', { defaultValue: 'Upravit' })}
-            </Button>
-          )}
-          {onDelete && (
-            <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-              {t('detail.actions.delete', { defaultValue: 'Smazat' })}
-            </Button>
-          )}
-        </>
-      }
+      headerRight={headerActions}
     >
-      {/* Error banner (není blocking – může být prefill) */}
-      {!effLoading && effError && (
-        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {t('error', { defaultValue: 'Chyba načtení.' })}{' '}
-          {process.env.NODE_ENV !== 'production' ? `(${effError})` : null}
-        </div>
-      )}
-
-      {/* Obsah */}
       <div className="flex flex-col gap-4 p-6">
-        {/* Header panel */}
-        <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-            {effLoading ? (
-              <Skeleton className="h-14 w-14 rounded-full" />
-            ) : (
-              <span className="text-lg font-semibold text-gray-600">
-                {initials(fullName(effData) || effData?.email || 'U')}
-              </span>
-            )}
-          </div>
+        {/* ✅ Globální inline status pro detail člena */}
+        <InlineStatus scope={SCOPE} />
 
-          {/* Name + primary info */}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-semibold">
-                {effLoading ? <Skeleton className="h-5 w-48" /> : fullName(effData)}
-              </h2>
-              {!effLoading && statusBadge((effData as any)?.status)}
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-              <span className="inline-flex items-center gap-1">
-                <Mail size={14} />
-                {effLoading ? (
-                  <Skeleton className="h-4 w-40" />
-                ) : effData?.email ? (
-                  <a href={`mailto:${effData.email}`} className="underline decoration-dotted underline-offset-2">
-                    {effData.email}
-                  </a>
-                ) : (
-                  '—'
-                )}
-              </span>
-              {effData?.email && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label={t('detail.copyEmail', { defaultValue: 'Kopírovat e-mail' }) as string}
-                  onClick={() => copyToClipboard(effData.email)}
-                  leftIcon={<Copy size={14} />}
-                >
-                  {t('detail.copy', { defaultValue: 'Kopírovat' })}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Header */}
+        <EntityHeader
+          loading={!!loading}
+          title={fullName(data)}
+          badges={
+            (data as any)?.status
+              ? [
+                  {
+                    label: t(`badges.${(data as any).status}`, { defaultValue: (data as any).status }),
+                    tone:
+                      (data as any).status === 'ACTIVE'
+                        ? 'success'
+                        : (data as any).status === 'INVITED'
+                        ? 'warning'
+                        : 'neutral',
+                  },
+                ]
+              : undefined
+          }
+          metaLayout="stack"
+          meta={[
+            {
+              icon: <Mail size={14} className="opacity-60" />,
+              label: t('detail.email', { defaultValue: 'E-mail' }),
+              value: data?.email,
+              href: data?.email ? `mailto:${data.email}` : undefined,
+              copyValue: data?.email ?? undefined,
+            },
+            {
+              icon: <Phone size={14} className="opacity-60" />,
+              label: t('form.phone', { defaultValue: 'Telefon' }),
+              value: (data as any)?.phone,
+              href: (data as any)?.phone ? `tel:${(data as any).phone}` : undefined,
+              copyValue: (data as any)?.phone ?? undefined,
+            },
+          ]}
+          avatar={{ initialsFrom: fullName(data) || data?.email || 'U' }}
+        />
 
-        {/* Cards grid */}
+        {/* Cards grid ... (beze změn UI) */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Kontakt */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">{t('detail.contact.title', { defaultValue: 'Kontakt' })}</div>
+            <div className="mb-2 text-sm font-medium">
+              {t('detail.contact.title', { defaultValue: 'Kontakt' })}
+            </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="opacity-70">{t('form.phone', { defaultValue: 'Telefon' })}</span>
                 <span className="flex items-center gap-2">
                   <Phone size={14} className="opacity-60" />
-                  {effLoading ? (
+                  {loading ? (
                     <Skeleton className="h-4 w-28" />
-                  ) : effData?.phone ? (
-                    <a href={`tel:${effData.phone}`} className="underline decoration-dotted underline-offset-2">
-                      {effData.phone}
+                  ) : (data as any)?.phone ? (
+                    <a
+                      href={`tel:${(data as any).phone}`}
+                      className="underline decoration-dotted underline-offset-2"
+                    >
+                      {(data as any).phone}
                     </a>
                   ) : (
                     '—'
@@ -264,67 +256,97 @@ export function Detail({
                 <span className="opacity-70">{t('detail.companyRole', { defaultValue: 'Firemní role' })}</span>
                 <span className="inline-flex items-center gap-1">
                   <Shield size={14} className="opacity-60" />
-                  {effLoading ? <Skeleton className="h-4 w-24" /> : roleLabel((effData as any)?.companyRole ?? (effData as any)?.role)}
+                  {loading ? (
+                    <Skeleton className="h-4 w-24" />
+                  ) : (
+                    roleLabel((data as any)?.companyRole ?? (data as any)?.role)
+                  )}
                 </span>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  label={t('detail.createdAt', { defaultValue: 'Vytvořeno' })}
+                  value={loading ? null : safeDate((data as any)?.createdAt)}
+                />
+                <Field
+                  label={t('detail.updatedAt', { defaultValue: 'Upraveno' })}
+                  value={loading ? null : safeDate((data as any)?.updatedAt)}
+                />
+              </div>
+
               <div className="mt-2 text-xs opacity-70">
-                {t('detail.roleAccess.projectsHint', { defaultValue: 'Projektové role budou doplněny později.' })}
+                {t('detail.roleAccess.projectsHint', {
+                  defaultValue: 'Projektové role budou doplněny později.',
+                })}
               </div>
             </div>
           </div>
 
           {/* Aktivita */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">{t('detail.activity.title', { defaultValue: 'Aktivita' })}</div>
+            <div className="mb-2 text-sm font-medium">
+              {t('detail.activity.title', { defaultValue: 'Aktivita' })}
+            </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="space-y-1">
-                <div className="opacity-70">{t('detail.lastLoginAt', { defaultValue: 'Poslední přihlášení' })}</div>
+                <div className="opacity-70">
+                  {t('detail.lastLoginAt', { defaultValue: 'Poslední přihlášení' })}
+                </div>
                 <div className="inline-flex items-center gap-1">
                   <Clock size={14} className="opacity-60" />
-                  {effLoading ? <Skeleton className="h-4 w-28" /> : <span>{safeDate((effData as any)?.lastLoginAt)}</span>}
+                  {loading ? (
+                    <Skeleton className="h-4 w-28" />
+                  ) : (
+                    <span>{safeDate((data as any)?.lastLoginAt)}</span>
+                  )}
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.createdAt', { defaultValue: 'Vytvořeno' })}</div>
-                {effLoading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate((effData as any)?.createdAt)}</div>}
-              </div>
-              <div className="space-y-1">
-                <div className="opacity-70">{t('detail.updatedAt', { defaultValue: 'Upraveno' })}</div>
-                {effLoading ? <Skeleton className="h-4 w-28" /> : <div>{safeDate((effData as any)?.updatedAt)}</div>}
               </div>
             </div>
           </div>
 
           {/* Adresy – placeholder */}
           <div className="rounded-xl border p-4">
-            <div className="mb-2 text-sm font-medium">{t('detail.address.title', { defaultValue: 'Adresy' })}</div>
+            <div className="mb-2 text-sm font-medium">
+              {t('detail.address.title', { defaultValue: 'Adresy' })}
+            </div>
             <div className="grid grid-cols-1 gap-3 text-sm">
               <div className="rounded-lg border p-3">
-                <div className="mb-1 text-xs opacity-70">{t('detail.address.permanent', { defaultValue: 'Trvalá' })}</div>
+                <div className="mb-1 text-xs opacity-70">
+                  {t('detail.address.permanent', { defaultValue: 'Trvalá' })}
+                </div>
                 <div className="text-gray-700">—</div>
               </div>
               <div className="rounded-lg border p-3">
-                <div className="mb-1 text-xs opacity-70">{t('detail.address.shipping', { defaultValue: 'Doručovací' })}</div>
+                <div className="mb-1 text-xs opacity-70">
+                  {t('detail.address.shipping', { defaultValue: 'Doručovací' })}
+                </div>
                 <div className="text-gray-700">—</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer actions */}
         {(onEdit || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-            {onEdit && (
-              <Button variant="outline" onClick={onEdit}>
-                {t('detail.actions.edit', { defaultValue: 'Upravit' })}
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
-                {t('detail.actions.delete', { defaultValue: 'Smazat' })}
-              </Button>
-            )}
+            <ScopeGuard anyOf={[TEAM_SCOPES.UPDATE]}>
+              {onEdit && (
+                <Button variant="outline" onClick={onEdit} disabled={!!loading || busy}>
+                  {t('detail.actions.edit', { defaultValue: 'Upravit' })}
+                </Button>
+              )}
+            </ScopeGuard>
+            <ScopeGuard anyOf={[TEAM_SCOPES.DELETE]}>
+              {onDelete && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={!!loading || busy}
+                >
+                  {t('detail.actions.delete', { defaultValue: 'Smazat' })}
+                </Button>
+              )}
+            </ScopeGuard>
           </div>
         )}
       </div>
@@ -338,7 +360,28 @@ export function Detail({
         cancelLabel={t('detail.deleteConfirm.cancel', { defaultValue: 'Zrušit' })}
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
+        disableOutsideClose={busy}
+        disableEscapeClose={busy}
+        confirmDisabled={false}
+        closeOnConfirm={false}
       />
     </DetailDrawer>
   );
 }
+
+function Field({ label, value }: { label: React.ReactNode; value: React.ReactNode | null }) {
+  return (
+    <div className="space-y-1">
+      <div className="opacity-70">{label}</div>
+      <div className="min-h-[1.25rem]">
+        {value === null ? (
+          <span className="inline-block h-4 w-24 animate-pulse rounded bg-gray-200" />
+        ) : (
+          <span className="font-medium">{value || '—'}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default Detail;

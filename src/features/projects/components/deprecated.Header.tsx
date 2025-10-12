@@ -1,8 +1,8 @@
-// src/features/projects/components/ProjectDetailHeader.tsx
+// src/features/projects/components/Header.tsx
 import * as React from 'react';
 import { cn } from '@/lib/utils/cn';
 
-export type ProjectDetailHeaderProps = {
+export type HeaderProps = {
   loading?: boolean;
   name?: string | null;
   nameLocalized?: string | null;
@@ -13,7 +13,7 @@ export type ProjectDetailHeaderProps = {
   onCopyCode?: (code: string) => void; // pokud chceš vlastní telemetry/handler
 };
 
-export default function ProjectDetailHeader({
+export default function Header({
   loading,
   name,
   nameLocalized,
@@ -22,7 +22,7 @@ export default function ProjectDetailHeader({
   statusLabel,
   className,
   onCopyCode,
-}: ProjectDetailHeaderProps) {
+}: HeaderProps) {
   const displayName =
     (nameLocalized && nameLocalized.trim()) || (name && name.trim()) || '—';
 

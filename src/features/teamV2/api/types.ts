@@ -6,9 +6,6 @@ import type {
   MemberStatus,
 } from "@/types/common/rbac";
 
-// Standardní stránkovaná odpověď (FE kontrakt)
-export { type PageResponse } from '@/lib/api/types/PageResponse';
-
 export type { CompanyRoleName };
 
 // --- Primitives & aliases ---
@@ -130,8 +127,10 @@ export interface UpdateMemberRoleRequest {
 // --- Members stats DTO (BE: GET /tenants/{companyId}/members/stats) ---
 export type MembersStatsDto = {
   owners: number;
-  active?: number;
-  invited?: number;
-  disabled?: number;
-  total?: number;
+  active: number;
+  invited: number;
+  disabled: number;
+  archived: number;
+  total: number;
+  byRole: Partial<Record<CompanyRoleName, number>>; // Map<CompanyRoleName, number>
 };
