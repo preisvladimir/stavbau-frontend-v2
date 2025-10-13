@@ -5,3 +5,4 @@ export {
 
 export { useBodyScrollLock } from "./useBodyScrollLock";
 export { useTrapFocus } from "./useTrapFocus";
+export { CrudDrawer } from './crud-drawer';

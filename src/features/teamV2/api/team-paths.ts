@@ -1,7 +1,7 @@
 // team-paths.ts
 // revize 13.10.2025
-import type { UUID } from '@/types';
-type IdLike = UUID | string;
+import type { IdLike } from '@/types';
+//type IdLike = UUID | string;
 
 const seg = (label: string, v: IdLike) => {
   const s = String(v ?? '').trim();

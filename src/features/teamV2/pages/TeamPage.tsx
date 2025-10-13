@@ -9,35 +9,41 @@ import { useServerTableState } from '@/lib/hooks/useServerTableState';
 import { useFab } from '@/components/layout';
 
 // --- RBAC / guards ---
-import { ScopeGuard, sc, useRoleOptions} from '@/rbac';
+import { ScopeGuard, sc, useRoleOptions } from '@/rbac';
 
 // --- API / types ---
 import { teamService } from '@/features/teamV2/api/team-service';
 import type { TeamFilters } from '@/features/teamV2/api/team-service';
-import type { MemberSummaryDto, UUID, CompanyRoleName } from '../api/types';
+import type { MemberSummaryDto, CompanyRoleName } from '../api/types';
+import type { UUID } from '@/types';
 
 // --- Mappers & validation ---
 import { formToCreateBody, formToUpdateProfileBody } from '../mappers/TeamMappers';
 import type { AnyTeamFormValues } from '../validation/schemas';
 
 // --- UI components ---
+import {
+  InlineStatus,// --- Globální feedback (toast/inline rozhodování) ---
+  useFeedback, // --- Globální feedback (toast/inline rozhodování) ---
+  Button,      // --- UI component Button ---
+  CrudDrawer
+} from '@/ui';
+
 import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
-import { CrudDrawer } from '@/components/ui/stavbau-ui/drawer/crud-drawer';
 import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
 import { Detail as TeamDetail } from '../components/Detail';
 import { Form as TeamForm } from '../components/Form';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
-import { Button } from '@/components/ui/stavbau-ui/button';
 
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 import { Mail, Shield, User as UserIcon, UserPlus, Plus } from '@/components/icons';
 
-// --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+
+
 
 export default function TeamPage() {
   const { setFab } = useFab();
@@ -291,7 +297,7 @@ export default function TeamPage() {
         />
 
         {/* Globální inline status pro tuto stránku */}
-        <InlineStatus scope={scope}  onClear={clearError}/>
+        <InlineStatus scope={scope} onClear={clearError} />
 
         {/* Tabulka */}
         <StbEntityTable<MemberSummaryDto>
