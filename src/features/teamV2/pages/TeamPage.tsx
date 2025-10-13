@@ -9,10 +9,10 @@ import { useServerTableState } from '@/lib/hooks/useServerTableState';
 import { useFab } from '@/components/layout';
 
 // --- RBAC / guards ---
-import { ScopeGuard, sc } from '@/rbac';
+import { ScopeGuard, sc, useRoleOptions} from '@/rbac';
 //import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { TEAM_SCOPES } from '../const/scopes';
-import { useRoleOptions } from '@/features/rbac/hooks/useRoleOptions';
+//import { TEAM_SCOPES } from '../const/scopes';
+//import { useRoleOptions } from '@/features/rbac/hooks/useRoleOptions';
 
 // --- API / types ---
 import { teamService } from '@/features/teamV2/api/team-service';
@@ -187,7 +187,7 @@ export default function TeamPage() {
       q={q}
       i18nNamespaces={i18nNamespaces}
       onClearSearch={() => onSearchChange('')}
-      requiredScopesAnyOf={[TEAM_SCOPES.WRITE, TEAM_SCOPES.ADD]}
+      requiredScopesAnyOf={[sc.team.write, sc.team.add]}
       emptyAction={
         <Button leftIcon={<UserPlus size={16} />} onClick={openNew}>
           {t('list.actions.add', { defaultValue: 'Přidat člena' })}
@@ -327,12 +327,12 @@ export default function TeamPage() {
               i18nNamespaces={i18nNamespaces}
               menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
               actions={[
-                { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.READ] },
-                { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [TEAM_SCOPES.UPDATE] },
+                { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [sc.team.read] },
+                { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [sc.team.update] },
                 {
                   kind: 'delete',
                   onClick: () => handleDelete(m.id as UUID),
-                  scopesAnyOf: [TEAM_SCOPES.REMOVE],
+                  scopesAnyOf: [sc.team.remove],
                   confirm: {
                     title: t('list.confirm.delete.title', { defaultValue: 'Smazat člena?' }),
                     description: t('list.confirm.delete.desc', { defaultValue: 'Tato akce je nevratná.' }),

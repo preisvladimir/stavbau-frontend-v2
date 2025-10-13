@@ -1,29 +1,33 @@
 // src/routes/router.tsx
 import * as React from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
+
+// --- App shell & error boundary ---
 import App from "@/app/App";
+import AppLayout from "./AppLayout";
 import ErrorBoundaryView from "@/ui/error-boundary/ErrorBoundaryView";
 
+// --- Auth / guards ---
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import LoginPage from "@/features/auth/pages/LoginPage";
 import ProtectedRoute from "@/features/auth/guards/ProtectedRoute";
-import AppLayout from "./AppLayout";
+
+// --- RBAC (jediný zdroj pravdy) ---
+import { ScopeGuard, sc } from "@/rbac";
+
+// --- Pages ---
 import DashboardPage from "@/pages/DashboardPage";
 import { RegisterPage } from "@/features/registration/pages/RegisterPage";
-import ScopeGuard from "@/features/auth/guards/ScopeGuard";
-
-// lazy stránky
-const TeamPageV2     = React.lazy(() => import("@/features/teamV2/pages/TeamPage"));
-const CustomersPage  = React.lazy(() => import("@/features/customers/pages/CustomersPage"));
-const ProjectsPage   = React.lazy(() => import("@/features/projects/pages/ProjectsPage"));
-const StatsPageAuto  = React.lazy(() => import("@/features/teamV2/pages/stats/StatsPageAuto"));
-
+const TeamPageV2    = React.lazy(() => import("@/features/teamV2/pages/TeamPage"));
+const CustomersPage = React.lazy(() => import("@/features/customers/pages/CustomersPage"));
+const ProjectsPage  = React.lazy(() => import("@/features/projects/pages/ProjectsPage"));
+const StatsPageAuto = React.lazy(() => import("@/features/teamV2/pages/stats/StatsPageAuto"));
 import RowActionsDemo from "@/pages/dev/RowActionsDemo";
 
 function RootWithProviders() {
   return (
     <AuthProvider>
-      <App /> {/* Globální wrapper s <Outlet/> + Suspense, viz níže */}
+      <App /> {/* Globální wrapper s <Outlet/> + Suspense */}
     </AuthProvider>
   );
 }
@@ -32,7 +36,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <RootWithProviders />,
-    errorElement: <ErrorBoundaryView />, // globální fallback pro route chyby
+    errorElement: <ErrorBoundaryView />,
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: "login", element: <LoginPage /> },
@@ -43,16 +47,16 @@ export const router = createBrowserRouter([
         children: [
           {
             element: <AppLayout />,
-            errorElement: <ErrorBoundaryView />, // fallback i pro vnořené
+            errorElement: <ErrorBoundaryView />,
             children: [
               { path: "dashboard", element: <DashboardPage /> },
               { path: "rowactions", element: <RowActionsDemo /> },
 
-              // Pozn.: ScopeGuard.anyOf = logické OR
+              // --- Team ---
               {
                 path: "team",
                 element: (
-                  <ScopeGuard anyOf={["team:read", "team:write"]}>
+                  <ScopeGuard anyOf={[sc.team.read, sc.team.write]}>
                     <TeamPageV2 />
                   </ScopeGuard>
                 ),
@@ -60,16 +64,17 @@ export const router = createBrowserRouter([
               {
                 path: "team/:id",
                 element: (
-                  <ScopeGuard anyOf={["team:read", "team:write"]}>
+                  <ScopeGuard anyOf={[sc.team.read, sc.team.write]}>
                     <TeamPageV2 />
                   </ScopeGuard>
                 ),
               },
 
+              // --- Team Stats ---
               {
                 path: "teamstats",
                 element: (
-                  <ScopeGuard anyOf={["team:read", "team:write"]}>
+                  <ScopeGuard anyOf={[sc.team.read, sc.team.write]}>
                     <StatsPageAuto />
                   </ScopeGuard>
                 ),
@@ -77,16 +82,19 @@ export const router = createBrowserRouter([
               {
                 path: "companies/:companyId/teamstats",
                 element: (
-                  <ScopeGuard anyOf={["team:read", "team:write"]}>
+                  <ScopeGuard anyOf={[sc.team.read, sc.team.write]}>
                     <StatsPageAuto />
                   </ScopeGuard>
                 ),
               },
 
+              // --- Customers ---
+              // Pozn.: původně bylo "invoices:write". V našem katalogu není meta "invoices:write".
+              // Pro čtení seznamu zákazníků dává smysl read scope (případně doplníme sc.customers.read, až bude v katalogu).
               {
                 path: "customers",
                 element: (
-                  <ScopeGuard anyOf={["invoices:read", "invoices:write"]}>
+                  <ScopeGuard anyOf={[sc.customers.read]}>
                     <CustomersPage />
                   </ScopeGuard>
                 ),
@@ -94,16 +102,18 @@ export const router = createBrowserRouter([
               {
                 path: "customers/:id",
                 element: (
-                  <ScopeGuard anyOf={["invoices:read", "invoices:write"]}>
+                  <ScopeGuard anyOf={[sc.customers.read]}>
                     <CustomersPage />
                   </ScopeGuard>
                 ),
               },
 
+              // --- Projects ---
+              // Meta "projects:write" v katalogu nemáme; pro zobrazení stačí read.
               {
                 path: "projects",
                 element: (
-                  <ScopeGuard anyOf={["projects:read", "projects:write"]}>
+                  <ScopeGuard anyOf={[sc.projects.read, sc.projects.write]}>
                     <ProjectsPage />
                   </ScopeGuard>
                 ),
@@ -111,7 +121,7 @@ export const router = createBrowserRouter([
               {
                 path: "projects/:id",
                 element: (
-                  <ScopeGuard anyOf={["projects:read", "projects:write"]}>
+                  <ScopeGuard anyOf={[sc.projects.read, sc.projects.write]}>
                     <ProjectsPage />
                   </ScopeGuard>
                 ),

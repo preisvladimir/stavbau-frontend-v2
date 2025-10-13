@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ZIP_CZ_REGEX, ISO2_REGEX } from "@/lib/utils/patterns";
-import { ROLE_WHITELIST, type CompanyRoleName } from "@/types/common/rbac";
+import { ROLE_WHITELIST, type CompanyRoleName } from "@/rbac";
 
 /** --- helpers --- */
 const emptyToUndef = <T extends string | null | undefined>(v: T) => {
@@ -58,7 +58,7 @@ export const MemberSchema = CreateMemberSchema;
 /** Typy pro RHF / formuláře */
 export type TeamFormValues = z.infer<typeof CreateMemberSchema>;
 type CreateVals = z.infer<typeof CreateMemberSchema>;
-type UpdateVals = z.infer<typeof UpdateMemberSchema>;
+//type UpdateVals = z.infer<typeof UpdateMemberSchema>;
 
 /**
  * Superset pro RHF – sjednocuje rozdíly mezi create/update
