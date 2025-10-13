@@ -14,12 +14,14 @@ import type { ProjectFilters } from '@/features/projects/api/projects-service';
 import type { ProjectSummaryDto, ProjectDto } from '../api/types';
 import type { UUID } from '@/types';
 // --- UI components ---
-import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
-import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
-import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
-import { Button } from '@/components/ui/stavbau-ui/button';
+import {
+  Button,
+  StbEntityTable,
+  TableHeader,
+  type DataTableV2Column,
+} from '@/ui';
 
 // --- RBAC / guards ---
 import { ScopeGuard, sc } from '@/rbac';
