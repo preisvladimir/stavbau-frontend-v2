@@ -11,8 +11,8 @@ import { useFab } from '@/components/layout';
 // --- API / services & types ---
 import { projectsService } from '@/features/projects/api/projects-service';
 import type { ProjectFilters } from '@/features/projects/api/projects-service';
-import type { ProjectSummaryDto, ProjectDto, UUID } from '../api/types';
-
+import type { ProjectSummaryDto, ProjectDto } from '../api/types';
+import type { UUID } from '@/types';
 // --- UI components ---
 import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
 import type { DataTableV2Column } from '@/components/ui/stavbau-ui/datatable/datatable-v2-core';
@@ -22,8 +22,7 @@ import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTa
 import { Button } from '@/components/ui/stavbau-ui/button';
 
 // --- RBAC / guards ---
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { PROJECT_SCOPES } from '../const/scopes';
+import { ScopeGuard, sc } from '@/rbac';
 
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
@@ -186,7 +185,7 @@ export default function ProjectsPage() {
       q={q}
       i18nNamespaces={i18nNamespaces}
       onClearSearch={() => onSearchChange('')}
-      requiredScopesAnyOf={[PROJECT_SCOPES.WRITE, PROJECT_SCOPES.CREATE]}
+      requiredScopesAnyOf={[sc.projects.write, sc.projects.create]}
       emptyAction={
         <Button leftIcon={<Plus size={16} />} onClick={openNew}>
           {t('list.actions.new', { defaultValue: 'Nový projekt' })}
@@ -228,7 +227,7 @@ export default function ProjectsPage() {
           title={t('title', { defaultValue: 'Projekty' })}
           subtitle={t('subtitle', { defaultValue: 'Správa projektů' })}
           actions={
-            <ScopeGuard anyOf={[PROJECT_SCOPES.CREATE]}>
+            <ScopeGuard anyOf={[sc.projects.create]}>
               <Button
                 type="button"
                 variant="primary"
@@ -286,12 +285,12 @@ export default function ProjectsPage() {
               i18nNamespaces={i18nNamespaces}
               menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
               actions={[
-                { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.READ] },
-                { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [PROJECT_SCOPES.UPDATE] },
+                { kind: 'detail', onClick: () => openDetail(m.id as UUID), scopesAnyOf: [sc.projects.read] },
+                { kind: 'edit', onClick: () => openEdit(m.id as UUID), scopesAnyOf: [sc.projects.update] },
                 {
                   kind: 'archive',
                   onClick: () => handleArchive(m.id as UUID),
-                  scopesAnyOf: [PROJECT_SCOPES.ARCHIVE],
+                  scopesAnyOf: [sc.projects.archive],
                   confirm: {
                     title: t('list.confirm.archive.title', { defaultValue: 'Archivovat projekt?' }),
                     description: t('list.confirm.archive.desc', { defaultValue: 'Projekt bude skryt z hlavního výpisu.' }),
@@ -323,7 +322,7 @@ export default function ProjectsPage() {
           listItems={data.items}
 
           // autoritativní fetch detailu
-          fetchDetail={(id, opts) => projectSvc.get?.(String(id), opts as any)}
+          fetchDetail={(id, opts) => projectSvc.get?.(id as UUID, opts as any)}
 
           mapDetailToFormDefaults={(dto) => dtoToFormDefaults(dto as ProjectDto)}
 
@@ -345,7 +344,7 @@ export default function ProjectsPage() {
           // CREATE
           renderCreateForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <Form
-              companyId={companyId}
+              companyId={companyId as UUID}
               mode="create"
               i18nNamespaces={i18nNamespaces}
               defaultValues={defaultValues}
@@ -359,7 +358,7 @@ export default function ProjectsPage() {
           // EDIT
           renderEditForm={({ defaultValues, submitting, onSubmit, onCancel }) => (
             <Form
-              companyId={companyId}
+              companyId={companyId as UUID}
               mode="edit"
               i18nNamespaces={i18nNamespaces}
               defaultValues={defaultValues}

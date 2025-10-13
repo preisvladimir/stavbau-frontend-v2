@@ -1,6 +1,7 @@
 // src/features/projects/api/projects-service.ts
+//revizs 13.10.2025
+import type { UUID } from "@/types";
 import type {
-  UUID,
   ProjectSummaryDto,
   ProjectDto,
   CreateProjectRequest,

@@ -6,3 +6,5 @@ export {
     useBodyScrollLock, useTrapFocus, StbDrawer, CrudDrawer,
     type StbDrawerProps
 } from "./drawer";
+
+export { ConfirmModal } from "./modal/confirm-modal";

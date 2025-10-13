@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils/cn';
 import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import { useTranslation } from 'react-i18next';
-import type { UUID } from '../../api/types';
+import type { UUID } from '@/types';
 import TeamStats from '../../components/TeamStats';
 import { VISIBLE_ROLES, type CompanyRoleName } from '@/rbac';
 

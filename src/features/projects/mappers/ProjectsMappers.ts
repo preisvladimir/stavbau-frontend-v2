@@ -1,4 +1,6 @@
 // src/features/projects/mappers/ProjectsMappers.ts
+//revize 13.10.2025.12.28
+import type { UUID } from "@/types";
 import type { ProjectDto, CreateProjectRequest, UpdateProjectRequest } from '../api/types';
 import type { AnyProjectFormValues } from '../validation/schemas';
 
@@ -32,11 +34,11 @@ export function dtoToFormDefaults(p: Partial<ProjectDto>): Partial<AnyProjectFor
 export function formToCreateBody(v: AnyProjectFormValues): CreateProjectRequest {
   return {
     name: v.name.trim(),                  // povinné
-    customerId: v.customerId,             // povinné (string) – hlídá schema
+    customerId: v.customerId as UUID,             // povinné (string) – hlídá schema
     // volitelná pole:
     code: trimToUndef((v as any).code),
     description: trimToUndef(v.description),
-    projectManagerId: trimToUndef(v.projectManagerId),
+    projectManagerId: trimToUndef(v.projectManagerId) as UUID,
     plannedStartDate: trimToUndef(v.plannedStartDate),
     plannedEndDate: trimToUndef(v.plannedEndDate),
     currency: trimToUndef(v.currency),
@@ -52,8 +54,8 @@ export function formToUpdateBody(v: AnyProjectFormValues): UpdateProjectRequest 
     name: trimToUndef(v.name),
     code: trimToUndef((v as any).code),
     description: trimToUndef(v.description),
-    customerId: trimToUndef(v.customerId),             // pokud je API umožní měnit
-    projectManagerId: trimToUndef(v.projectManagerId),
+    customerId: trimToUndef(v.customerId) as UUID,             // pokud je API umožní měnit
+    projectManagerId: trimToUndef(v.projectManagerId) as UUID,
     plannedStartDate: trimToUndef(v.plannedStartDate),
     plannedEndDate: trimToUndef(v.plannedEndDate),
     currency: trimToUndef(v.currency),

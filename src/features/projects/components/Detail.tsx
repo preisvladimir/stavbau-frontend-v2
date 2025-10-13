@@ -1,18 +1,23 @@
 // src/features/projects/components/Detail.tsx
+//revize 13.10.2025.12.17
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
 import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
 import AddressBlock from '@/components/common/AddressBlock';
 import { Button } from '@/components/ui/stavbau-ui/button';
-import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { PROJECT_SCOPES } from '@/features/projects/const/scopes';
-import type { ProjectDto, UUID } from '../api/types';
+
+import type { ProjectDto } from '../api/types';
+
+import { ScopeGuard, sc } from '@/rbac';
+import type { UUID } from '@/types';
 import { toApiProblem } from '@/lib/api/problem';
 
 // --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+import { InlineStatus, useFeedback, ConfirmModal } from '@/ui';
+
+
+
 
 export type ProjectDetailProps = {
   i18nNamespaces?: string[];
@@ -153,7 +158,7 @@ export default function Detail({
 
   const headerActions = (
     <>
-      <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+      <ScopeGuard anyOf={[sc.projects.update]}>
         {onEdit && (
           <Button
             variant="outline"
@@ -165,7 +170,7 @@ export default function Detail({
           </Button>
         )}
       </ScopeGuard>
-      <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+      <ScopeGuard anyOf={[sc.projects.archive]}>
         {showArchive && (
           <Button
             variant="secondary"
@@ -193,7 +198,7 @@ export default function Detail({
           </Button>
         )}
       </ScopeGuard>
-      <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+      <ScopeGuard anyOf={[sc.projects.delete]}>
         {onDelete && (
           <Button
             variant="destructive"
@@ -388,7 +393,7 @@ export default function Detail({
 
         {(onEdit || onArchive || onUnarchive || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-            <ScopeGuard anyOf={[PROJECT_SCOPES.UPDATE]}>
+            <ScopeGuard anyOf={[sc.projects.update]}>
               {onEdit && (
                 <Button
                   variant="outline"
@@ -399,7 +404,7 @@ export default function Detail({
                 </Button>
               )}
             </ScopeGuard>
-            <ScopeGuard anyOf={[PROJECT_SCOPES.ARCHIVE]}>
+            <ScopeGuard anyOf={[sc.projects.archive]}>
               {showArchive && (
                 <Button
                   variant="secondary"
@@ -425,7 +430,7 @@ export default function Detail({
                 </Button>
               )}
             </ScopeGuard>
-            <ScopeGuard anyOf={[PROJECT_SCOPES.DELETE]}>
+            <ScopeGuard anyOf={[sc.projects.delete]}>
               {onDelete && (
                 <Button
                   variant="destructive"

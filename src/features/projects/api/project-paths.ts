@@ -1,5 +1,6 @@
 // src/features/projects/api/project-paths.ts
-import type { UUID } from "./types";
+//revize 13.10.2025
+import type { UUID } from "@/types";
 
 /** Základ všech endpoints pro projekty v rámci firmy */
 export const projectsBase = (companyId: UUID | string) =>

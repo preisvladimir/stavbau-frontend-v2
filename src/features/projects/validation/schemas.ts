@@ -1,6 +1,6 @@
 // src/features/projects/validation/schemas.ts
+//revize 13.10.2025
 import { z } from 'zod';
-
 
 /** Helper: "" -> undefined (pro optional pole) */
 const emptyToUndef = z.preprocess(

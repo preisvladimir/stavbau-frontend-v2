@@ -1,8 +1,7 @@
 // src/features/projects/api/types.ts
-import type { PageResponse } from "@/lib/api/types/PageResponse";
-import { type AddressDto } from '@/types/common/address';
+//revize 13.10.2025
+import type { AddressDto, PageResponse, UUID } from '@/types';
 
-export type UUID = string;
 export type ProjectFilters = { status?: string };
 // Enums — strojové hodnoty, label přijde z BE (statusLabel)
 export type ProjectStatus =

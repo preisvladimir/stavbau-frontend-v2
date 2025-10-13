@@ -1,7 +1,7 @@
 // src/features/projects/hooks/useProjectPermissions.ts
 import { useMemo } from 'react';
 import { useHasScope } from '@/features/auth/hooks/useHasScope';
-import { PROJECT_SCOPES } from '@/features/projects/const/scopes';
+import { PROJECT_SCOPES } from '@/features/projects/const/deprecated.scopes';
 
 export function useProjectPermissions() {
     const canRead = useHasScope(PROJECT_SCOPES.READ);

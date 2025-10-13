@@ -4,13 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { type Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { Button } from '@/components/ui/stavbau-ui/button';
 import AsyncSearchSelect from '@/components/ui/stavbau-ui/AsyncSearchSelect';
 import { useRequiredCompanyId } from "@/features/auth/hooks/useCompanyId";
 import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocomplete';
-import type { AddressDto } from '@/types/common/address';
+
 import type { AddressSuggestion } from '@/lib/api/geo';
-import type { UUID } from '../api/types';
 
 import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
 import type { FetchOptions } from '@/components/ui/stavbau-ui/AsyncSearchSelect';
@@ -26,8 +24,10 @@ import {
 import { toApiProblem } from "@/lib/api/problem";
 import { applyApiErrorsToForm } from "@/lib/forms/applyApiErrorsToForm";
 
-// --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+
+import type { UUID, AddressDto } from '@/types';
+// --- Globální feedback (toast/inline rozhodování) + UI Components ---
+import {Button, InlineStatus, useFeedback } from '@/ui';
 
 export type ProjectFormProps = {
   companyId: UUID;
