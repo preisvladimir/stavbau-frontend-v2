@@ -1,6 +1,7 @@
 // src/features/teamV2/api/team-service.ts
+// revize 13.10.2025
+import type { UUID } from '@/types';
 import type {
-  UUID,
   MemberSummaryDto,
   MemberDto,
   CreateMemberRequest,

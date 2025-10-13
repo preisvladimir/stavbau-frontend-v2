@@ -21,7 +21,8 @@ Jednotná a rozšiřitelná komponenta pro potvrzovací dialogy. Slouží jako *
 ## 🔌 Import
 
 ```tsx
-import { ConfirmModal } from "@/components/ui/stavbau-ui/modal/confirm-modal";
+import { ConfirmModal } from "@/ui/confirm-modal";
+import { ConfirmModal } from "@/ui";
 ```
 
 ---

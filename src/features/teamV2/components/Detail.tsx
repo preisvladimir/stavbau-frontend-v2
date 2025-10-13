@@ -1,5 +1,5 @@
 // src/features/team/components/TeamDetail.tsx
-//revize 1.10.2025
+//revize 13.10.2025
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
@@ -10,8 +10,9 @@ import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 
 import { toApiProblem } from '@/lib/api/problem';
-import type { MemberDto, UUID } from '../api/types';
+import type { MemberDto } from '../api/types';
 
+import type { UUID } from '@/types';
 import { sc } from '@/rbac';
 import {
   Button,
