@@ -1,20 +1,22 @@
 // src/features/customers/components/CustomerForm.tsx
 import * as React from 'react';
-import { useForm, type Resolver } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
+import { useForm, type Resolver } from 'react-hook-form';
+
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Collapse } from "@/components/ui/stavbau-ui/collapse";
-import { Button } from '@/components/ui/stavbau-ui/button';
+
 import { Pencil, ChevronDown, ChevronUp } from "@/components/icons";
 import { cn } from '@/lib/utils/cn';
 import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
 import type { CustomerFormValues } from '../validation/schemas';
 import { AddressAutocomplete } from '@/components/ui/stavbau-ui/addressautocomplete';
 import type { AddressSuggestion } from '@/lib/api/geo';
-import type { AddressDto } from '@/types/common/address';
+
+import type { AddressDto } from '@/types';
 
 // --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+import {Button, InlineStatus, useFeedback } from '@/ui';
 
 import { customerSchema, type CustomerFormValues as FormValues } from '../validation/schemas';
 

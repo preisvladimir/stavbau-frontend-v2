@@ -9,15 +9,15 @@ import { useServerTableState } from '@/lib/hooks/useServerTableState';
 import { useFab } from '@/components/layout';
 
 // --- RBAC / guards ---
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { CUSTOMERS_SCOPES } from '../const/scopes';
+import { ScopeGuard, sc } from '@/rbac';
+import type { UUID } from '@/types';
 
 // --- API / service ---
 import { customersService } from '@/features/customers/api/customers-service';
 import type { CustomerFilters } from '@/features/customers/api/customers-service';
 
 // --- Types ---
-import type { CustomerDto, CustomerSummaryDto, UUID } from '../api/types';
+import type { CustomerDto, CustomerSummaryDto } from '../api/types';
 
 // --- UI components ---
 import { StbEntityTable } from '@/components/ui/stavbau-ui/datatable/StbEntityTable';
@@ -155,7 +155,7 @@ export default function CustomersPage() {
       q={q}
       i18nNamespaces={i18nNamespaces}
       onClearSearch={() => onSearchChange('')}
-      requiredScopesAnyOf={[CUSTOMERS_SCOPES.RW, CUSTOMERS_SCOPES.CREATE]}
+      requiredScopesAnyOf={[sc.customers.create]}
       emptyAction={
         <Button leftIcon={<UserPlus size={16} />} onClick={openNew}>
           {t('list.actions.add', { defaultValue: 'Přidat zákazníka' })}
@@ -244,7 +244,7 @@ export default function CustomersPage() {
           title={t('title', { defaultValue: 'Zákazníci' })}
           subtitle={t('subtitle', { defaultValue: 'Správa zákazníků' })}
           actions={
-            <ScopeGuard anyOf={[CUSTOMERS_SCOPES.CREATE, CUSTOMERS_SCOPES.RW]}>
+            <ScopeGuard anyOf={[sc.customers.create]}>
               <Button
                 type="button"
                 variant="primary"
@@ -293,12 +293,12 @@ export default function CustomersPage() {
               i18nNamespaces={i18nNamespaces}
               menuLabel={t('list.actions.title', { defaultValue: 'Akce' })}
               actions={[
-                { kind: 'detail', onClick: () => openDetail(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.READ, CUSTOMERS_SCOPES.RW] },
-                { kind: 'edit', onClick: () => openEdit(c.id as UUID), scopesAnyOf: [CUSTOMERS_SCOPES.UPDATE, CUSTOMERS_SCOPES.RW] },
+                { kind: 'detail', onClick: () => openDetail(c.id as UUID), scopesAnyOf: [sc.customers.read] },
+                { kind: 'edit', onClick: () => openEdit(c.id as UUID), scopesAnyOf: [sc.customers.update] },
                 {
                   kind: 'delete',
                   onClick: () => handleDelete(c.id as UUID),
-                  scopesAnyOf: [CUSTOMERS_SCOPES.DELETE, CUSTOMERS_SCOPES.RW],
+                  scopesAnyOf: [sc.customers.delete],
                   confirm: {
                     title: t('list.confirm.delete.title', { defaultValue: 'Smazat zákazníka?' }),
                     description: t('list.confirm.delete.desc', { defaultValue: 'Tato akce je nevratná.' }),
@@ -325,7 +325,7 @@ export default function CustomersPage() {
             edit: t('form.title.edit', { defaultValue: 'Upravit zákazníka' }),
           }}
           listItems={data.items}
-          fetchDetail={(id, opts) => customers.get?.(String(id), opts as any)}
+          fetchDetail={(id, opts) => customers.get?.(id as UUID, opts as any)}
           mapDetailToFormDefaults={(dto) => dtoToFormDefaults(dto as CustomerDto)}
           renderDetail={({ data, loading, error, onDelete }) => (
             <Detail

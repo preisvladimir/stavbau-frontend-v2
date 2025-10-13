@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 // --- App hooks & routing ---
 import { useOverlayRouting } from '@/lib/router/useOverlayRouting';
 import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';
-import { useServerTableState } from '@/lib/hooks/useServerTableState';
 import { useFab } from '@/components/layout';
 
 // --- API / services & types ---
@@ -13,13 +12,15 @@ import { projectsService } from '@/features/projects/api/projects-service';
 import type { ProjectFilters } from '@/features/projects/api/projects-service';
 import type { ProjectSummaryDto, ProjectDto } from '../api/types';
 import type { UUID } from '@/types';
+
 // --- UI components ---
-import RowActions from '@/components/ui/stavbau-ui/datatable/RowActions';
-import { ServerTableEmpty } from '@/components/ui/stavbau-ui/emptystate/ServerTableEmpty';
 import {
   Button,
   StbEntityTable,
   TableHeader,
+  RowActions,
+  ServerTableEmpty,
+  useServerTableState,
   type DataTableV2Column,
 } from '@/ui';
 
@@ -28,7 +29,7 @@ import { ScopeGuard, sc } from '@/rbac';
 
 // --- UI utils & tokens ---
 import { cn } from '@/lib/utils/cn';
-import { sbContainer } from '@/components/ui/stavbau-ui/tokens';
+import { sbContainer } from '@/ui';
 import { Plus } from '@/components/icons';
 
 // --- Drawer orchestrátor & stránky ---

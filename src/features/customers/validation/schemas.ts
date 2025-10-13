@@ -1,6 +1,6 @@
 // src/features/customers/validation/schemas.ts
 import { z } from 'zod';
-import { isValidICO, isValidCZDic } from '@/lib/utils/patterns';
+import { isValidICO, isValidCZDic } from '@/lib/utils';
 
 export const customerSchema = z.object({
   type: z.enum(['ORGANIZATION', 'PERSON'], { message: 'Zvolte typ' }),

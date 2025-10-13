@@ -1,6 +1,6 @@
 // src/features/customers/api/customers-service.ts
+import type { UUID } from '@/types';
 import type {
-  UUID,
   CustomerSummaryDto,
   CustomerDto,
   CreateCustomerRequest,

@@ -4,17 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
 import AddressBlock from '@/components/common/AddressBlock';
 import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
-import { Button } from '@/components/ui/stavbau-ui/button';
-import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { RBAC_AREAS } from '@/lib/rbac/areas';
+
+
+
+//import { RBAC_AREAS } from '@/lib/rbac/areas';
 import { Mail, Phone } from '@/components/icons';
 import { toApiProblem } from '@/lib/api/problem';
 
-// --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
 
-import type { CustomerDto, UUID } from '../api/types';
+import {Button, ConfirmModal, InlineStatus, useFeedback } from '@/ui';
+import { ScopeGuard, sc } from '@/rbac';
+import type { UUID } from '@/types';
+import type { CustomerDto } from '../api/types';
 
 export type CustomerDetailProps = {
   i18nNamespaces?: string[];
@@ -120,14 +121,14 @@ export function Detail({
 
   const headerActions = (
     <>
-      <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.UPDATE, RBAC_AREAS.CUSTOMERS.WRITE]}>
+      <ScopeGuard anyOf={[sc.customers.update]}>
         {onEdit && (
           <Button variant="outline" size="sm" onClick={onEdit} disabled={!!loading || busy}>
             {t('detail.actions.edit', { defaultValue: 'Upravit' })}
           </Button>
         )}
       </ScopeGuard>
-      <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.DELETE, RBAC_AREAS.CUSTOMERS.WRITE]}>
+      <ScopeGuard anyOf={[sc.customers.delete]}>
         <Button
           variant="destructive"
           size="sm"
@@ -225,14 +226,14 @@ export function Detail({
 
         {(onEdit || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-            <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.UPDATE, RBAC_AREAS.CUSTOMERS.WRITE]}>
+            <ScopeGuard anyOf={[sc.customers.update]}>
               {onEdit && (
                 <Button variant="outline" onClick={onEdit} disabled={!!loading || busy}>
                   {t('detail.actions.edit', { defaultValue: 'Upravit' })}
                 </Button>
               )}
             </ScopeGuard>
-            <ScopeGuard anyOf={[RBAC_AREAS.CUSTOMERS.DELETE, RBAC_AREAS.CUSTOMERS.WRITE]}>
+            <ScopeGuard anyOf={[sc.customers.delete]}>
               <Button
                 variant="destructive"
                 onClick={() => setConfirmOpen(true)}

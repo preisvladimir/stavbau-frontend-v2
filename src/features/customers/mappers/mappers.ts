@@ -3,7 +3,8 @@ import type { CustomerDto } from '../api/types';
 import type { CustomerFormValues } from '../validation/schemas';
 
 // normalize helper
-const nn = <T,>(v: T | null | undefined) => (v ?? undefined);
+import { nn } from '@/lib/utils';
+
 
 /** DTO → Form defaults (pro edit) */
 export function dtoToFormDefaults(dto: Partial<CustomerDto>): Partial<CustomerFormValues> {

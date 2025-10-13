@@ -1,10 +1,10 @@
 // src/components/ui/stavbau-ui/table/RowActions.tsx
+//revize 13.10.2025
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils/cn';
-import { Button } from '@/components/ui/stavbau-ui/button';
-import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
-import ScopeGuard from '@/features/auth/guards/ScopeGuard';
+import { Button, ConfirmModal} from '@/ui';
+import { ScopeGuard, type Scope } from '@/rbac';
 
 // Ikony – přizpůsob svému barrel importu
 import { MoreVertical, Pencil, Trash2, Archive, RotateCcw, Eye } from '@/components/icons';
@@ -21,7 +21,8 @@ export type RowAction<T> = {
   size?: 'xs' | 'sm' | 'md';
   onClick: (item: T) => void | Promise<void>;
   confirm?: { title?: string; description?: string; confirmLabel?: string; cancelLabel?: string };
-  scopesAnyOf?: string[];
+  /** RBAC guard – OR logika nad scopami */
+  scopesAnyOf?: readonly Scope[];
   hidden?: boolean | ((item: T) => boolean);
   disabled?: boolean | ((item: T) => boolean);
   stopPropagation?: boolean; // default true

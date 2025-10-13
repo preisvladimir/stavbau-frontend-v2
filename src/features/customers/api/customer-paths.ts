@@ -1,5 +1,5 @@
 // src/features/customers/api/customer-paths.ts
-import type { UUID } from './types';
+import type { UUID } from '@/types';
 
 export const customersListUrl = (companyId: UUID | string) =>
   `/company/${encodeURIComponent(String(companyId))}/customers`;
