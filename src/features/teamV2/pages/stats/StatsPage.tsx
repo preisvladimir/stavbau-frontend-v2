@@ -7,7 +7,7 @@ import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import TeamStats from '../../components/TeamStats';
-import { VISIBLE_ROLES, type CompanyRoleName } from '@/types/common/rbac';
+import { VISIBLE_ROLES, type CompanyRoleName } from '@/rbac';
 
 export type StatsPageProps = {
   companyId: UUID | string;
@@ -25,7 +25,7 @@ export default function StatsPage({
   i18nNamespaces = ['team', 'common'],
   autoRefreshMs = 30_000,
   rolesOrder = VISIBLE_ROLES, // readonly z RBAC
-  className,
+  //className,
 }: StatsPageProps) {
   const { t } = useTranslation(i18nNamespaces);
 

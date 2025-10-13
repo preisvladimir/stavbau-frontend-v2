@@ -1,4 +1,4 @@
-// src/features/teamV2/pages/StatsPageAuto.tsx
+// src/features/teamV2/pages/StatsPageAuto.tsx / revize 13.10.2025
 import { useParams, Navigate } from 'react-router-dom';
 import StatsPage from './StatsPage';
 import { useRequiredCompanyId } from '@/features/auth/hooks/useCompanyId';

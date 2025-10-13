@@ -1,11 +1,10 @@
 import * as React from "react";
-import { UiPortal } from "../portal";
 import { cn } from "@/lib/utils/cn";
-
 import {
   Button,
-  useTrapFocus,
-  useBodyScrollLock
+  UiPortal,
+  useBodyScrollLock,
+  useTrapFocus
 } from "@/ui";
 
 type Props = {

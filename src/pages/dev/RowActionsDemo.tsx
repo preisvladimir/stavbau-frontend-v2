@@ -3,7 +3,7 @@ import * as React from 'react';
 import { TableHeader } from '@/components/ui/stavbau-ui/datatable/TableHeader';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import ScopeGuard from '@/lib/rbac/ScopeGuard';
-import { TEAM_SCOPES } from '@/features/teamV2/const/scopes';
+import { sc } from '@/rbac';
 import { UserPlus, Pencil, Trash2, Eye, Archive, ArchiveRestore } from '@/components/icons';
 import RowActions, { type RowAction } from '@/components/ui/stavbau-ui/datatable/RowActions';
 import { cn } from '@/lib/utils/cn';
@@ -155,7 +155,7 @@ export default function RowActionsDemo() {
               <input type="checkbox" checked={compact} onChange={(e) => setCompact(e.target.checked)} />
               Kompaktní velikost
             </label>
-            <ScopeGuard anyOf={[TEAM_SCOPES.WRITE, TEAM_SCOPES.ADD]}>
+            <ScopeGuard anyOf={[sc.team.write, sc.team.add]}>
               <Button
                 type="button"
                 variant="primary"

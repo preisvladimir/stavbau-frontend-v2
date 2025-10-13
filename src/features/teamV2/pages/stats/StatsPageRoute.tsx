@@ -1,4 +1,4 @@
-// src/features/teamV2/pages/StatsPageRoute.tsx
+// src/features/teamV2/pages/StatsPageRoute.tsx / revize 13.10.2025
 import { useParams, Navigate } from 'react-router-dom';
 import StatsPage from './StatsPage';
 

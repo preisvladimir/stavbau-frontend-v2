@@ -1,4 +1,5 @@
 // src/features/teamV2/hooks/useMembersStats.ts
+// revize 13.10.2025
 import * as React from 'react';
 import type { MembersStatsDto, UUID } from '../api/types';
 import { teamService } from '@/features/teamV2/api/team-service';

@@ -1,5 +1,11 @@
 // src/features/auth/rbac/index.ts
-export * from './catalog';
+// Jediný vstupní bod pro RBAC ve FE
+export * from './catalog';        // sc, s, typy, ROLE_KEYS, roles, …
+// volitelné — pokud používáš
+export * from './expand';
 export * from './hooks';
-export * from './useRoleOptions';
+
 export { default as ScopeGuard } from './ScopeGuard';
+
+export * from './useRoleOptions';
+

@@ -1,17 +1,26 @@
 // src/features/team/components/TeamForm.tsx
+// revize 13.10.2025
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/stavbau-ui/button';
+
 import { CreateMemberSchema, UpdateMemberSchema, type AnyTeamFormValues } from '../validation/schemas';
-import { VISIBLE_ROLES, type CompanyRoleName } from '@/types/common/rbac';
+
 import { toApiProblem } from "@/lib/api/problem";
 import { applyApiErrorsToForm } from "@/lib/forms/applyApiErrorsToForm";
 import type { ExtendFormProps } from '@/components/ui/stavbau-ui/forms/types';
 
-// --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+import {
+  VISIBLE_ROLES,
+  type CompanyRoleName
+} from '@/rbac';
+import {
+  Button,
+  InlineStatus,
+  useFeedback // --- Globální feedback (toast/inline rozhodování) ---
+} from '@/ui';
+
 
 type TeamSpecificProps = {
   /** Zamkne výběr company role (např. poslední OWNER) */

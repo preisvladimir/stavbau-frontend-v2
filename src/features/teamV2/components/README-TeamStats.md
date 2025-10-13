@@ -1,4 +1,4 @@
-# Statistiky Týmu – README (CZ)
+# Statistiky Týmu – README (CZ) - revidováno 13.10.2025
 
 Tento dokument popisuje, jak ve STAVBAU-V2 zprovoznit a používat **statistiky týmu** postavené na `teamService(companyId).stats()` a komponentě `TeamStats`. Součástí je i ukázka samostatné stránky `StatsPage` a adaptačních router komponent.
 

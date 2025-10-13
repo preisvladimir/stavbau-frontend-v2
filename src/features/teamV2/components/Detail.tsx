@@ -1,18 +1,25 @@
 // src/features/team/components/TeamDetail.tsx
+//revize 1.10.2025
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
-import { Button } from '@/components/ui/stavbau-ui/button';
+
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
 import { Mail, Phone, Shield, Clock } from '@/components/icons';
 import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-import { TEAM_SCOPES } from '@/features/teamV2/const/scopes';
+
 import { toApiProblem } from '@/lib/api/problem';
 import type { MemberDto, UUID } from '../api/types';
 
-// --- Globální feedback (toast/inline rozhodování) ---
-import { InlineStatus, useFeedback } from '@/ui/feedback';
+import { sc } from '@/rbac';
+import {
+  Button,
+   InlineStatus,  // --- Globální feedback (toast/inline rozhodování) --- 
+    useFeedback   // --- Globální feedback (toast/inline rozhodování) ---
+   } from '@/ui';
+
+
 
 export type DetailProps = {
   open: boolean;
@@ -123,14 +130,14 @@ export function Detail({
 
   const headerActions = (
     <>
-      <ScopeGuard anyOf={[TEAM_SCOPES.UPDATE]}>
+      <ScopeGuard anyOf={[sc.team.update]}>
         {onEdit && (
           <Button variant="outline" size="sm" onClick={onEdit} disabled={!!loading || busy}>
             {t('detail.actions.edit', { defaultValue: 'Upravit' })}
           </Button>
         )}
       </ScopeGuard>
-      <ScopeGuard anyOf={[TEAM_SCOPES.DELETE]}>
+      <ScopeGuard anyOf={[sc.team.remove]}>
         {onDelete && (
           <Button
             variant="destructive"
@@ -329,14 +336,14 @@ export function Detail({
 
         {(onEdit || onDelete) && (
           <div className="mt-2 flex justify-end gap-2">
-            <ScopeGuard anyOf={[TEAM_SCOPES.UPDATE]}>
+            <ScopeGuard anyOf={[sc.team.remove]}>
               {onEdit && (
                 <Button variant="outline" onClick={onEdit} disabled={!!loading || busy}>
                   {t('detail.actions.edit', { defaultValue: 'Upravit' })}
                 </Button>
               )}
             </ScopeGuard>
-            <ScopeGuard anyOf={[TEAM_SCOPES.DELETE]}>
+            <ScopeGuard anyOf={[sc.team.remove]}>
               {onDelete && (
                 <Button
                   variant="destructive"

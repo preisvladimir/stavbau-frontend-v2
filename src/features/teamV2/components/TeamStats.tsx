@@ -1,3 +1,4 @@
+// revize 13.10.2025
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../api/types';
@@ -92,9 +93,9 @@ export default function TeamStats({
   );
 
   // Skeleton box
-  const Skel = ({ className = '' }: { className?: string }) => (
-    <div className={cn('animate-pulse rounded-md bg-gray-100', className)} />
-  );
+ // const Skel = ({ className = '' }: { className?: string }) => (
+ //   <div className={cn('animate-pulse rounded-md bg-gray-100', className)} />
+ // );
 
   return (
     <section className={cn('rounded-xl border bg-white', className)}>
@@ -231,7 +232,7 @@ function StatTile({
 }
 
 function RoleRow({
-  role,
+ // role,
   label,
   count,
   onClick,

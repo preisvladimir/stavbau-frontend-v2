@@ -10,9 +10,6 @@ import { useFab } from '@/components/layout';
 
 // --- RBAC / guards ---
 import { ScopeGuard, sc, useRoleOptions} from '@/rbac';
-//import ScopeGuard from '@/features/auth/guards/ScopeGuard';
-//import { TEAM_SCOPES } from '../const/scopes';
-//import { useRoleOptions } from '@/features/rbac/hooks/useRoleOptions';
 
 // --- API / types ---
 import { teamService } from '@/features/teamV2/api/team-service';
