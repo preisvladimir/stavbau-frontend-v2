@@ -1,7 +1,7 @@
-// src/ui/error-boundary/ErrorBoundaryView.tsx
+// src/ui/error/boundary/ErrorBoundaryView.tsx
 import { useNavigate, useRouteError, isRouteErrorResponse } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/ui/button";
+import { Button } from "../../button";
 
 type Props = {
   /** Volitelný HTTP/semantic kód (např. 404). Když nepředáš, vezme se z router erroru. */

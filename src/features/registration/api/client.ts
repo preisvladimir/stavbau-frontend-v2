@@ -4,7 +4,7 @@ import type { CompanyLookupPreviewDto, CompanyRegistrationRequest, CompanyRegist
 export class RegistrationService {
   /** Normalized FE-ready preview from BE */
   static async getFromAres(ico: string, signal?: AbortSignal): Promise<CompanyLookupPreviewDto> {
-    const res = await api.get<CompanyLookupPreviewDto>("/companies/lookup/ares/preview", {
+    const res = await api.get<CompanyLookupPreviewDto>("/ares/lookup/by/ico", {
       params: { ico },
       signal,
     });

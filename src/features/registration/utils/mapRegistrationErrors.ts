@@ -1,4 +1,4 @@
-import type { ProblemDetail } from "@/lib/api/types";
+import type { ProblemDetail } from "@/types";
 
 export type MappedRegistrationError =
   | { kind: "field"; field: "owner.email"; i18nKey: string }

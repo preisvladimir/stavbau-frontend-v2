@@ -9,10 +9,10 @@ import { useRegistration } from "../RegistrationWizard";
 import { step3OwnerSchema, type Step3Owner } from "../../validation/schemas";
 import { RegistrationService } from "../../api/client";
 import type {CompanyRegistrationRequest } from "../../api/types";
-import type { ProblemDetail } from "@/lib/api/types";
+import type { ProblemDetail } from "@/types";
 
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import { Button } from "@/components/ui/stavbau-ui";
+import { Button } from "@/ui";
 
 export const StepOwner: React.FC = () => {
   // t = registration, te = errors

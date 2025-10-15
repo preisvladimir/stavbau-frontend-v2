@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
 import AddressBlock from '@/components/common/AddressBlock';
-import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
+import EntityHeader from '@/components/ui/stavbau-ui/deprecated.detail/EntityHeader';
 
 
 

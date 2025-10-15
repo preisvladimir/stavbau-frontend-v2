@@ -5,7 +5,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 // --- App shell & error boundary ---
 import App from "@/app/App";
 import AppLayout from "./AppLayout";
-import ErrorBoundaryView from "@/ui/error-boundary/ErrorBoundaryView";
+import { ErrorBoundaryView } from "@/ui";
 
 // --- Auth / guards ---
 import { AuthProvider } from "@/features/auth/context/AuthContext";

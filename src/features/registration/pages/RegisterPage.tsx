@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/stavbau-ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/ui";
 import { RegistrationWizard } from "../components/RegistrationWizard";
 
 export const RegisterPage: React.FC = () => {

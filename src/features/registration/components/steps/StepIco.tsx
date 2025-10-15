@@ -6,9 +6,9 @@ import { useRegistration } from "../RegistrationWizard";
 import { step1IcoSchema, type Step1Ico } from "../../validation/schemas";
 import { RegistrationService } from "../../api/client";
 import { mapRegistrationError } from "../../utils/mapRegistrationErrors";
-import { type ProblemDetail } from "@/types/ProblemDetails";
+import { type ProblemDetail } from "@/types";
 import { isAxiosError } from "axios";
-import { Button } from "@/components/ui/stavbau-ui";
+import { Button } from "@/ui";
 
 export const StepIco: React.FC = () => {
   const { t } = useTranslation("registration");

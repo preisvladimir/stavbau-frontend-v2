@@ -5,7 +5,7 @@ import { DetailDrawer } from '@/components/ui/stavbau-ui/drawer/detail-drawer';
 import { Button } from '@/components/ui/stavbau-ui/button';
 import { ConfirmModal } from '@/components/ui/stavbau-ui/modal/confirm-modal';
 import { Mail, Phone, Shield, Clock } from '@/components/icons';
-import EntityHeader from '@/components/ui/stavbau-ui/detail/EntityHeader';
+import EntityHeader from '@/components/ui/stavbau-ui/deprecated.detail/EntityHeader';
 import ScopeGuard from '@/features/auth/guards/ScopeGuard';
 import { TEAM_SCOPES } from '@/features/teamV2/const/scopes';
 

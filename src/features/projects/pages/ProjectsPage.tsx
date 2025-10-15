@@ -12,6 +12,7 @@ import { projectsService } from '@/features/projects/api/projects-service';
 import type { ProjectFilters } from '@/features/projects/api/projects-service';
 import type { ProjectSummaryDto, ProjectDto } from '../api/types';
 import type { UUID } from '@/types';
+import { useServerTableState } from '@/lib/hooks/useServerTableState';
 
 // --- UI components ---
 import {
@@ -20,7 +21,6 @@ import {
   TableHeader,
   RowActions,
   ServerTableEmpty,
-  useServerTableState,
   type DataTableV2Column,
 } from '@/ui';
 

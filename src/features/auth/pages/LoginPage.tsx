@@ -16,7 +16,7 @@ import {
   CardTitle,
   CardDescription,
   Button,
-} from "@/components/ui/stavbau-ui";
+} from "@/ui";
 // import { useToast } from "@/lib/ui/ToastProvider"; // až bude k dispozici
 
 const schema = z.object({

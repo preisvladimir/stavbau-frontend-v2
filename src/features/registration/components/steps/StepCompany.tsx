@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRegistration } from "../RegistrationWizard";
 import { step2CompanySchema, type Step2Company } from "../../validation/schemas";
-import { Button } from "@/components/ui/stavbau-ui";
+import { Button } from "@/ui";
 
 export const StepCompany: React.FC = () => {
   const { t } = useTranslation("registration");
